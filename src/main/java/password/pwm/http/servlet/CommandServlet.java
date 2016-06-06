@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,10 +23,10 @@
 package password.pwm.http.servlet;
 
 import com.novell.ldapchai.exception.ChaiUnavailableException;
-import password.pwm.Permission;
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
-import password.pwm.bean.SessionStateBean;
+import password.pwm.bean.LocalSessionStateBean;
+import password.pwm.bean.LoginInfoBean;
 import password.pwm.config.Configuration;
 import password.pwm.config.PwmSetting;
 import password.pwm.error.ErrorInformation;
@@ -34,14 +34,16 @@ import password.pwm.error.PwmError;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.PwmRequest;
 import password.pwm.http.PwmSession;
+import password.pwm.http.filter.AbstractPwmFilter;
 import password.pwm.http.filter.AuthenticationFilter;
+import password.pwm.util.JsonUtil;
 import password.pwm.util.logging.PwmLogger;
-import password.pwm.ws.server.RestResultBean;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import java.io.IOException;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * Processes a variety of different commands sent in an HTTP Request, including logoff.
@@ -108,12 +110,26 @@ public class CommandServlet extends AbstractPwmServlet {
             processContinue(pwmRequest);
         } else if (action.equalsIgnoreCase("pageLeaveNotice")) {
             processPageLeaveNotice(pwmRequest);
-        } else if (action.equalsIgnoreCase("clearIntruderTable")) {
-            processClearIntruderTable(pwmRequest);
+        } else if (action.equalsIgnoreCase("csp-report")) {
+            processCspReport(pwmRequest);
         } else {
             final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_UNKNOWN,"unknown command sent to CommandServlet: " + action);
             LOGGER.debug(pwmSession, errorInformation);
             pwmRequest.respondWithError(errorInformation);
+        }
+    }
+
+    private static void processCspReport(
+            final PwmRequest pwmRequest
+    )
+            throws IOException, PwmUnrecoverableException
+    {
+        final String body = pwmRequest.readRequestBodyAsString();
+        try {
+            Map<String, Object> map = JsonUtil.deserializeStringObjectMap(body);
+            LOGGER.trace("CSP Report: " + JsonUtil.serializeMap(map, JsonUtil.Flag.PrettyPrint));
+        } catch (Exception e) {
+            LOGGER.error("error processing csp report: " + e.getMessage() + ", body=" + body);
         }
     }
 
@@ -137,12 +153,11 @@ public class CommandServlet extends AbstractPwmServlet {
             throws IOException, PwmUnrecoverableException, ServletException
     {
         final PwmSession pwmSession = pwmRequest.getPwmSession();
-        final SessionStateBean ssBean = pwmSession.getSessionStateBean();
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         final Configuration config = pwmApplication.getConfig();
 
-        if (ssBean.isAuthenticated()) {
-            if (AuthenticationFilter.forceRequiredRedirects(pwmRequest)) {
+        if (pwmRequest.isAuthenticated()) {
+            if (AuthenticationFilter.forceRequiredRedirects(pwmRequest) == AbstractPwmFilter.ProcessStatus.Halt) {
                 return;
             }
 
@@ -174,32 +189,11 @@ public class CommandServlet extends AbstractPwmServlet {
     }
 
 
-    private void processClearIntruderTable(
-            final PwmRequest pwmRequest
-    )
-            throws ChaiUnavailableException, PwmUnrecoverableException, IOException, ServletException
-    {
-        pwmRequest.validatePwmFormID();
-        if (!checkIfUserAuthenticated(pwmRequest)) {
-            return;
-        }
-
-        if (!pwmRequest.getPwmSession().getSessionManager().checkPermission(pwmRequest.getPwmApplication(), Permission.PWMADMIN)) {
-            LOGGER.info(pwmRequest, "unable to execute clear intruder records");
-            return;
-        }
-
-        //pwmApplication.getIntruderManager().clear();
-
-        RestResultBean restResultBean = new RestResultBean();
-        pwmRequest.outputJsonResult(restResultBean);
-    }
-
 
     private static void redirectToForwardURL(final PwmRequest pwmRequest)
             throws IOException, PwmUnrecoverableException
     {
-        final SessionStateBean sessionStateBean = pwmRequest.getPwmSession().getSessionStateBean();
+        final LocalSessionStateBean sessionStateBean = pwmRequest.getPwmSession().getSessionStateBean();
 
         final String redirectURL = pwmRequest.getForwardUrl();
         LOGGER.trace(pwmRequest, "redirecting user to forward url: " + redirectURL);
@@ -218,9 +212,8 @@ public class CommandServlet extends AbstractPwmServlet {
     )
             throws ChaiUnavailableException, IOException, ServletException, PwmUnrecoverableException {
         final PwmSession pwmSession = pwmRequest.getPwmSession();
-        final SessionStateBean ssBean = pwmSession.getSessionStateBean();
 
-        if (!ssBean.isAuthenticated()) {
+        if (!pwmRequest.isAuthenticated()) {
             final String action = pwmRequest.readParameterAsString(PwmConstants.PARAM_ACTION_REQUEST);
             LOGGER.info(pwmSession, "authentication required for " + action);
             pwmRequest.respondWithError(PwmError.ERROR_AUTHENTICATION_REQUIRED.toInfo());
@@ -255,7 +248,7 @@ public class CommandServlet extends AbstractPwmServlet {
                 return;
             }
 
-            if (!AuthenticationFilter.forceRequiredRedirects(pwmRequest)) {
+            if (AuthenticationFilter.forceRequiredRedirects(pwmRequest) == AbstractPwmFilter.ProcessStatus.Continue) {
                 redirectToForwardURL(pwmRequest);
             }
         }
@@ -286,7 +279,7 @@ public class CommandServlet extends AbstractPwmServlet {
             }
 
             final PwmSession pwmSession = pwmRequest.getPwmSession();
-            if (pwmSession.getUserInfoBean().isRequiresNewPassword() && !pwmSession.getSessionStateBean().isSkippedRequireNewPassword()) {
+            if (pwmSession.getUserInfoBean().isRequiresNewPassword() && !pwmSession.getLoginInfoBean().isLoginFlag(LoginInfoBean.LoginFlag.skipNewPw)) {
                 pwmRequest.sendRedirect(PwmServletDefinition.ChangePassword.servletUrlName());
             } else {
                 redirectToForwardURL(pwmRequest);

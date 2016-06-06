@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,10 @@ package password.pwm.http.bean;
 
 import password.pwm.bean.UserIdentity;
 
-public class ActivateUserBean implements PwmSessionBean {
+import java.util.Collections;
+import java.util.Set;
+
+public class ActivateUserBean extends PwmSessionBean {
     private boolean tokenIssued;
     private boolean tokenPassed;
     private boolean agreementPassed;
@@ -90,5 +93,13 @@ public class ActivateUserBean implements PwmSessionBean {
     public void setAgreementText(String agreementText)
     {
         this.agreementText = agreementText;
+    }
+
+    public Type getType() {
+        return Type.PUBLIC;
+    }
+
+    public Set<Flag> getFlags() {
+        return Collections.emptySet();
     }
 }

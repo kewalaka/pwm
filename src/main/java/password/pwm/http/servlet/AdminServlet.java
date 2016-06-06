@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@ import password.pwm.http.PwmURL;
 import password.pwm.svc.report.ReportService;
 import password.pwm.svc.stats.StatisticsManager;
 import password.pwm.util.logging.PwmLogger;
+import password.pwm.ws.server.RestResultBean;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -62,6 +63,8 @@ public class AdminServlet extends AbstractPwmServlet {
         downloadUserReportCsv(HttpMethod.POST),
         downloadUserSummaryCsv(HttpMethod.POST),
         downloadStatisticsLogCsv(HttpMethod.POST),
+        clearIntruderTable(HttpMethod.POST),
+
         ;
 
         private final Collection<HttpMethod> method;
@@ -123,6 +126,10 @@ public class AdminServlet extends AbstractPwmServlet {
 
                 case downloadStatisticsLogCsv:
                     downloadStatisticsLogCsv(pwmRequest);
+                    return;
+
+                case clearIntruderTable:
+                    processClearIntruderTable(pwmRequest);
                     return;
             }
         }
@@ -219,6 +226,24 @@ public class AdminServlet extends AbstractPwmServlet {
         }
     }
 
+    private void processClearIntruderTable(
+            final PwmRequest pwmRequest
+    )
+            throws ChaiUnavailableException, PwmUnrecoverableException, IOException, ServletException
+    {
+        if (!pwmRequest.getPwmSession().getSessionManager().checkPermission(pwmRequest.getPwmApplication(), Permission.PWMADMIN)) {
+            LOGGER.info(pwmRequest, "unable to execute clear intruder records");
+            return;
+        }
+
+        //pwmApplication.getIntruderManager().clear();
+
+        RestResultBean restResultBean = new RestResultBean();
+        pwmRequest.outputJsonResult(restResultBean);
+    }
+
+
+
     public void forwardToJsp(final PwmRequest pwmRequest) throws ServletException, PwmUnrecoverableException, IOException {
         final Page currentPage = Page.forUrl(pwmRequest.getURL());
         if (currentPage != null) {
@@ -236,6 +261,7 @@ public class AdminServlet extends AbstractPwmServlet {
         tokenLookup(PwmConstants.JSP_URL.ADMIN_TOKEN_LOOKUP,"/tokens"),
         viewLog(PwmConstants.JSP_URL.ADMIN_LOGVIEW,"/logs"),
         urlReference(PwmConstants.JSP_URL.ADMIN_URLREFERENCE,"/urls"),
+        debugUser(PwmConstants.JSP_URL.ADMIN_DEBUG,"/debug"),
 
         ;
 

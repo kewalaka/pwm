@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 package password.pwm.util.localdb;
 
 import org.mapdb.DBMaker;
+import org.mapdb.Serializer;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
 import password.pwm.util.TimeDuration;
@@ -119,9 +120,10 @@ public class MapDB_LocalDB implements LocalDBProvider {
         }
     }
 
-    public void init(final File dbDirectory, final Map<String, String> initParameters, final boolean readOnly)
+    public void init(final File dbDirectory, final Map<String, String> initParameters, final Map<Parameter,String> parameters)
             throws LocalDBException {
-        if (readOnly) {
+
+        if (LocalDBUtility.hasBooleanParameter(Parameter.readOnly, parameters)) {
             throw new UnsupportedOperationException("readOnly not supported");
         }
 
@@ -134,7 +136,10 @@ public class MapDB_LocalDB implements LocalDBProvider {
             LOCK.writeLock().lock();
             this.dbDirectory = dbDirectory;
             final File dbFile = new File(dbDirectory.getAbsolutePath() + File.separator + FILE_NAME);
-            recman = DBMaker.newFileDB(dbFile).make();
+            recman = DBMaker.fileDB(dbFile.getAbsolutePath()).make();
+
+            LOGGER.debug("beginning DB compact");
+            recman.getStore().compact();
 
             LOGGER.info("LocalDB opened in " + TimeDuration.fromCurrent(startTime).asCompactString());
             status = LocalDB.Status.OPEN;
@@ -270,9 +275,11 @@ public class MapDB_LocalDB implements LocalDBProvider {
     private static Map<String, String> openHTree(
             final String name,
             final org.mapdb.DB recman
-    )
-            throws IOException {
-        return recman.getTreeMap(name);
+    ) {
+        return recman.hashMap(name)
+                .keySerializer(Serializer.STRING)
+                .valueSerializer(Serializer.STRING)
+                .open();
     }
 
 // -------------------------- INNER CLASSES --------------------------

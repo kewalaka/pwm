@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,11 @@
 
 package password.pwm.util.db;
 
+import org.xeustechnologies.jcl.JarClassLoader;
+import org.xeustechnologies.jcl.JclObjectFactory;
+import password.pwm.PwmAboutProperty;
 import password.pwm.PwmApplication;
+import password.pwm.PwmApplicationMode;
 import password.pwm.PwmConstants;
 import password.pwm.config.Configuration;
 import password.pwm.config.PwmSetting;
@@ -31,25 +35,22 @@ import password.pwm.config.value.FileValue;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
 import password.pwm.error.PwmException;
-import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.health.HealthRecord;
 import password.pwm.health.HealthStatus;
 import password.pwm.health.HealthTopic;
 import password.pwm.svc.PwmService;
 import password.pwm.svc.stats.Statistic;
 import password.pwm.svc.stats.StatisticsManager;
-import password.pwm.util.ClosableIterator;
-import password.pwm.util.JsonUtil;
-import password.pwm.util.PasswordData;
-import password.pwm.util.TimeDuration;
+import password.pwm.util.*;
 import password.pwm.util.logging.PwmLogger;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.*;
-import java.util.jar.JarEntry;
-import java.util.jar.JarInputStream;
 
 /**
  * @author Jason D. Rivard
@@ -218,20 +219,27 @@ public class DatabaseAccessorImpl implements PwmService, DatabaseAccessor {
             final byte[] jdbcDriverBytes = dbConfiguration.getJdbcDriver();
             if (jdbcDriverBytes != null) {
                 LOGGER.debug("loading JDBC database driver stored in configuration");
-                final JdbcDriverClassLoader jdbcDriverClassLoader = new JdbcDriverClassLoader(jdbcDriverBytes);
-                driver = (Driver) Class.forName(jdbcClassName, true, jdbcDriverClassLoader).newInstance();
-                LOGGER.debug("successfully loaded JDBC database driver '" + jdbcClassName + "' stored in configuration");
+                final JarClassLoader jarClassLoader = new JarClassLoader();
+                jarClassLoader.add(new ByteArrayInputStream(jdbcDriverBytes));
+                final JclObjectFactory jclObjectFactory = JclObjectFactory.getInstance();
+
+                //Create object of loaded class
+                driver = (Driver)jclObjectFactory.create(jarClassLoader, jdbcClassName);
+
+                LOGGER.debug("successfully loaded JDBC database driver '" + jdbcClassName + "' from application configuration");
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             final String errorMsg = "error registering JDBC database driver stored in configuration: " + e.getMessage();
             final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_DB_UNAVAILABLE,errorMsg);
+            LOGGER.error(errorMsg,e);
             throw new DatabaseException(errorInformation);
         }
 
         if (driver == null) {
             try {
                 LOGGER.debug("loading JDBC database driver from classpath: " + jdbcClassName);
-                driver = (Driver) Class.forName(jdbcClassName).newInstance(); //load from normal classpath
+                driver = (Driver) Class.forName(jdbcClassName).newInstance();
+
                 LOGGER.debug("successfully loaded JDBC database driver from classpath: " + jdbcClassName);
             } catch (Throwable e) {
                 final String errorMsg = e.getClass().getName() + " error loading JDBC database driver from classpath: " + e.getMessage();
@@ -250,63 +258,86 @@ public class DatabaseAccessorImpl implements PwmService, DatabaseAccessor {
                 connectionProperties.setProperty("password", dbConfiguration.getPassword().getStringValue());
             }
             final Connection connection = driver.connect(connectionURL, connectionProperties);
-            LOGGER.debug("successfully opened connection to database " + connectionURL);
+
+
+            final Map<PwmAboutProperty,String> debugProps = getConnectionDebugProperties(connection);;
+            LOGGER.debug("successfully opened connection to database " + connectionURL + ", properties: " + JsonUtil.serializeMap(debugProps));
+
             connection.setAutoCommit(true);
             return connection;
-        } catch (PwmUnrecoverableException | SQLException e) {
-            final String errorMsg = "error connecting to database: " + e.getMessage();
+        } catch (Throwable e) {
+            final String errorMsg = "error connecting to database: " + Helper.readHostileExceptionMessage(e);
             final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_DB_UNAVAILABLE,errorMsg);
+            if (e instanceof IOException) {
+                LOGGER.error(errorInformation);
+            } else {
+                LOGGER.error(errorMsg, e);
+            }
             throw new DatabaseException(errorInformation);
         }
     }
 
     private static void initTable(final Connection connection, final DatabaseTable table, final DBConfiguration dbConfiguration) throws DatabaseException {
+        boolean tableExists = false;
         try {
             checkIfTableExists(connection, table);
             LOGGER.trace("table " + table + " appears to exist");
+            tableExists = true;
         } catch (SQLException e) { // assume error was due to table missing;
-            {
-                final StringBuilder sqlString = new StringBuilder();
-                sqlString.append("CREATE table ").append(table.toString()).append(" (").append("\n");
-                sqlString.append("  " + KEY_COLUMN + " ").append(dbConfiguration.getColumnTypeKey()).append("(").append(
-                        KEY_COLUMN_LENGTH).append(") NOT NULL PRIMARY KEY,").append("\n");
-                sqlString.append("  " + VALUE_COLUMN + " ").append(dbConfiguration.getColumnTypeValue()).append(" ");
-                sqlString.append("\n");
-                sqlString.append(")").append("\n");
+            LOGGER.trace("error while checking for table: " + e.getMessage() + ", assuming due to table non-existence");
+        }
 
-                LOGGER.trace("attempting to execute the following sql statement:\n " + sqlString.toString());
+        if (!tableExists) {
+            createTable(connection, table, dbConfiguration);
+        }
+    }
 
-                Statement statement = null;
-                try {
-                    statement = connection.createStatement();
-                    statement.execute(sqlString.toString());
-                    LOGGER.debug("created table " + table.toString());
-                } catch (SQLException ex) {
-                    LOGGER.error("error creating new table " + table.toString() + ": " + ex.getMessage());
-                } finally {
-                    close(statement);
-                }
+    private static void createTable(final Connection connection, final DatabaseTable table, final DBConfiguration dbConfiguration) throws DatabaseException {
+        {
+            final StringBuilder sqlString = new StringBuilder();
+            sqlString.append("CREATE table ").append(table.toString()).append(" (").append("\n");
+            sqlString.append("  " + KEY_COLUMN + " ").append(dbConfiguration.getColumnTypeKey()).append("(").append(
+                    KEY_COLUMN_LENGTH).append(") NOT NULL PRIMARY KEY,").append("\n");
+            sqlString.append("  " + VALUE_COLUMN + " ").append(dbConfiguration.getColumnTypeValue()).append(" ");
+            sqlString.append("\n");
+            sqlString.append(")").append("\n");
+
+            LOGGER.trace("attempting to execute the following sql statement:\n " + sqlString.toString());
+
+            Statement statement = null;
+            try {
+                statement = connection.createStatement();
+                statement.execute(sqlString.toString());
+                LOGGER.debug("created table " + table.toString());
+            } catch (SQLException ex) {
+                final String errorMsg = "error creating new table " + table.toString() + ": " + ex.getMessage();
+                final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_DB_UNAVAILABLE, errorMsg);
+                throw new DatabaseException(errorInformation);
+            } finally {
+                close(statement);
             }
+        }
 
-            {
-                final String indexName = table.toString() + "_IDX";
-                final StringBuilder sqlString = new StringBuilder();
-                sqlString.append("CREATE index ").append(indexName);
-                sqlString.append(" ON ").append(table.toString());
-                sqlString.append(" (").append(KEY_COLUMN).append(")");
-                Statement statement = null;
+        {
+            final String indexName = table.toString() + "_IDX";
+            final StringBuilder sqlString = new StringBuilder();
+            sqlString.append("CREATE index ").append(indexName);
+            sqlString.append(" ON ").append(table.toString());
+            sqlString.append(" (").append(KEY_COLUMN).append(")");
+            Statement statement = null;
 
-                LOGGER.trace("attempting to execute the following sql statement:\n " + sqlString.toString());
+            LOGGER.trace("attempting to execute the following sql statement:\n " + sqlString.toString());
 
-                try {
-                    statement = connection.createStatement();
-                    statement.execute(sqlString.toString());
-                    LOGGER.debug("created index " + indexName);
-                } catch (SQLException ex) {
-                    LOGGER.error("error creating new index " + indexName + ": " + ex.getMessage());
-                } finally {
-                    close(statement);
-                }
+            try {
+                statement = connection.createStatement();
+                statement.execute(sqlString.toString());
+                LOGGER.debug("created index " + indexName);
+            } catch (SQLException ex) {
+                final String errorMsg = "error creating new index " + indexName + ": " + ex.getMessage();
+                final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_DB_UNAVAILABLE, errorMsg);
+                throw new DatabaseException(errorInformation);
+            } finally {
+                close(statement);
             }
         }
     }
@@ -763,7 +794,7 @@ public class DatabaseAccessorImpl implements PwmService, DatabaseAccessor {
     }
 
     private void updateStats(boolean readOperation, boolean writeOperation) {
-        if (pwmApplication != null && pwmApplication.getApplicationMode() == PwmApplication.MODE.RUNNING) {
+        if (pwmApplication != null && pwmApplication.getApplicationMode() == PwmApplicationMode.RUNNING) {
             final StatisticsManager statisticsManager = pwmApplication.getStatisticsManager();
             if (statisticsManager != null && statisticsManager.status() == STATUS.OPEN) {
                 if (readOperation) {
@@ -776,53 +807,25 @@ public class DatabaseAccessorImpl implements PwmService, DatabaseAccessor {
         }
     }
 
-    public static class JdbcDriverClassLoader extends ClassLoader {
-        private static final String CLASS_FILE_SEPERATOR = "/";
-        private final byte[] jdbcDriverJar;
+    @Override
+    public Map<PwmAboutProperty,String> getConnectionDebugProperties() {
+        return getConnectionDebugProperties(connection);
+    }
 
-        public JdbcDriverClassLoader(byte[] jdbcDriverJar) {
-            this.jdbcDriverJar = jdbcDriverJar;
-        }
-
-        public Class findClass(String name)
-                throws ClassNotFoundException
-        {
+    private static Map<PwmAboutProperty,String> getConnectionDebugProperties(final Connection connection) {
+        if (connection != null) {
             try {
-                byte[] b = loadClassData(name);
-                if (b == null) {
-                    throw new ClassNotFoundException("unable to discover file from in-memory jar classloader: " + name);
-                }
-                return defineClass(name, b, 0, b.length);
-            } catch (IOException e) {
-                e.printStackTrace();
-                throw new ClassNotFoundException("IOException reading from in-memory jar classloader: " + e.getMessage());
+                final Map<PwmAboutProperty,String> returnObj = new LinkedHashMap<>();
+                final DatabaseMetaData databaseMetaData = connection.getMetaData();
+                returnObj.put(PwmAboutProperty.database_driverName, databaseMetaData.getDriverName());
+                returnObj.put(PwmAboutProperty.database_driverVersion, databaseMetaData.getDriverVersion());
+                returnObj.put(PwmAboutProperty.database_databaseProductName, databaseMetaData.getDatabaseProductName());
+                returnObj.put(PwmAboutProperty.database_databaseProductVersion, databaseMetaData.getDatabaseProductVersion());
+                return Collections.unmodifiableMap(returnObj);
+            } catch (SQLException e) {
+                LOGGER.error("error rading jdbc meta data: " + e.getMessage());
             }
         }
-
-        private byte[] loadClassData(String name)
-                throws IOException
-        {
-            final String literalFileName = name.replace(".", CLASS_FILE_SEPERATOR) + ".class";
-            final JarInputStream jarInputStream = new JarInputStream(new ByteArrayInputStream(jdbcDriverJar));
-            JarEntry jarEntry;
-            while ((jarEntry = jarInputStream.getNextJarEntry()) != null) {
-                if (!jarEntry.isDirectory()) {
-                    if (literalFileName.equals(jarEntry.getName())) {
-                        final int fileLength = (int) jarEntry.getSize();
-                        final byte[] buffer = new byte[1024];
-                        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                        int length;
-                        while ((length = jarInputStream.read(buffer)) > 0) {
-                            baos.write(buffer, 0, length);
-                        }
-                        final byte[] outputFile = baos.toByteArray();
-                        LOGGER.trace("loaded class file name=" + name + ", found=" + jarEntry.getName()
-                                + ", fileLength=" + fileLength + " returnLength=" + outputFile.length);
-                        return outputFile;
-                    }
-                }
-            }
-            return null;
-        }
+        return Collections.emptyMap();
     }
 }

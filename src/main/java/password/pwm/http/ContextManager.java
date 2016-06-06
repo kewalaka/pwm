@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +22,7 @@
 
 package password.pwm.http;
 
-import password.pwm.AppProperty;
-import password.pwm.PwmApplication;
-import password.pwm.PwmConstants;
-import password.pwm.PwmEnvironment;
+import password.pwm.*;
 import password.pwm.config.Configuration;
 import password.pwm.config.stored.ConfigurationProperty;
 import password.pwm.config.stored.ConfigurationReader;
@@ -143,7 +140,7 @@ public class ContextManager implements Serializable {
         }
 
         Configuration configuration = null;
-        PwmApplication.MODE mode = PwmApplication.MODE.ERROR;
+        PwmApplicationMode mode = PwmApplicationMode.ERROR;
 
 
         final File applicationPath;
@@ -166,16 +163,16 @@ public class ContextManager implements Serializable {
             configuration = configReader.getConfiguration();
 
             if (configReader == null) {
-                mode = startupErrorInformation == null ? PwmApplication.MODE.ERROR : PwmApplication.MODE.ERROR;
+                mode = startupErrorInformation == null ? PwmApplicationMode.ERROR : PwmApplicationMode.ERROR;
             } else {
-                mode = startupErrorInformation == null ? configReader.getConfigMode() : PwmApplication.MODE.ERROR;
+                mode = startupErrorInformation == null ? configReader.getConfigMode() : PwmApplicationMode.ERROR;
             }
 
             if (startupErrorInformation == null) {
                 startupErrorInformation = configReader.getConfigFileError();
             }
 
-            if (PwmApplication.MODE.ERROR == mode) {
+            if (PwmApplicationMode.ERROR == mode) {
                 outputError("Startup Error: " + (startupErrorInformation == null ? "un-specified error" : startupErrorInformation.toDebugStr()));
             }
         } catch (Throwable e) {
@@ -184,6 +181,7 @@ public class ContextManager implements Serializable {
         LOGGER.debug("configuration file was loaded from " + (configurationFile == null ? "null" : configurationFile.getAbsoluteFile()));
 
         final Collection<PwmEnvironment.ApplicationFlag> applicationFlags = readApplicationFlags();
+        final Map<PwmEnvironment.ApplicationParameter,String> applicationParams = readApplicationParams();
 
         try {
             final PwmEnvironment pwmEnvironment= new PwmEnvironment.Builder(configuration, applicationPath)
@@ -191,6 +189,7 @@ public class ContextManager implements Serializable {
                     .setConfigurationFile(configurationFile)
                     .setContextManager(this)
                     .setFlags(applicationFlags)
+                    .setParams(applicationParams)
                     .createPwmEnvironment();
             pwmApplication = new PwmApplication(pwmEnvironment);
         } catch (Exception e) {
@@ -425,19 +424,29 @@ public class ContextManager implements Serializable {
     }
 
     public Collection<PwmEnvironment.ApplicationFlag> readApplicationFlags() {
+        final String contextAppFlagsValue = servletContext.getInitParameter(
+                PwmEnvironment.EnvironmentParameter.applicationFlags.toString()
+        );
 
-        {
-            final String contextAppFlagsSetting = servletContext.getInitParameter(
-                    PwmEnvironment.EnvironmentParameter.applicationFlags.toString()
-            );
-
-            if (contextAppFlagsSetting != null && !contextAppFlagsSetting.isEmpty()) {
-                return PwmEnvironment.ParseHelper.parseApplicationFlagValueParameter(contextAppFlagsSetting);
-            }
-
-            final String contextPath = servletContext.getContextPath().replace("/","");
-            return PwmEnvironment.ParseHelper.readApplicationFlagsFromSystem(contextPath);
+        if (contextAppFlagsValue != null && !contextAppFlagsValue.isEmpty()) {
+            return PwmEnvironment.ParseHelper.parseApplicationFlagValueParameter(contextAppFlagsValue);
         }
+
+        final String contextPath = servletContext.getContextPath().replace("/","");
+        return PwmEnvironment.ParseHelper.readApplicationFlagsFromSystem(contextPath);
+    }
+
+    public Map<PwmEnvironment.ApplicationParameter,String> readApplicationParams() {
+        final String contextAppParamsValue = servletContext.getInitParameter(
+                PwmEnvironment.EnvironmentParameter.applicationParamFile.toString()
+        );
+
+        if (contextAppParamsValue != null && !contextAppParamsValue.isEmpty()) {
+            return PwmEnvironment.ParseHelper.parseApplicationParamValueParameter(contextAppParamsValue);
+        }
+
+        final String contextPath = servletContext.getContextPath().replace("/","");
+        return PwmEnvironment.ParseHelper.readApplicationParmsFromSystem(contextPath);
     }
 
     static void outputError(String outputText) {

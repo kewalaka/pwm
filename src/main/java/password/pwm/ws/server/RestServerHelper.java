@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,9 +23,7 @@
 package password.pwm.ws.server;
 
 import com.novell.ldapchai.exception.ChaiUnavailableException;
-import password.pwm.Permission;
-import password.pwm.PwmApplication;
-import password.pwm.PwmConstants;
+import password.pwm.*;
 import password.pwm.bean.UserIdentity;
 import password.pwm.config.PwmSetting;
 import password.pwm.config.profile.HelpdeskProfile;
@@ -35,7 +33,6 @@ import password.pwm.error.PwmOperationalException;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.PwmRequest;
 import password.pwm.http.PwmSession;
-import password.pwm.http.ServletHelper;
 import password.pwm.http.filter.AuthenticationFilter;
 import password.pwm.ldap.UserSearchEngine;
 import password.pwm.svc.intruder.RecordType;
@@ -72,12 +69,6 @@ public abstract class RestServerHelper {
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         final PwmSession pwmSession = pwmRequest.getPwmSession();
 
-        ServletHelper.handleRequestInitialization(pwmRequest, pwmApplication, pwmSession);
-
-        if (servicePermissions.isAuthRequired()) {
-            ServletHelper.handleRequestSecurityChecks(request, pwmApplication, pwmSession);
-        }
-
         if (pwmSession.getSessionStateBean().getLocale() == null) {
             final List<Locale> knownLocales = pwmApplication.getConfig().getKnownLocales();
             final Locale userLocale = LocaleHelper.localeResolver(request.getLocale(), knownLocales);
@@ -93,7 +84,7 @@ public abstract class RestServerHelper {
         }
 
         final RestRequestBean restRequestBean = new RestRequestBean();
-        restRequestBean.setAuthenticated(pwmSession.getSessionStateBean().isAuthenticated());
+        restRequestBean.setAuthenticated(pwmSession.isAuthenticated());
         restRequestBean.setExternal(determineIfRestClientIsExternal(pwmSession,request));
         restRequestBean.setUserIdentity(
                 lookupUsername(pwmApplication, pwmSession, restRequestBean.isExternal(), servicePermissions, requestedUsername));
@@ -102,13 +93,13 @@ public abstract class RestServerHelper {
 
 
         if (servicePermissions.isPublicDuringConfig()) {
-            if (pwmApplication.getApplicationMode() == PwmApplication.MODE.NEW || pwmApplication.getApplicationMode() == PwmApplication.MODE.CONFIGURATION) {
+            if (pwmApplication.getApplicationMode() == PwmApplicationMode.NEW || pwmApplication.getApplicationMode() == PwmApplicationMode.CONFIGURATION) {
                 return restRequestBean;
             }
         }
 
         // check permissions
-        final boolean authenticated = pwmSession.getSessionStateBean().isAuthenticated();
+        final boolean authenticated = pwmSession.isAuthenticated();
         if (servicePermissions.isAuthRequired()) {
             if (!authenticated) {
                 throw new PwmUnrecoverableException(PwmError.ERROR_AUTHENTICATION_REQUIRED);
@@ -134,14 +125,14 @@ public abstract class RestServerHelper {
 
             final PasswordData secretKey = pwmApplication.getConfig().readSettingAsPassword(PwmSetting.WEBSERVICES_EXTERNAL_SECRET);
             if (secretKey != null) {
-                final String headerName = "RestSecretKey";
+                final String headerName = pwmApplication.getConfig().readAppProperty(AppProperty.SECURITY_WS_REST_SERVER_SECRET_HEADER);
                 final String headerValue = pwmRequest.readHeaderValueAsString(headerName);
                 if (headerValue == null || headerValue.isEmpty()) {
                     final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_UNAUTHORIZED, "request is missing security header " + headerName);
                     throw new PwmUnrecoverableException(errorInformation);
                 }
-                if (headerValue.equals(secretKey.getStringValue())) {
-                    final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_UNAUTHORIZED, "authenticated user does not have external webservices permission");
+                if (!headerValue.equals(secretKey.getStringValue())) {
+                    final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_UNAUTHORIZED, "authenticated user does not have correct security header");
                     throw new PwmUnrecoverableException(errorInformation);
                 }
             }
@@ -171,7 +162,7 @@ public abstract class RestServerHelper {
             return null;
         }
 
-        if (!pwmSession.getSessionStateBean().isAuthenticated()) {
+        if (!pwmSession.isAuthenticated()) {
             throw new PwmUnrecoverableException(new ErrorInformation(PwmError.ERROR_AUTHENTICATION_REQUIRED));
         }
 
@@ -217,7 +208,7 @@ public abstract class RestServerHelper {
             final PwmSession pwmSession
     )
             throws PwmUnrecoverableException, ChaiUnavailableException {
-        if (pwmSession.getSessionStateBean().isAuthenticated()) {
+        if (pwmSession.isAuthenticated()) {
             return;
         }
 

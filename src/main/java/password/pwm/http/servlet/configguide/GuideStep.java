@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,11 @@
 package password.pwm.http.servlet.configguide;
 
 import password.pwm.config.PwmSettingTemplate;
+import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.bean.ConfigGuideBean;
 import password.pwm.util.logging.PwmLogger;
+
+import java.util.Set;
 
 public enum GuideStep {
     START(null),
@@ -34,10 +37,11 @@ public enum GuideStep {
     LDAP_PROXY(null),
     LDAP_CONTEXT(null),
     LDAP_ADMINS(null),
-    LDAP_TESTUSER(null),
-    CR_STORAGE(null),
+    STORAGE(null),
     LDAP_SCHEMA(LdapSchemeVisibilityCheck.class),
     DATABASE(DbVisibilityCheck.class),
+    LDAP_PERMISSIONS(LdapSchemeVisibilityCheck.class),
+    LDAP_TESTUSER(null),
     APP(null),
     PASSWORD(null),
     END(null),
@@ -84,16 +88,23 @@ public enum GuideStep {
 
     static class LdapSchemeVisibilityCheck implements VisibilityCheck {
         public boolean visible(ConfigGuideBean configGuideBean) {
-            final ConfigGuideForm.Cr_Storage_Pref selectedPref = ConfigGuideForm.Cr_Storage_Pref.valueOf(configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_CR_STORAGE_PREF));
-            return ConfigGuideForm.Cr_Storage_Pref.LDAP == selectedPref
-                    && (configGuideBean.getSelectedTemplate() == PwmSettingTemplate.NOVL || configGuideBean.getSelectedTemplate() == PwmSettingTemplate.NOVL_IDM);
+            try {
+                final Set<PwmSettingTemplate> templates = ConfigGuideForm.generateStoredConfig(configGuideBean).getTemplateSet().getTemplates();
+                return templates.contains(PwmSettingTemplate.LDAP);
+            } catch (PwmUnrecoverableException e) {
+                return true;
+            }
         }
     }
 
     static class DbVisibilityCheck implements VisibilityCheck {
         public boolean visible(ConfigGuideBean configGuideBean) {
-            final ConfigGuideForm.Cr_Storage_Pref selectedPref = ConfigGuideForm.Cr_Storage_Pref.valueOf(configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_CR_STORAGE_PREF));
-            return ConfigGuideForm.Cr_Storage_Pref.DB == selectedPref;
+            try {
+                final Set<PwmSettingTemplate> templates = ConfigGuideForm.generateStoredConfig(configGuideBean).getTemplateSet().getTemplates();
+                return templates.contains(PwmSettingTemplate.DB);
+            } catch (PwmUnrecoverableException e) {
+                return true;
+            }
         }
     }
 }

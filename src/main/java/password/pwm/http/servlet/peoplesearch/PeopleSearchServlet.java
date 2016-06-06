@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ import password.pwm.error.*;
 import password.pwm.http.HttpMethod;
 import password.pwm.http.PwmHttpRequestWrapper;
 import password.pwm.http.PwmRequest;
+import password.pwm.http.PwmRequestFlag;
 import password.pwm.http.servlet.AbstractPwmServlet;
 import password.pwm.i18n.Display;
 import password.pwm.ldap.*;
@@ -48,6 +49,7 @@ import password.pwm.svc.stats.StatisticsManager;
 import password.pwm.util.JsonUtil;
 import password.pwm.util.LocaleHelper;
 import password.pwm.util.TimeDuration;
+import password.pwm.util.Validator;
 import password.pwm.util.logging.PwmLogger;
 import password.pwm.util.macro.MacroMachine;
 import password.pwm.ws.server.RestResultBean;
@@ -127,10 +129,6 @@ public class PeopleSearchServlet extends AbstractPwmServlet {
             }
 
         }
-        final int peopleSearchIdleTimeout = (int)pwmRequest.getConfig().readSettingAsLong(PwmSetting.PEOPLE_SEARCH_IDLE_TIMEOUT_SECONDS);
-        if (peopleSearchIdleTimeout > 0 && pwmRequest.getURL().isPrivateUrl()) {
-            pwmRequest.getPwmSession().setSessionTimeout(pwmRequest.getHttpServletRequest().getSession(), peopleSearchIdleTimeout);
-        }
 
         final PeopleSearchConfiguration peopleSearchConfiguration = new PeopleSearchConfiguration(pwmRequest.getConfig());
 
@@ -160,8 +158,8 @@ public class PeopleSearchServlet extends AbstractPwmServlet {
         }
 
         if (pwmRequest.getURL().isPublicUrl()) {
-            pwmRequest.setFlag(PwmRequest.Flag.HIDE_IDLE, true);
-            pwmRequest.setFlag(PwmRequest.Flag.NO_IDLE_TIMEOUT, true);
+            pwmRequest.setFlag(PwmRequestFlag.HIDE_IDLE, true);
+            pwmRequest.setFlag(PwmRequestFlag.NO_IDLE_TIMEOUT, true);
         }
         pwmRequest.forwardToJsp(PwmConstants.JSP_URL.PEOPLE_SEARCH);
     }
@@ -272,7 +270,7 @@ public class PeopleSearchServlet extends AbstractPwmServlet {
                 searchDuration.asCompactString() + " not using cache, size=" + results.getResults().size());
 
         final SearchResultBean searchResultBean = new SearchResultBean();
-        searchResultBean.setSearchResults(new ArrayList<>(results.resultsAsJsonOutput(pwmRequest.getPwmApplication())));
+        searchResultBean.setSearchResults(new ArrayList<>(results.resultsAsJsonOutput(pwmRequest.getPwmApplication(),null)));
         searchResultBean.setSizeExceeded(sizeExceeded);
         final String aboutMessage = LocaleHelper.getLocalizedMessage(
                 pwmRequest.getLocale(),
@@ -672,8 +670,15 @@ public class PeopleSearchServlet extends AbstractPwmServlet {
                         bean.setUserReferences(userReferences.values());
                     }
                 } else {
-                    bean.setValue(searchResults.containsKey(formConfiguration.getName()) ? searchResults.get(
-                            formConfiguration.getName()) : "");
+                    if (formConfiguration.isMultivalue()) {
+                        bean.setValues(readUserMultiAttributeValues(pwmRequest, userIdentity, formConfiguration.getName()));
+                    } else {
+                        if (searchResults.containsKey(formConfiguration.getName())) {
+                            bean.setValues(Collections.singletonList(searchResults.get(formConfiguration.getName())));
+                        } else {
+                            bean.setValues(Collections.<String>emptyList());
+                        }
+                    }
                 }
                 returnObj.put(formConfiguration.getName(),bean);
             }
@@ -863,6 +868,29 @@ public class PeopleSearchServlet extends AbstractPwmServlet {
 
         }
         return returnObj;
+    }
+
+    private static List<String> readUserMultiAttributeValues(
+            final PwmRequest pwmRequest,
+            final UserIdentity userIdentity,
+            final String attributeName
+    )
+            throws PwmUnrecoverableException
+    {
+
+        final List<UserIdentity> returnObj = new ArrayList<>();
+
+        final int MAX_VALUES = Integer.parseInt(pwmRequest.getConfig().readAppProperty(AppProperty.PEOPLESEARCH_VALUE_MAXCOUNT));
+        final ChaiUser chaiUser = getChaiUser(pwmRequest, userIdentity);
+        try {
+            final Set<String> ldapValues = chaiUser.readMultiStringAttribute(attributeName);
+            return ldapValues != null ? new ArrayList<>(ldapValues) : Collections.<String>emptyList();
+        } catch (ChaiOperationException e) {
+            throw new PwmUnrecoverableException(new ErrorInformation(PwmError.ERROR_DIRECTORY_UNAVAILABLE, "error reading attribute value '" + attributeName + "', error:" +  e.getMessage()));
+        } catch (ChaiUnavailableException e) {
+            throw new PwmUnrecoverableException(new ErrorInformation(PwmError.ERROR_DIRECTORY_UNAVAILABLE, e.getMessage()));
+        }
+
     }
 
     private CacheKey makeCacheKey(

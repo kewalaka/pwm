@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,15 +24,14 @@ package password.pwm.config;
 
 import org.jdom2.Attribute;
 import org.jdom2.Element;
-import org.jdom2.xpath.XPathExpression;
-import org.jdom2.xpath.XPathFactory;
 import password.pwm.config.value.PasswordValue;
 import password.pwm.config.value.ValueFactory;
 import password.pwm.error.PwmOperationalException;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.i18n.Config;
-import password.pwm.i18n.ConfigEditor;
+import password.pwm.util.Helper;
 import password.pwm.util.LocaleHelper;
+import password.pwm.util.StringUtil;
 import password.pwm.util.logging.PwmLogger;
 import password.pwm.util.macro.MacroMachine;
 
@@ -47,15 +46,27 @@ import java.util.regex.PatternSyntaxException;
  * @author Jason D. Rivard
  */
 public enum PwmSetting {
+    // templates
+    TEMPLATE_LDAP(
+            "template.ldap", PwmSettingSyntax.SELECT, PwmSettingCategory.TEMPLATES),
+    TEMPLATE_STORAGE(
+            "template.storage", PwmSettingSyntax.SELECT, PwmSettingCategory.TEMPLATES),
+
+
+    // notes
+    NOTES(
+            "notes.noteText", PwmSettingSyntax.TEXT_AREA, PwmSettingCategory.NOTES),
+
+
     // application settings
     PWM_SITE_URL(
             "pwm.selfURL", PwmSettingSyntax.STRING, PwmSettingCategory.GENERAL),
     VERSION_CHECK_ENABLE(
-            "pwm.versionCheck.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.GENERAL),
+            "pwm.versionCheck.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.TELEMETRY),
     PUBLISH_STATS_ENABLE(
-            "pwm.publishStats.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.GENERAL),
+            "pwm.publishStats.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.TELEMETRY),
     PUBLISH_STATS_SITE_DESCRIPTION(
-            "pwm.publishStats.siteDescription", PwmSettingSyntax.STRING, PwmSettingCategory.GENERAL),
+            "pwm.publishStats.siteDescription", PwmSettingSyntax.STRING, PwmSettingCategory.TELEMETRY),
     URL_FORWARD(
             "pwm.forwardURL", PwmSettingSyntax.STRING, PwmSettingCategory.GENERAL),
     URL_LOGOUT(
@@ -69,15 +80,21 @@ public enum PwmSetting {
     HIDE_CONFIGURATION_HEALTH_WARNINGS(
             "display.hideConfigHealthWarnings", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.GENERAL),
     KNOWN_LOCALES(
-            "knownLocales", PwmSettingSyntax.STRING_ARRAY, PwmSettingCategory.GENERAL),
+            "knownLocales", PwmSettingSyntax.STRING_ARRAY, PwmSettingCategory.LOCALIZATION),
     LOCALE_COOKIE_MAX_AGE(
-            "locale.cookie.age", PwmSettingSyntax.DURATION, PwmSettingCategory.GENERAL),
+            "locale.cookie.age", PwmSettingSyntax.DURATION, PwmSettingCategory.LOCALIZATION),
     PWMDB_LOCATION(
             "pwmDb.location", PwmSettingSyntax.STRING, PwmSettingCategory.GENERAL),
     HTTP_PROXY_URL(
             "http.proxy.url", PwmSettingSyntax.STRING, PwmSettingCategory.GENERAL),
     APP_PROPERTY_OVERRIDES(
             "pwm.appProperty.overrides", PwmSettingSyntax.STRING_ARRAY, PwmSettingCategory.GENERAL),
+
+    // clustering
+    SECURITY_LOGIN_SESSION_MODE(
+            "security.loginSession.mode", PwmSettingSyntax.SELECT, PwmSettingCategory.CLUSTERING),
+    SECURITY_MODULE_SESSION_MODE(
+            "security.moduleSession.mode", PwmSettingSyntax.SELECT, PwmSettingCategory.CLUSTERING),
 
     // user interface
     INTERFACE_THEME(
@@ -236,6 +253,8 @@ public enum PwmSetting {
             "email.changePassword.helpdesk", PwmSettingSyntax.EMAIL, PwmSettingCategory.EMAIL_TEMPLATES),
     EMAIL_UPDATEPROFILE(
             "email.updateProfile", PwmSettingSyntax.EMAIL, PwmSettingCategory.EMAIL_TEMPLATES),
+    EMAIL_UPDATEPROFILE_VERIFICATION(
+            "email.updateProfile.token", PwmSettingSyntax.EMAIL, PwmSettingCategory.EMAIL_TEMPLATES),
     EMAIL_NEWUSER(
             "email.newUser", PwmSettingSyntax.EMAIL, PwmSettingCategory.EMAIL_TEMPLATES),
     EMAIL_NEWUSER_VERIFICATION(
@@ -298,6 +317,15 @@ public enum PwmSetting {
             "sms.requestId.characters", PwmSettingSyntax.STRING, PwmSettingCategory.SMS_GATEWAY),
     SMS_REQUESTID_LENGTH(
             "sms.requestId.length", PwmSettingSyntax.NUMERIC, PwmSettingCategory.SMS_GATEWAY),
+    SMS_USE_URL_SHORTENER(
+            "sms.useUrlShortener", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.SMS_GATEWAY),
+    SMS_SUCCESS_RESULT_CODE(
+            "sms.successResultCodes", PwmSettingSyntax.STRING_ARRAY, PwmSettingCategory.SMS_GATEWAY),
+    URL_SHORTENER_CLASS(
+            "urlshortener.classname", PwmSettingSyntax.STRING, PwmSettingCategory.SMS_GATEWAY),
+    URL_SHORTENER_PARAMETERS(
+            "urlshortener.parameters", PwmSettingSyntax.STRING_ARRAY, PwmSettingCategory.SMS_GATEWAY),
+
     SMS_CHALLENGE_TOKEN_TEXT(
             "sms.challenge.token.message", PwmSettingSyntax.LOCALIZED_STRING, PwmSettingCategory.SMS_MESSAGES),
     SMS_CHALLENGE_NEW_PASSWORD_TEXT(
@@ -312,14 +340,8 @@ public enum PwmSetting {
             "sms.activation.message", PwmSettingSyntax.LOCALIZED_STRING, PwmSettingCategory.SMS_MESSAGES),
     SMS_FORGOTTEN_USERNAME_TEXT(
             "sms.forgottenUsername.message", PwmSettingSyntax.LOCALIZED_STRING, PwmSettingCategory.SMS_MESSAGES),
-    SMS_USE_URL_SHORTENER(
-            "sms.useUrlShortener", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.SMS_GATEWAY),
-    SMS_SUCCESS_RESULT_CODE(
-            "sms.successResultCodes", PwmSettingSyntax.STRING_ARRAY, PwmSettingCategory.SMS_GATEWAY),
-    URL_SHORTENER_CLASS(
-            "urlshortener.classname", PwmSettingSyntax.STRING, PwmSettingCategory.SMS_GATEWAY),
-    URL_SHORTENER_PARAMETERS(
-            "urlshortener.parameters", PwmSettingSyntax.STRING_ARRAY, PwmSettingCategory.SMS_GATEWAY),
+    SMS_UPDATE_PROFILE_TOKEN_TEXT(
+            "sms.updateProfile.token.message", PwmSettingSyntax.LOCALIZED_STRING, PwmSettingCategory.SMS_MESSAGES),
 
 
     //global password policy settings
@@ -329,14 +351,22 @@ public enum PwmSetting {
             "password.sharedHistory.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.PASSWORD_GLOBAL),
     PASSWORD_SHAREDHISTORY_MAX_AGE(
             "password.sharedHistory.age", PwmSettingSyntax.DURATION, PwmSettingCategory.PASSWORD_GLOBAL),
-    WORDLIST_CASE_SENSITIVE(
-            "wordlistCaseSensitive", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.PASSWORD_GLOBAL),
-    PASSWORD_WORDLIST_WORDSIZE(
-            "password.wordlist.wordSize", PwmSettingSyntax.NUMERIC, PwmSettingCategory.PASSWORD_GLOBAL),
     PASSWORD_POLICY_CASE_SENSITIVITY(
             "password.policy.caseSensitivity", PwmSettingSyntax.SELECT, PwmSettingCategory.PASSWORD_GLOBAL),
     PASSWORD_PROFILE_LIST(
             "password.profile.list", PwmSettingSyntax.PROFILE, PwmSettingCategory.PASSWORD_GLOBAL),
+
+
+    // wordlist settings
+    WORDLIST_FILENAME(
+            "pwm.wordlist.location", PwmSettingSyntax.STRING, PwmSettingCategory.WORDLISTS),
+    WORDLIST_CASE_SENSITIVE(
+            "wordlistCaseSensitive", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.WORDLISTS),
+    PASSWORD_WORDLIST_WORDSIZE(
+            "password.wordlist.wordSize", PwmSettingSyntax.NUMERIC, PwmSettingCategory.WORDLISTS),
+    SEEDLIST_FILENAME(
+            "pwm.seedlist.location", PwmSettingSyntax.STRING, PwmSettingCategory.WORDLISTS),
+
 
     // password policy profile settings
     PASSWORD_POLICY_QUERY_MATCH(
@@ -390,7 +420,7 @@ public enum PwmSetting {
     PASSWORD_POLICY_MAXIMUM_OLD_PASSWORD_CHARS(
             "password.policy.maximumOldPasswordChars", PwmSettingSyntax.NUMERIC, PwmSettingCategory.PASSWORD_POLICY),
     PASSWORD_POLICY_MINIMUM_LIFETIME(
-            "password.policy.minimumLifetime", PwmSettingSyntax.NUMERIC, PwmSettingCategory.PASSWORD_POLICY),
+            "password.policy.minimumLifetime", PwmSettingSyntax.DURATION, PwmSettingCategory.PASSWORD_POLICY),
     PASSWORD_POLICY_ENABLE_WORDLIST(
             "password.policy.checkWordlist", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.PASSWORD_POLICY),
     PASSWORD_POLICY_AD_COMPLEXITY_LEVEL(
@@ -421,9 +451,18 @@ public enum PwmSetting {
             "password.policy.charGroup.regExValues", PwmSettingSyntax.STRING_ARRAY, PwmSettingCategory.PASSWORD_POLICY),
 
 
-    // security settings
+    // app security settings
     PWM_SECURITY_KEY(
             "pwm.securityKey", PwmSettingSyntax.PASSWORD, PwmSettingCategory.APP_SECURITY),
+    REVERSE_DNS_ENABLE(
+            "network.reverseDNS.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.APP_SECURITY),
+    DISPLAY_SHOW_DETAILED_ERRORS(
+            "display.showDetailedErrors", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.APP_SECURITY),
+    SESSION_MAX_SECONDS(
+            "session.maxSeconds", PwmSettingSyntax.DURATION, PwmSettingCategory.APP_SECURITY),
+
+
+    // web security
     SECURITY_ENABLE_REQUEST_SEQUENCE(
             "security.page.enableRequestSequence", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.WEB_SECURITY),
     SECURITY_ENABLE_FORM_NONCE(
@@ -438,8 +477,6 @@ public enum PwmSetting {
             "forceBasicAuth", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.WEB_SECURITY),
     USE_X_FORWARDED_FOR_HEADER(
             "useXForwardedForHeader", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.WEB_SECURITY),
-    REVERSE_DNS_ENABLE(
-            "network.reverseDNS.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.APP_SECURITY),
     MULTI_IP_SESSION_ALLOWED(
             "network.allowMultiIPSession", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.WEB_SECURITY),
     REQUIRED_HEADERS(
@@ -448,10 +485,6 @@ public enum PwmSetting {
             "network.ip.permittedRange", PwmSettingSyntax.STRING_ARRAY, PwmSettingCategory.WEB_SECURITY),
     SECURITY_PAGE_LEAVE_NOTICE_TIMEOUT(
             "security.page.leaveNoticeTimeout", PwmSettingSyntax.NUMERIC, PwmSettingCategory.WEB_SECURITY),
-    DISPLAY_SHOW_DETAILED_ERRORS(
-            "display.showDetailedErrors", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.APP_SECURITY),
-    SESSION_MAX_SECONDS(
-            "session.maxSeconds", PwmSettingSyntax.DURATION, PwmSettingCategory.APP_SECURITY),
     SECURITY_PREVENT_FRAMING(
             "security.preventFraming", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.WEB_SECURITY),
     SECURITY_REDIRECT_WHITELIST(
@@ -662,7 +695,6 @@ public enum PwmSetting {
             "recovery.allowWhenLocked", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.RECOVERY_PROFILE),
 
 
-    //
     // forgotten username
     FORGOTTEN_USERNAME_ENABLE(
             "forgottenUsername.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.FORGOTTEN_USERNAME),
@@ -670,8 +702,8 @@ public enum PwmSetting {
             "forgottenUsername.form", PwmSettingSyntax.FORM, PwmSettingCategory.FORGOTTEN_USERNAME),
     FORGOTTEN_USERNAME_SEARCH_FILTER(
             "forgottenUsername.searchFilter", PwmSettingSyntax.STRING, PwmSettingCategory.FORGOTTEN_USERNAME),
-    FORGOTTEN_USERNAME_USERNAME_ATTRIBUTE(
-            "forgottenUsername.usernameAttribute", PwmSettingSyntax.STRING, PwmSettingCategory.FORGOTTEN_USERNAME),
+    FORGOTTEN_USERNAME_MESSAGE(
+            "forgottenUsername.message", PwmSettingSyntax.LOCALIZED_TEXT_AREA, PwmSettingCategory.FORGOTTEN_USERNAME),
     FORGOTTEN_USERNAME_SEND_USERNAME_METHOD(
             "forgottenUsername.sendUsername.sendMethod", PwmSettingSyntax.SELECT, PwmSettingCategory.FORGOTTEN_USERNAME),
 
@@ -749,21 +781,26 @@ public enum PwmSetting {
 
     // update profile
     UPDATE_PROFILE_ENABLE(
-            "updateAttributes.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.UPDATE),
-    UPDATE_PROFILE_FORCE_SETUP(
-            "updateAttributes.forceSetup", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.UPDATE),
-    UPDATE_PROFILE_AGREEMENT_MESSAGE(
-            "display.updateAttributes.agreement", PwmSettingSyntax.LOCALIZED_TEXT_AREA, PwmSettingCategory.UPDATE),
+            "updateAttributes.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.UPDATE_SETTINGS),
+    UPDATE_PROFILE__PROFILE_LIST(
+            "updateAttributes.profile.list", PwmSettingSyntax.PROFILE, PwmSettingCategory.GENERAL),
     UPDATE_PROFILE_QUERY_MATCH(
-            "updateAttributes.queryMatch", PwmSettingSyntax.USER_PERMISSION, PwmSettingCategory.UPDATE),
+            "updateAttributes.queryMatch", PwmSettingSyntax.USER_PERMISSION, PwmSettingCategory.UPDATE_PROFILE),
     UPDATE_PROFILE_WRITE_ATTRIBUTES(
-            "updateAttributes.writeAttributes", PwmSettingSyntax.ACTION, PwmSettingCategory.UPDATE),
+            "updateAttributes.writeAttributes", PwmSettingSyntax.ACTION, PwmSettingCategory.UPDATE_PROFILE),
+    UPDATE_PROFILE_FORCE_SETUP(
+            "updateAttributes.forceSetup", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.UPDATE_PROFILE),
+    UPDATE_PROFILE_AGREEMENT_MESSAGE(
+            "display.updateAttributes.agreement", PwmSettingSyntax.LOCALIZED_TEXT_AREA, PwmSettingCategory.UPDATE_PROFILE),
     UPDATE_PROFILE_FORM(
-            "updateAttributes.form", PwmSettingSyntax.FORM, PwmSettingCategory.UPDATE),
-    UPDATE_PROFILE_CHECK_QUERY_MATCH(
-            "updateAttributes.check.queryMatch", PwmSettingSyntax.USER_PERMISSION, PwmSettingCategory.UPDATE),
+            "updateAttributes.form", PwmSettingSyntax.FORM, PwmSettingCategory.UPDATE_PROFILE),
     UPDATE_PROFILE_SHOW_CONFIRMATION(
-            "updateAttributes.showConfirmation", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.UPDATE),
+            "updateAttributes.showConfirmation", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.UPDATE_PROFILE),
+    UPDATE_PROFILE_EMAIL_VERIFICATION(
+            "updateAttributes.email.verification", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.UPDATE_PROFILE),
+    UPDATE_PROFILE_SMS_VERIFICATION(
+            "updateAttributes.sms.verification", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.UPDATE_PROFILE),
+
 
     // shortcut settings
     SHORTCUT_ENABLE(
@@ -819,44 +856,46 @@ public enum PwmSetting {
 
     // edirectory settings
     EDIRECTORY_ENABLE_NMAS(
-            "ldap.edirectory.enableNmas", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_SETTINGS, PwmSettingTemplate.NOVL),
+            "ldap.edirectory.enableNmas", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_SETTINGS),
     EDIRECTORY_STORE_NMAS_RESPONSES(
-            "ldap.edirectory.storeNmasResponses", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_SETTINGS, PwmSettingTemplate.NOVL),
+            "ldap.edirectory.storeNmasResponses", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_SETTINGS),
     EDIRECTORY_USE_NMAS_RESPONSES(
-            "ldap.edirectory.useNmasResponses", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_SETTINGS, PwmSettingTemplate.NOVL),
+            "ldap.edirectory.useNmasResponses", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_SETTINGS),
     EDIRECTORY_READ_USER_PWD(
-            "ldap.edirectory.readUserPwd", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_SETTINGS, PwmSettingTemplate.NOVL),
+            "ldap.edirectory.readUserPwd", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_SETTINGS),
     EDIRECTORY_PWD_MGT_WEBSERVICE_URL(
-            "ldap.edirectory.ws.pwdMgtURL", PwmSettingSyntax.STRING, PwmSettingCategory.EDIR_SETTINGS, PwmSettingTemplate.NOVL),
+            "ldap.edirectory.ws.pwdMgtURL", PwmSettingSyntax.STRING, PwmSettingCategory.EDIR_SETTINGS),
 
     EDIRECTORY_READ_CHALLENGE_SET(
-            "ldap.edirectory.readChallengeSets", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_CR_SETTINGS, PwmSettingTemplate.NOVL),
+            "ldap.edirectory.readChallengeSets", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_CR_SETTINGS),
     EDIRECTORY_CR_MIN_RANDOM_DURING_SETUP(
-            "ldap.edirectory.cr.minRandomDuringSetup", PwmSettingSyntax.NUMERIC, PwmSettingCategory.EDIR_CR_SETTINGS, PwmSettingTemplate.NOVL),
+            "ldap.edirectory.cr.minRandomDuringSetup", PwmSettingSyntax.NUMERIC, PwmSettingCategory.EDIR_CR_SETTINGS),
     EDIRECTORY_CR_APPLY_WORDLIST(
-            "ldap.edirectory.cr.applyWordlist", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_CR_SETTINGS, PwmSettingTemplate.NOVL),
+            "ldap.edirectory.cr.applyWordlist", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.EDIR_CR_SETTINGS),
     EDIRECTORY_CR_MAX_QUESTION_CHARS_IN__ANSWER(
-            "ldap.edirectory.cr.maxQuestionCharsInAnswer", PwmSettingSyntax.NUMERIC, PwmSettingCategory.EDIR_CR_SETTINGS, PwmSettingTemplate.NOVL),
+            "ldap.edirectory.cr.maxQuestionCharsInAnswer", PwmSettingSyntax.NUMERIC, PwmSettingCategory.EDIR_CR_SETTINGS),
 
 
     // active directory
     AD_USE_PROXY_FOR_FORGOTTEN(
-            "ldap.ad.proxyForgotten", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ACTIVE_DIRECTORY, PwmSettingTemplate.AD),
+            "ldap.ad.proxyForgotten", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ACTIVE_DIRECTORY),
     AD_ALLOW_AUTH_REQUIRE_NEW_PWD(
-            "ldap.ad.allowAuth.requireNewPassword", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ACTIVE_DIRECTORY, PwmSettingTemplate.AD),
+            "ldap.ad.allowAuth.requireNewPassword", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ACTIVE_DIRECTORY),
     AD_ALLOW_AUTH_EXPIRED(
-            "ldap.ad.allowAuth.expired", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ACTIVE_DIRECTORY, PwmSettingTemplate.AD),
+            "ldap.ad.allowAuth.expired", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ACTIVE_DIRECTORY),
     AD_ENFORCE_PW_HISTORY_ON_SET(
-            "ldap.ad.enforcePwHistoryOnSet", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ACTIVE_DIRECTORY, PwmSettingTemplate.AD),
+            "ldap.ad.enforcePwHistoryOnSet", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ACTIVE_DIRECTORY),
 
     // active directory
     ORACLE_DS_ENABLE_MANIP_ALLOWCHANGETIME(
-            "ldap.oracleDS.enable.manipAllowChangeTime", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ORACLE_DS, PwmSettingTemplate.ORACLE_DS),
+            "ldap.oracleDS.enable.manipAllowChangeTime", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ORACLE_DS),
     ORACLE_DS_ALLOW_AUTH_REQUIRE_NEW_PWD(
-            "ldap.oracleDS.allowAuth.requireNewPassword", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ORACLE_DS, PwmSettingTemplate.ORACLE_DS),
+            "ldap.oracleDS.allowAuth.requireNewPassword", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.ORACLE_DS),
 
 
     // helpdesk profile
+    HELPDESK_ENABLE(
+            "helpdesk.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.HELPDESK_SETTINGS),
     HELPDESK_PROFILE_LIST(
             "helpdesk.profile.list", PwmSettingSyntax.PROFILE, PwmSettingCategory.GENERAL),
     HELPDESK_PROFILE_QUERY_MATCH(
@@ -905,30 +944,35 @@ public enum PwmSetting {
             "helpdesk.displayName", PwmSettingSyntax.STRING, PwmSettingCategory.HELPDESK_PROFILE),
     HELPDESK_TOKEN_SEND_METHOD(
             "helpdesk.token.sendMethod", PwmSettingSyntax.SELECT, PwmSettingCategory.HELPDESK_PROFILE),
-    HELPDESK_ENABLE_OTP_VERIFY(
-            "helpdesk.otp.verify", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.HELPDESK_PROFILE),
     HELPDESK_PASSWORD_MASKVALUE(
             "helpdesk.setPassword.maskValue", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.HELPDESK_PROFILE),
-
+    HELPDESK_VERIFICATION_METHODS(
+            "helpdesk.verificationMethods", PwmSettingSyntax.VERIFICATION_METHOD, PwmSettingCategory.HELPDESK_PROFILE),
+    HELPDESK_VERIFICATION_FORM(
+            "helpdesk.verification.form", PwmSettingSyntax.FORM, PwmSettingCategory.HELPDESK_PROFILE),
 
 
     // Database
     DATABASE_JDBC_DRIVER(
-            "db.jdbc.driver", PwmSettingSyntax.FILE, PwmSettingCategory.DATABASE),
+            "db.jdbc.driver", PwmSettingSyntax.FILE, PwmSettingCategory.DATABASE_SETTINGS),
     DATABASE_CLASS(
-            "db.classname", PwmSettingSyntax.STRING, PwmSettingCategory.DATABASE),
+            "db.classname", PwmSettingSyntax.STRING, PwmSettingCategory.DATABASE_SETTINGS),
     DATABASE_URL(
-            "db.url", PwmSettingSyntax.STRING, PwmSettingCategory.DATABASE),
+            "db.url", PwmSettingSyntax.STRING, PwmSettingCategory.DATABASE_SETTINGS),
     DATABASE_USERNAME(
-            "db.username", PwmSettingSyntax.STRING, PwmSettingCategory.DATABASE),
+            "db.username", PwmSettingSyntax.STRING, PwmSettingCategory.DATABASE_SETTINGS),
     DATABASE_PASSWORD(
-            "db.password", PwmSettingSyntax.PASSWORD, PwmSettingCategory.DATABASE),
+            "db.password", PwmSettingSyntax.PASSWORD, PwmSettingCategory.DATABASE_SETTINGS),
+    DB_VENDOR_TEMPLATE(
+            "db.vendor.template", PwmSettingSyntax.SELECT, PwmSettingCategory.DATABASE_SETTINGS),
+
+    // Database advanced
     DATABASE_COLUMN_TYPE_KEY(
-            "db.columnType.key", PwmSettingSyntax.STRING, PwmSettingCategory.DATABASE),
+            "db.columnType.key", PwmSettingSyntax.STRING, PwmSettingCategory.DATABASE_ADV),
     DATABASE_COLUMN_TYPE_VALUE(
-            "db.columnType.value", PwmSettingSyntax.STRING, PwmSettingCategory.DATABASE),
+            "db.columnType.value", PwmSettingSyntax.STRING, PwmSettingCategory.DATABASE_ADV),
     DATABASE_DEBUG_TRACE(
-            "db.debugTrace.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.DATABASE),
+            "db.debugTrace.enable", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.DATABASE_ADV),
 
     // reporting
     REPORTING_ENABLE(
@@ -1015,10 +1059,8 @@ public enum PwmSetting {
             "naaf.requiredMethods", PwmSettingSyntax.OPTIONLIST, PwmSettingCategory.NAAF),
 
     //appliance
-    HTTPS_CERT_PKCS12(
-            "https.server.cert.pkcs12", PwmSettingSyntax.FILE, PwmSettingCategory.HTTPS_SERVER),
-    HTTPS_CERT_PASSWORD(
-            "https.server.cert.password", PwmSettingSyntax.PASSWORD, PwmSettingCategory.HTTPS_SERVER),
+    HTTPS_CERT(
+            "https.server.cert", PwmSettingSyntax.PRIVATE_KEY, PwmSettingCategory.HTTPS_SERVER),
     HTTPS_PROTOCOLS(
             "https.server.tls.protocols", PwmSettingSyntax.OPTIONLIST, PwmSettingCategory.HTTPS_SERVER),
     HTTPS_CIPHERS(
@@ -1026,35 +1068,31 @@ public enum PwmSetting {
 
 
     // deprecated.
-    WORDLIST_FILENAME(
-            "pwm.wordlist.location", PwmSettingSyntax.STRING, PwmSettingCategory.PASSWORD_GLOBAL),
-    SEEDLIST_FILENAME(
-            "pwm.seedlist.location", PwmSettingSyntax.STRING, PwmSettingCategory.CHANGE_PASSWORD),
+    UPDATE_PROFILE_CHECK_QUERY_MATCH(
+            "updateAttributes.check.queryMatch", PwmSettingSyntax.USER_PERMISSION, PwmSettingCategory.UPDATE_PROFILE),
     PASSWORD_POLICY_AD_COMPLEXITY(
             "password.policy.ADComplexity", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.PASSWORD_POLICY),
     CHALLENGE_REQUIRE_RESPONSES(
             "challenge.requireResponses", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.RECOVERY_SETTINGS),
     FORGOTTEN_PASSWORD_REQUIRE_OTP(
             "recovery.require.otp", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.RECOVERY_SETTINGS),
+    HELPDESK_ENABLE_OTP_VERIFY(
+            "helpdesk.otp.verify", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.HELPDESK_PROFILE),
 
 
 
     ;
-
-    public enum PwmSettingFlag {
-
-    }
 
     private static final PwmLogger LOGGER = PwmLogger.forClass(PwmSetting.class);
 
     private final String key;
     private final PwmSettingSyntax syntax;
     private final PwmSettingCategory category;
-    private final Set<PwmSettingTemplate> templates;
 
-    private Map <StoredValue,List<PwmSettingTemplate>> defaultValues;
-    private Map<PwmSettingTemplate, String> placeholder;
+    private List<TemplateSetAssociation> defaultValues;
+    private List<TemplateSetAssociation> examples;
     private Map<String,String> options;
+    private Collection<PwmSettingFlag> flags;
     private Boolean required;
     private Boolean hidden;
     private Integer level;
@@ -1067,14 +1105,11 @@ public enum PwmSetting {
     PwmSetting(
             final String key,
             final PwmSettingSyntax syntax,
-            final PwmSettingCategory category,
-            final PwmSettingTemplate... templates
+            final PwmSettingCategory category
     ) {
         this.key = key;
         this.syntax = syntax;
         this.category = category;
-        final PwmSettingTemplate[] temps = (templates == null || templates.length == 0) ? PwmSettingTemplate.values() : templates;
-        this.templates = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(temps)));
     }
 
 
@@ -1097,67 +1132,46 @@ public enum PwmSetting {
         return syntax;
     }
 
-    public Set<PwmSettingTemplate> getTemplates() {
-        return templates;
-    }
-
 
     // -------------------------- OTHER METHODS --------------------------
 
-    public StoredValue getDefaultValue(final PwmSettingTemplate template)
+    public StoredValue getDefaultValue(final PwmSettingTemplateSet templateSet)
             throws PwmOperationalException, PwmUnrecoverableException
     {
         if (defaultValues == null) {
-            final Map<StoredValue, List<PwmSettingTemplate>> returnObj = new LinkedHashMap<>();
+            final List<TemplateSetAssociation> returnObj = new ArrayList<>();
             final Element settingElement = PwmSettingXml.readSettingXml(this);
-            final List<Element> defaultElements = settingElement.getChildren("default");
+            final List<Element> defaultElements = settingElement.getChildren(PwmSettingXml.XML_ELEMENT_DEFAULT);
             if (this.getSyntax() == PwmSettingSyntax.PASSWORD) {
-                returnObj.put(new PasswordValue(null), Collections.<PwmSettingTemplate>emptyList());
+                returnObj.add(new TemplateSetAssociation(new PasswordValue(null), Collections.<PwmSettingTemplate>emptySet()));
             } else {
                 for (final Element defaultElement : defaultElements) {
-                    final List<PwmSettingTemplate> definedTemplates = PwmSettingXml.parseTemplateAttribute(defaultElement);
+                    final Set<PwmSettingTemplate> definedTemplates = PwmSettingXml.parseTemplateAttribute(defaultElement);
                     final StoredValue storedValue = ValueFactory.fromXmlValues(this, defaultElement, null);
-                    returnObj.put(storedValue, definedTemplates);
+                    returnObj.add(new TemplateSetAssociation(storedValue, definedTemplates));
                 }
             }
             if (returnObj.isEmpty()) {
                 throw new IllegalStateException("no default value for setting " + this.getKey());
             }
-            defaultValues = Collections.unmodifiableMap(returnObj);
+            defaultValues = Collections.unmodifiableList(returnObj);
         }
-        for (final StoredValue storedValue : defaultValues.keySet()) {
-            final List<PwmSettingTemplate> settingTemplateList = defaultValues.get(storedValue);
-            if (settingTemplateList.contains(template)) {
-                return storedValue;
-            }
-        }
-        return defaultValues.keySet().iterator().next(); // return top if no template matches.
+
+        return (StoredValue)associationForTempleSet(defaultValues, templateSet).getObject();
     }
 
-    public Map<PwmSettingTemplate, String> getDefaultValueDebugStrings(final Locale locale, final PwmSettingTemplate.Type templateType)
+    public Map<String,String> getDefaultValueDebugStrings(final Locale locale)
             throws PwmOperationalException, PwmUnrecoverableException
     {
-        final Map<PwmSettingTemplate, String> returnObj = new LinkedHashMap<>();
-        final String defaultDebugStr = this.getDefaultValue(PwmSettingTemplate.DEFAULT).toDebugString(locale);
-        boolean hasNonDefaultValue = false;
-        if (defaultDebugStr != null) {
-            for (final PwmSettingTemplate template : PwmSettingTemplate.valuesOrderedByLabel(locale)) {
-                if (!template.isHidden()  && template.getType() == templateType) {
-                    final String debugStr = this.getDefaultValue(template).toDebugString(locale);
-                    if (!defaultDebugStr.equals(debugStr)) {
-                        hasNonDefaultValue = true;
-                    }
-                    returnObj.put(template, debugStr);
-                }
-            }
+        getDefaultValue(PwmSettingTemplateSet.getDefault()); // ensure value has been read into cache
+        final Map<String,String> returnObj = new LinkedHashMap<>();
+        for (final TemplateSetAssociation templateSetAssociation : defaultValues) {
+            returnObj.put(
+                    StringUtil.join(templateSetAssociation.getSettingTemplates(),","),
+                    ((StoredValue) templateSetAssociation.getObject()).toDebugString(locale)
+            );
         }
-
-        if (!hasNonDefaultValue) {
-            returnObj.clear();
-            returnObj.put(PwmSettingTemplate.DEFAULT, this.getDefaultValue(PwmSettingTemplate.DEFAULT).toDebugString(locale));
-        }
-
-        return returnObj;
+        return Collections.unmodifiableMap(returnObj);
     }
 
     public Map<String, String> getOptions() {
@@ -1182,10 +1196,81 @@ public enum PwmSetting {
         return options;
     }
 
+    public Map<PwmSettingProperty, String> getProperties() {
+        final Map<PwmSettingProperty, String> properties = new LinkedHashMap<>();
+        final Element settingElement = PwmSettingXml.readSettingXml(this);
+        final Element propertiesElement = settingElement.getChild("properties");
+        if (propertiesElement != null) {
+            final List<Element> propertyElements = propertiesElement.getChildren("property");
+            if (propertyElements != null) {
+                for (Element propertyElement : propertyElements) {
+                    if (propertyElement.getAttributeValue("key") == null) {
+                        throw new IllegalStateException("property element is missing 'key' attribute for value " + this.getKey());
+                    }
+                    final PwmSettingProperty property = Helper.readEnumFromString(PwmSettingProperty.class, null, propertyElement.getAttributeValue("key"));
+                    if (property == null) {
+                        throw new IllegalStateException("property element has unknown 'key' attribute for value " + this.getKey());
+                    }
+                    properties.put(property, propertyElement.getValue());
+                }
+            }
+        }
+
+        return properties;
+    }
+
+    public Collection<PwmSettingFlag> getFlags() {
+        if (flags == null) {
+            final Collection<PwmSettingFlag> returnObj = new ArrayList<>();
+            final Element settingElement = PwmSettingXml.readSettingXml(this);
+            final List<Element> flagElements = settingElement.getChildren("flag");
+            for (final Element flagElement : flagElements) {
+                final String value = flagElement.getTextTrim();
+
+                try {
+                    final PwmSettingFlag flag = PwmSettingFlag.valueOf(value);
+                    if (flag != null) {
+                        returnObj.add(flag);
+                    }
+                } catch (IllegalArgumentException e) {
+                    LOGGER.error("unknown flag for setting " + this.getKey() + ", error: unknown flag value: " + value);
+                }
+
+            }
+            flags = Collections.unmodifiableCollection(returnObj);
+        }
+        return flags;
+    }
+
+    public Collection<LDAPPermissionInfo> getLDAPPermissionInfo() {
+        final Element settingElement = PwmSettingXml.readSettingXml(this);
+        final List<Element> permissionElements = settingElement.getChildren(PwmSettingXml.XML_ELEMENT_LDAP_PERMISSION);
+        final List<LDAPPermissionInfo> returnObj = new ArrayList<>();
+        if (permissionElements != null) {
+            for (final Element permissionElement : permissionElements) {
+                final LDAPPermissionInfo.Actor actor = Helper.readEnumFromString(
+                        LDAPPermissionInfo.Actor.class,
+                        null,
+                        permissionElement.getAttributeValue(PwmSettingXml.XML_ATTRIBUTE_PERMISSION_ACTOR)
+                );
+                final LDAPPermissionInfo.Access type = Helper.readEnumFromString(
+                        LDAPPermissionInfo.Access.class,
+                        null,
+                        permissionElement.getAttributeValue(PwmSettingXml.XML_ATTRIBUTE_PERMISSION_ACCESS)
+                );
+                if (actor != null && type != null) {
+                    LDAPPermissionInfo permissionInfo = new LDAPPermissionInfo(type, actor);
+                    returnObj.add(permissionInfo);
+                }
+            }
+        }
+        return Collections.unmodifiableList(returnObj);
+    }
+
     public String getLabel(final Locale locale) {
         final String key = "Setting_Label_" + this.getKey();
         try {
-            return LocaleHelper.getLocalizedMessage(locale, key, null, ConfigEditor.class);
+            return LocaleHelper.getLocalizedMessage(locale, key, null, password.pwm.i18n.PwmSetting.class);
         } catch (MissingResourceException e) {
             return "MISSING_SETTING_LABEL-" + key;
         }
@@ -1194,7 +1279,7 @@ public enum PwmSetting {
     public String getDescription(final Locale locale) {
         final String key = "Setting_Description_" + this.getKey();
         try {
-            final String storedText = LocaleHelper.getLocalizedMessage(locale, key, null, ConfigEditor.class);
+            final String storedText = LocaleHelper.getLocalizedMessage(locale, key, null, password.pwm.i18n.PwmSetting.class);
             final MacroMachine macroMachine = MacroMachine.forStatic();
             return macroMachine.expandMacros(storedText);
         } catch (MissingResourceException e) {
@@ -1202,27 +1287,23 @@ public enum PwmSetting {
         }
     }
 
-    public String getPlaceholder(final PwmSettingTemplate template) {
-        if (placeholder == null) {
-            final Map<PwmSettingTemplate, String> returnObj = new HashMap<>();
+    public String getExample(final PwmSettingTemplateSet template) {
+        if (examples == null) {
+            final List<TemplateSetAssociation> returnObj = new ArrayList<>();
             final MacroMachine macroMachine = MacroMachine.forStatic();
-            for (final PwmSettingTemplate loopTemplate : PwmSettingTemplate.values()) {
-                final Element settingElement = PwmSettingXml.readSettingXml(this);
-                final XPathFactory xpfac = XPathFactory.instance();
-                Element defaultElement = null;
-                if (loopTemplate != null) {
-                    XPathExpression xp = xpfac.compile("placeholder[@template=\"" + loopTemplate.toString() + "\"]");
-                    defaultElement = (Element) xp.evaluateFirst(settingElement);
-                }
-                if (defaultElement == null) {
-                    XPathExpression xp = xpfac.compile("placeholder[not(@template)]");
-                    defaultElement = (Element) xp.evaluateFirst(settingElement);
-                }
-                returnObj.put(loopTemplate, defaultElement == null ? "" : macroMachine.expandMacros(defaultElement.getValue()));
+            final Element settingElement = PwmSettingXml.readSettingXml(this);
+            final List<Element> exampleElements = settingElement.getChildren(PwmSettingXml.XML_ELEMENT_EXAMPLE);
+            for (final Element exampleElement : exampleElements) {
+                final Set<PwmSettingTemplate> definedTemplates = PwmSettingXml.parseTemplateAttribute(exampleElement);
+                final String exampleString = macroMachine.expandMacros(exampleElement.getText());
+                returnObj.add(new TemplateSetAssociation(exampleString, definedTemplates));
             }
-            placeholder = returnObj;
+            if (returnObj.isEmpty()) {
+                returnObj.add(new TemplateSetAssociation("",Collections.<PwmSettingTemplate>emptySet()));
+            }
+            examples = returnObj;
         }
-        return placeholder.get(template);
+        return (String)associationForTempleSet(examples,template).getObject();
     }
 
     public boolean isRequired() {
@@ -1273,39 +1354,6 @@ public enum PwmSetting {
 
     }
 
-    public static Map<PwmSettingCategory, List<PwmSetting>> valuesByFilter(
-            final PwmSettingTemplate template,
-            final PwmSettingCategory parent,
-            final int level) {
-        final List<PwmSetting> settingList = new ArrayList<>(Arrays.asList(PwmSetting.values()));
-
-        for (Iterator<PwmSetting> iter = settingList.iterator(); iter.hasNext(); ) {
-            final PwmSetting loopSetting = iter.next();
-            if (parent != null && loopSetting.getCategory().getParent() != parent) {
-                iter.remove();
-            } else if (level >= 0 && loopSetting.getLevel() > level) {
-                iter.remove();
-            } else if (template != null && !loopSetting.getTemplates().contains(template)) {
-                iter.remove();
-            } else if (loopSetting.isHidden() || loopSetting.getCategory().isHidden()) {
-                iter.remove();
-            }
-        }
-
-        final Map<PwmSettingCategory, List<PwmSetting>> returnMap = new TreeMap<>();
-        for (final PwmSetting loopSetting : settingList) {
-            if (!returnMap.containsKey(loopSetting.getCategory())) {
-                returnMap.put(loopSetting.getCategory(), new ArrayList<PwmSetting>());
-            }
-            returnMap.get(loopSetting.getCategory()).add(loopSetting);
-        }
-        for (final PwmSettingCategory category : returnMap.keySet()) {
-            returnMap.put(category, Collections.unmodifiableList(returnMap.get(category)));
-        }
-
-        return Collections.unmodifiableMap(returnMap);
-    }
-
     public static PwmSetting forKey(final String key) {
         for (final PwmSetting loopSetting : values()) {
             if (loopSetting.getKey().equals(key)) {
@@ -1332,7 +1380,7 @@ public enum PwmSetting {
     public static Map<SettingStat, Object> getStats() {
         final Map<SettingStat,Object> returnObj = new LinkedHashMap<>();
         {
-            returnObj.put(SettingStat.Total,PwmSetting.values().length);
+            returnObj.put(SettingStat.Total, password.pwm.config.PwmSetting.values().length);
         }
         {
             int hasProfile = 0;
@@ -1354,6 +1402,47 @@ public enum PwmSetting {
             returnObj.put(SettingStat.syntaxCounts, syntaxCounts);
         }
         return returnObj;
+    }
+
+    public static class TemplateSetAssociation {
+        private final Object object;
+        private final Set<PwmSettingTemplate> settingTemplates;
+
+        public TemplateSetAssociation(Object association, Set<PwmSettingTemplate> settingTemplates) {
+            this.object = association;
+            this.settingTemplates = settingTemplates;
+        }
+
+        public Object getObject() {
+            return object;
+        }
+
+        public Set<PwmSettingTemplate> getSettingTemplates() {
+            return settingTemplates;
+        }
+    }
+
+    static TemplateSetAssociation associationForTempleSet(final List<TemplateSetAssociation> associationSets, final PwmSettingTemplateSet pwmSettingTemplate) {
+        if (associationSets == null || associationSets.isEmpty()) {
+            return null;
+        }
+
+        if (associationSets.size() == 1) {
+            return associationSets.iterator().next();
+        }
+
+        for (int matchCountExamSize  = associationSets.size(); matchCountExamSize > 0; matchCountExamSize--) {
+            for (final TemplateSetAssociation associationSet : associationSets) {
+                final Set<PwmSettingTemplate> temporarySet = new HashSet<>(associationSet.getSettingTemplates());
+                temporarySet.retainAll(pwmSettingTemplate.getTemplates());
+                final int matchCount = temporarySet.size();
+                if (matchCount == matchCountExamSize) {
+                    return associationSet;
+                }
+            }
+        }
+
+        return associationSets.iterator().next();
     }
 }
 

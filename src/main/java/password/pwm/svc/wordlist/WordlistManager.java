@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  S  ee the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -27,7 +27,6 @@ import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
 import password.pwm.config.PwmSetting;
 import password.pwm.error.PwmException;
-import password.pwm.util.Helper;
 import password.pwm.util.localdb.LocalDB;
 import password.pwm.util.logging.PwmLogger;
 
@@ -41,9 +40,8 @@ import java.util.TreeMap;
  */
 public class WordlistManager extends AbstractWordlist implements Wordlist {
 
-    private static final PwmLogger LOGGER = PwmLogger.forClass(WordlistManager.class);
-
     public WordlistManager() {
+        LOGGER = PwmLogger.forClass(WordlistManager.class);
     }
 
 
@@ -60,30 +58,21 @@ public class WordlistManager extends AbstractWordlist implements Wordlist {
         super.init(pwmApplication);
         final boolean caseSensitive = pwmApplication.getConfig().readSettingAsBoolean(PwmSetting.WORDLIST_CASE_SENSITIVE);
         final int checkSize = (int)pwmApplication.getConfig().readSettingAsLong(PwmSetting.PASSWORD_WORDLIST_WORDSIZE);
-        final WordlistConfiguration wordlistConfiguration = new WordlistConfiguration(caseSensitive, checkSize);
+        final String wordlistUrl = readAutoImportUrl();
 
+        this.wordlistConfiguration = new WordlistConfiguration(caseSensitive, checkSize, wordlistUrl);
         this.DEBUG_LABEL = PwmConstants.PWM_APP_NAME + "-Wordlist";
-
-        final Thread t = new Thread(new Runnable() {
-            public void run()
-            {
-                LOGGER.debug(DEBUG_LABEL + " starting up in background thread");
-                try {
-                    startup(pwmApplication.getLocalDB(), wordlistConfiguration);
-                } catch (Exception e) {
-                    try {
-                        LOGGER.warn("error during startup: " + e.getMessage());
-                    } catch (Exception moreE) { /* probably due to shut down */ }
-                }
-            }
-        }, Helper.makeThreadName(pwmApplication, WordlistManager.class));
-
-        t.start();
+        backgroundStartup();
     }
 
     @Override
     protected PwmApplication.AppAttribute getMetaDataAppAttribute() {
         return PwmApplication.AppAttribute.WORDLIST_METADATA;
+    }
+
+    @Override
+    protected PwmSetting getWordlistFileSetting() {
+        return PwmSetting.WORDLIST_FILENAME;
     }
 
     @Override

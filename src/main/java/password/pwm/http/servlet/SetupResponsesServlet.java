@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ import com.novell.ldapchai.provider.ChaiProvider;
 import password.pwm.Permission;
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
-import password.pwm.Validator;
+import password.pwm.util.Validator;
 import password.pwm.bean.ResponseInfoBean;
 import password.pwm.bean.UserInfoBean;
 import password.pwm.config.PwmSetting;
@@ -119,12 +119,12 @@ public class SetupResponsesServlet extends AbstractPwmServlet {
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         final UserInfoBean uiBean = pwmSession.getUserInfoBean();
 
-        if (!pwmSession.getSessionStateBean().isAuthenticated()) {
+        if (!pwmSession.isAuthenticated()) {
             pwmRequest.respondWithError(PwmError.ERROR_AUTHENTICATION_REQUIRED.toInfo());
             return;
         }
 
-        if (pwmSession.getLoginInfoBean().getAuthenticationType() == AuthenticationType.AUTH_WITHOUT_PASSWORD) {
+        if (pwmSession.getLoginInfoBean().getType() == AuthenticationType.AUTH_WITHOUT_PASSWORD) {
             throw new PwmUnrecoverableException(PwmError.ERROR_PASSWORD_REQUIRED);
         }
 
@@ -140,12 +140,12 @@ public class SetupResponsesServlet extends AbstractPwmServlet {
         }
 
         // check if the locale has changed since first seen.
-        if (pwmSession.getSessionStateBean().getLocale() != pwmSession.getSetupResponseBean().getUserLocale()) {
-            pwmSession.clearSessionBean(SetupResponsesBean.class);
-            pwmSession.getSetupResponseBean().setUserLocale(pwmSession.getSessionStateBean().getLocale());
+        if (pwmSession.getSessionStateBean().getLocale() != pwmApplication.getSessionStateService().getBean(pwmRequest, SetupResponsesBean.class).getUserLocale()) {
+            pwmRequest.getPwmApplication().getSessionStateService().clearBean(pwmRequest, SetupResponsesBean.class);
+            pwmApplication.getSessionStateService().getBean(pwmRequest, SetupResponsesBean.class).setUserLocale(pwmSession.getSessionStateBean().getLocale());
         }
 
-        SetupResponsesBean setupResponsesBean = pwmSession.getSessionBean(SetupResponsesBean.class);
+        SetupResponsesBean setupResponsesBean = pwmApplication.getSessionStateService().getBean(pwmRequest, SetupResponsesBean.class);
         initializeBean(pwmRequest, setupResponsesBean);
 
         // check to see if the user has any challenges assigned
@@ -183,8 +183,8 @@ public class SetupResponsesServlet extends AbstractPwmServlet {
                     return;
 
                 case changeResponses:
-                    pwmSession.clearSessionBean(SetupResponsesBean.class);
-                    setupResponsesBean = pwmSession.getSessionBean(SetupResponsesBean.class);
+                    pwmApplication.getSessionStateService().clearBean(pwmRequest, SetupResponsesBean.class);
+                    setupResponsesBean = pwmApplication.getSessionStateService().getBean(pwmRequest, SetupResponsesBean.class);
                     this.initializeBean(pwmRequest, setupResponsesBean);
                     setupResponsesBean.setUserLocale(pwmSession.getSessionStateBean().getLocale());
 
@@ -208,7 +208,7 @@ public class SetupResponsesServlet extends AbstractPwmServlet {
             pwmApplication.getCrService().clearResponses(pwmSession, theUser, userGUID);
             UserStatusReader userStatusReader = new UserStatusReader(pwmApplication, pwmRequest.getSessionLabel());
             userStatusReader.populateLocaleSpecificUserInfoBean(pwmSession.getUserInfoBean(),pwmRequest.getLocale());
-            pwmSession.clearSessionBean(SetupResponsesBean.class);
+            pwmRequest.getPwmApplication().getSessionStateService().clearBean(pwmRequest, SetupResponsesBean.class);
 
             // mark the event log
             final UserAuditRecord auditRecord = pwmApplication.getAuditManager().createUserAuditRecord(
@@ -231,11 +231,11 @@ public class SetupResponsesServlet extends AbstractPwmServlet {
     )
             throws PwmUnrecoverableException, IOException, ServletException, ChaiUnavailableException
     {
-        pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.ModuleBean, setupResponsesBean);
-        pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.ModuleBean_String, pwmRequest.getPwmApplication().getSecureService().encryptObjectToString(setupResponsesBean));
-        pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.SetupResponses_ResponseInfo, pwmRequest.getPwmSession().getUserInfoBean().getResponseInfoBean());
+        pwmRequest.setAttribute(PwmRequest.Attribute.ModuleBean, setupResponsesBean);
+        pwmRequest.setAttribute(PwmRequest.Attribute.ModuleBean_String, pwmRequest.getPwmApplication().getSecureService().encryptObjectToString(setupResponsesBean));
+        pwmRequest.setAttribute(PwmRequest.Attribute.SetupResponses_ResponseInfo, pwmRequest.getPwmSession().getUserInfoBean().getResponseInfoBean());
 
-        if (setupResponsesBean.isHasExistingResponses()) {
+        if (setupResponsesBean.isHasExistingResponses() && !pwmRequest.getPwmSession().getUserInfoBean().isRequiresResponseConfig()) {
             pwmRequest.forwardToJsp(PwmConstants.JSP_URL.SETUP_RESPONSES_EXISTING);
             return;
         }
@@ -271,8 +271,8 @@ public class SetupResponsesServlet extends AbstractPwmServlet {
                     setupResponsesBean.getHelpdeskResponseData().getResponseMap()
             );
             saveResponses(pwmRequest, responses);
-            pwmRequest.getPwmSession().clearSessionBean(SetupResponsesBean.class);
-            pwmRequest.forwardToSuccessPage(Message.Success_SetupResponse);
+            pwmRequest.getPwmApplication().getSessionStateService().clearBean(pwmRequest, SetupResponsesBean.class);
+            pwmRequest.getPwmResponse().forwardToSuccessPage(Message.Success_SetupResponse);
         } catch (PwmOperationalException e) {
             LOGGER.error(pwmRequest.getSessionLabel(), e.getErrorInformation());
             pwmRequest.respondWithError(e.getErrorInformation());
@@ -369,7 +369,6 @@ public class SetupResponsesServlet extends AbstractPwmServlet {
         userStatusReader.populateActorUserInfoBean(pwmSession, uiBean.getUserIdentity());
         pwmApplication.getStatisticsManager().incrementValue(Statistic.SETUP_RESPONSES);
         pwmSession.getUserInfoBean().setRequiresResponseConfig(false);
-        pwmSession.getSessionStateBean().setSessionSuccess(Message.Success_SetupResponse, null);
         pwmApplication.getAuditManager().submit(AuditEvent.SET_RESPONSES, pwmSession.getUserInfoBean(), pwmSession);
     }
 
@@ -474,7 +473,7 @@ public class SetupResponsesServlet extends AbstractPwmServlet {
 
             responseSet.meetsChallengeSetRequirements(challengeSet);
 
-            final int minRandomRequiredSetup = pwmRequest.getPwmSession().getSetupResponseBean().getResponseData().getMinRandomSetup();
+            final int minRandomRequiredSetup = pwmRequest.getPwmApplication().getSessionStateService().getBean(pwmRequest, SetupResponsesBean.class).getResponseData().getMinRandomSetup();
             if (minRandomRequiredSetup == 0) { // if using recover style, then all readResponseSet must be supplied at this point.
                 if (responseSet.getChallengeSet().getRandomChallenges().size() < challengeSet.getRandomChallenges().size()) {
                     throw new ChaiValidationException("too few random responses", ChaiError.CR_TOO_FEW_RANDOM_RESPONSES);

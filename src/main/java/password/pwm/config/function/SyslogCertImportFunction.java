@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,8 +47,8 @@ public class SyslogCertImportFunction implements SettingUIFunction {
             PwmRequest pwmRequest,
             StoredConfigurationImpl storedConfiguration,
             PwmSetting setting,
-            String profile
-    )
+            String profile,
+            String extraData)
             throws PwmOperationalException, PwmUnrecoverableException {
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         final PwmSession pwmSession = pwmRequest.getPwmSession();
@@ -75,7 +75,7 @@ public class SyslogCertImportFunction implements SettingUIFunction {
             }
         }
 
-        final UserIdentity userIdentity = pwmSession.getSessionStateBean().isAuthenticated() ? pwmSession.getUserInfoBean().getUserIdentity() : null;
+        final UserIdentity userIdentity = pwmSession.isAuthenticated() ? pwmSession.getUserInfoBean().getUserIdentity() : null;
         storedConfiguration.writeSetting(setting, new X509CertificateValue(resultCertificates), userIdentity);
         return Message.getLocalizedMessage(pwmSession.getSessionStateBean().getLocale(), Message.Success_Unknown, pwmApplication.getConfig());
     }

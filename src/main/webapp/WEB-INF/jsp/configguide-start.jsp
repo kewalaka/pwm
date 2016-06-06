@@ -1,9 +1,12 @@
+<%@ page import="password.pwm.PwmEnvironment" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
+<%@ page import="password.pwm.util.StringUtil" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -20,31 +23,36 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_LOCALE); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_THEME); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.NO_IDLE_TIMEOUT); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_LOCALE); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.INCLUDE_CONFIG_CSS); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.NO_IDLE_TIMEOUT); %>
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
     <%@ include file="fragment/configguide-header.jsp"%>
     <div id="centerbody">
+        <span><%=PwmConstants.PWM_APP_NAME_VERSION%></span>
+        <pwm:if test="<%=PwmIfTest.trialMode%>"><span><pwm:display key="Header_TrialMode" bundle="Admin"/></span></pwm:if>
+        <br/>
         <pwm:display key="Display_ConfigManagerNew" bundle="Config" value1="<%=PwmConstants.PWM_APP_NAME%>"/>
         <%@ include file="/WEB-INF/jsp/fragment/message.jsp" %>
-        <%--
+
         <p>
-            Application Configuration Path: <code><%=StringEscapeUtils.escapeHtml4(JspUtility.getPwmRequest(pageContext).getPwmApplication().getApplicationPath().getAbsolutePath())%></code>
+            <pwm:if test="<%=PwmIfTest.appliance%>" negate="true">
+                Application Configuration Path: <code><%=StringUtil.escapeHtml(JspUtility.getPwmRequest(pageContext).getPwmApplication().getPwmEnvironment().getApplicationPath().getAbsolutePath())%></code>
+            </pwm:if>
         </p>
-        --%>
+
         <br/>
         <table style="border:0">
             <tr style="border:0">
                 <td style="border:0" class="menubutton_key">
                     <a class="menubutton" id="button-startConfigGuide">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-rocket"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-rocket"></span></pwm:if>
                         <pwm:display key="MenuItem_StartConfigGuide" bundle="Config"/>
                     </a>
                 </td>
@@ -55,7 +63,7 @@
             <tr style="border:0">
                 <td style="border:0" class="menubutton_key">
                     <a class="menubutton" id="button-manualConfig">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-cogs"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-cogs"></span></pwm:if>
                         <pwm:display key="MenuItem_ManualConfig" bundle="Config"/>
                     </a>
                 </td>
@@ -66,7 +74,7 @@
             <tr style="border:0">
                 <td style="border:0" class="menubutton_key">
                     <a class="menubutton" id="button-uploadConfig">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-upload"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-upload"></span></pwm:if>
                         <pwm:display key="MenuItem_UploadConfig" bundle="Config"/>
                     </a>
                 </td>
@@ -93,10 +101,10 @@
             PWM_MAIN.addEventHandler('button-manualConfig', 'click', function () {
                 if (PWM_GLOBAL['setting-displayEula']) {
                     PWM_MAIN.showEula(true,function(){
-                        skipWizard();
+                        PWM_GUIDE.skipGuide();
                     });
                 } else {
-                    skipWizard();
+                    PWM_GUIDE.skipGuide();
                 }
             });
             PWM_MAIN.addEventHandler('button-uploadConfig', 'click', function () {
@@ -110,18 +118,8 @@
             });
 
         });
-
-        function skipWizard() {
-            PWM_MAIN.showConfirmDialog({text:'<pwm:display key="Confirm_SkipGuide" bundle="Config"/>',okAction:function() {
-                PWM_GUIDE.gotoStep('FINISH');
-            }});
-        }
     </script>
 </pwm:script>
-<pwm:script-ref url="/public/resources/js/configguide.js"/>
-<pwm:script-ref url="/public/resources/js/configmanager.js"/>
-<pwm:script-ref url="/public/resources/js/uilibrary.js"/>
-<pwm:script-ref url="/public/resources/js/admin.js"/>
 <%@ include file="fragment/footer.jsp" %>
 </body>
 </html>

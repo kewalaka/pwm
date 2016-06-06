@@ -1,11 +1,17 @@
+<%@ page import="password.pwm.config.PwmSettingTemplate" %>
 <%@ page import="password.pwm.http.servlet.configguide.ConfigGuideForm" %>
 <%@ page import="password.pwm.ldap.schema.SchemaOperationResult" %>
+<%@ page import="java.util.Set" %>
+<%@ page import="javax.naming.event.EventDirContext" %>
+<%@ page import="password.pwm.ldap.schema.SchemaExtender" %>
+<%@ page import="password.pwm.ldap.schema.SchemaDefinition" %>
+<%@ page import="java.util.List" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -22,13 +28,14 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_LOCALE); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_THEME); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_LOCALE); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.INCLUDE_CONFIG_CSS); %>
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%
-    final PwmRequest pwmRequest = PwmRequest.forRequest(request, response);
-    ConfigGuideBean configGuideBean = JspUtility.getPwmSession(pageContext).getSessionBean(ConfigGuideBean.class);
+    ConfigGuideBean configGuideBean = JspUtility.getSessionBean(pageContext, ConfigGuideBean.class);
+    final Set<PwmSettingTemplate> templateSet =  ConfigGuideForm.generateStoredConfig(configGuideBean).getTemplateSet().getTemplates();
+    boolean builtinExtenderAvailable = templateSet.contains(PwmSettingTemplate.NOVL) || templateSet.contains(PwmSettingTemplate.NOVL_IDM);
     boolean existingSchemaGood = false;
     String schemaActivityLog = "";
     try {
@@ -40,13 +47,13 @@
     }
 %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
-<link href="<pwm:context/><pwm:url url='/public/resources/configStyle.css'/>" rel="stylesheet" type="text/css"/>
 <div id="wrapper">
     <%@ include file="fragment/configguide-header.jsp"%>
     <div id="centerbody">
+        <% if (builtinExtenderAvailable) { %>
         <form id="formData">
             <%@ include file="/WEB-INF/jsp/fragment/message.jsp" %>
             <br class="clear"/>
@@ -56,7 +63,7 @@
                 </div>
                 <div class="setting_body">
                     <p>
-                    <pwm:display key="Display_ConfigGuideLdapSchema" bundle="Config"/>
+                        <pwm:display key="Display_ConfigGuideLdapSchema" bundle="Config"/>
                     </p>
                     <div>
                         <div id="titlePane_<%=ConfigGuideForm.FormParameter.PARAM_LDAP_HOST%>" style="padding-left: 5px; padding-top: 5px">
@@ -80,12 +87,37 @@
                         <% } %>
                     </p>
                     <button class="btn" type="button" id="button-extendSchema" <%=existingSchemaGood?"disabled=\"disabled\"":""%>>
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-bolt"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-bolt"></span></pwm:if>
                         Extend Schema
                     </button>
                 </div>
             </div>
         </form>
+        <% } else { %>
+        <div class="setting_outline">
+            <div class="setting_title">
+                LDAP Schema
+            </div>
+            <div class="setting_body">
+                <% final String ldapTemplateName = PwmSetting.TEMPLATE_LDAP.getOptions().get(configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_TEMPLATE_LDAP)); %>
+                <p>The storage location is set to <i>LDAP</i>, and the LDAP directory setting template is <i><%=ldapTemplateName%></i>.</p>
+                <p>This configuration expects the LDAP server's schema to be extended or you can adjust the configuration to use pre-existing defined attributes in your LDAP directory.</p>
+                <p>LDIF files to process the schema extension are included for several directory types.</p>
+                <p>For reference, the standard schema definition is displayed below.</p>
+                <%List<SchemaDefinition> schemaDefinitions = SchemaDefinition.getPwmSchemaDefinitions();%>
+                <div class="overflow-panel-medium border">
+                    <code>
+                        <% for (SchemaDefinition defintion : schemaDefinitions) { %>
+                        Type: <%=defintion.getSchemaType()%><br/>
+                        Name: <%=defintion.getName()%><br/>
+                        Definition: <%=defintion.getDefinition()%><br/>
+                        <br/><br/>
+                        <% } %>
+                    </code>
+                </div>
+            </div>
+        </div>
+        <% } %>
         <br/>
         <%@ include file="fragment/configguide-buttonbar.jsp" %>
     </div>
@@ -100,9 +132,6 @@
         });
     </script>
 </pwm:script>
-<pwm:script-ref url="/public/resources/js/configguide.js"/>
-<pwm:script-ref url="/public/resources/js/configmanager.js"/>
-<pwm:script-ref url="/public/resources/js/admin.js"/>
 <%@ include file="fragment/footer.jsp" %>
 </body>
 </html>

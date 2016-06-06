@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@ package password.pwm.http;
 import password.pwm.PwmConstants;
 import password.pwm.config.PwmSetting;
 import password.pwm.error.PwmUnrecoverableException;
+import password.pwm.http.bean.PwmSessionBean;
 import password.pwm.i18n.PwmDisplayBundle;
 import password.pwm.util.LocaleHelper;
 import password.pwm.util.logging.PwmLogger;
@@ -44,23 +45,33 @@ public abstract class JspUtility {
             ServletRequest request
     )
     {
-        final PwmRequest pwmRequest = (PwmRequest)request.getAttribute(PwmConstants.REQUEST_ATTR.PwmRequest.toString());
+        final PwmRequest pwmRequest = (PwmRequest)request.getAttribute(PwmRequest.Attribute.PwmRequest.toString());
         if (pwmRequest == null) {
             LOGGER.warn("unable to load pwmRequest object during jsp execution");
         }
         return pwmRequest;
     }
 
-    public static Serializable getAttribute(final PageContext pageContext, final PwmConstants.REQUEST_ATTR requestAttr) {
+    public static <E extends PwmSessionBean> E getSessionBean(final PageContext pageContext, final Class<E> theClass) {
+        final PwmRequest pwmRequest = forRequest(pageContext.getRequest());
+        try {
+            return pwmRequest.getPwmApplication().getSessionStateService().getBean(pwmRequest, theClass);
+        } catch (PwmUnrecoverableException e) {
+            LOGGER.warn("unable to load pwmRequest object during jsp execution: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public static Serializable getAttribute(final PageContext pageContext, final PwmRequest.Attribute requestAttr) {
         final PwmRequest pwmRequest = forRequest(pageContext.getRequest());
         return pwmRequest.getAttribute(requestAttr);
     }
 
-    public static void setFlag(final PageContext pageContext, final PwmRequest.Flag flag) {
+    public static void setFlag(final PageContext pageContext, final PwmRequestFlag flag) {
         setFlag(pageContext, flag, true);
     }
 
-    public static void setFlag(final PageContext pageContext, final PwmRequest.Flag flag, final boolean value) {
+    public static void setFlag(final PageContext pageContext, final PwmRequestFlag flag, final boolean value) {
         final PwmRequest pwmRequest;
         try {
             pwmRequest = PwmRequest.forRequest(
@@ -76,7 +87,7 @@ public abstract class JspUtility {
         }
     }
 
-    public static boolean isFlag(final HttpServletRequest request, final PwmRequest.Flag flag) {
+    public static boolean isFlag(final HttpServletRequest request, final PwmRequestFlag flag) {
         final PwmRequest pwmRequest = forRequest(request);
         return pwmRequest != null && pwmRequest.isFlag(flag);
     }
@@ -120,5 +131,12 @@ public abstract class JspUtility {
     public static PwmRequest getPwmRequest(final PageContext pageContext) {
         return forRequest(pageContext.getRequest());
     }
+
+    public static String localizedString(final PageContext pageContext, final String key, Class<? extends PwmDisplayBundle> bundleClass, final String... values) {
+        final PwmRequest pwmRequest = forRequest(pageContext.getRequest());
+        return LocaleHelper.getLocalizedMessage(pwmRequest.getLocale(), key, pwmRequest.getConfig(), bundleClass, values);
+    }
 }
+
+
 

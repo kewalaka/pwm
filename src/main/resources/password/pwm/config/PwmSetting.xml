@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -26,11 +26,45 @@
   modified by administrators.  Any changes must match the compiled PwmSettings.java enum object.
 -->
 <settings>
+    <setting hidden="false" key="template.ldap" level="0">
+        <flag>NoDefault</flag>
+        <default>
+            <value>DEFAULT</value>
+        </default>
+        <options>
+            <option value="AD">Microsoft Active Directory</option>
+            <option value="ORACLE_DS">Oracle Directory Server</option>
+            <option value="NOVL">NetIQ eDirectory</option>
+            <option value="NOVL_IDM">NetIQ IDM / OAuth Integration</option>
+            <option value="OPEN_LDAP">OpenLDAP</option>
+            <option value="DEFAULT">Others</option>
+        </options>
+        <properties>
+            <property key="ModificationWarning">Changing this setting will change default values throughout the configuration.  Are you sure you wish to modify this setting?</property>
+        </properties>
+    </setting>
+    <setting hidden="false" key="template.storage" level="0">
+        <flag>NoDefault</flag>
+        <default>
+            <value>LDAP</value>
+        </default>
+        <options>
+            <option value="LDAP">LDAP</option>
+            <option value="DB">Remote Database</option>
+            <option value="LOCALDB">LocalDB (Testing Only)</option>
+        </options>
+        <properties>
+            <property key="ModificationWarning">Changing this setting will change default values throughout the configuration.  Are you sure you wish to modify this setting?</property>
+        </properties>
+    </setting>
+    <setting hidden="false" key="notes.noteText" level="0">
+        <flag>NoDefault</flag>
+        <default/>
+    </setting>
     <setting hidden="false" key="pwm.selfURL" level="0">
         <regex>^(http|https)://.+$</regex>
-        <default>
-            <value>http://www.example.com/password</value>
-        </default>
+        <example>http://www.example.com/password</example>
+        <default/>
     </setting>
     <setting hidden="false" key="pwm.versionCheck.enable" level="1" required="true">
         <default>
@@ -69,6 +103,9 @@
         </default>
     </setting>
     <setting hidden="false" key="idleTimeoutSeconds" level="1" required="true">
+        <properties>
+            <property key="Minimum">60</property>
+        </properties>
         <default>
             <value>300</value>
         </default>
@@ -276,6 +313,7 @@
         </default>
     </setting>
     <setting hidden="false" key="password.allowChange.queryMatch" level="2" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value><![CDATA[{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(objectClass=*)"}]]></value>
         </default>
@@ -286,14 +324,10 @@
         </default>
     </setting>
     <setting hidden="false" key="password.require.form" level="1">
+        <flag>Form_HideOptions</flag>
         <default>
             <value />
         </default>
-        <options>
-            <option value="types">[]</option>
-            <option value="required">hide</option>
-            <option value="hideOptions">true</option>
-        </options>
     </setting>
     <setting hidden="false" key="password.change.requireCurrent" level="1" required="true">
         <default>
@@ -306,11 +340,13 @@
         </options>
     </setting>
     <setting hidden="false" key="display.password.changeAgreement" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value />
         </default>
     </setting>
     <setting hidden="false" key="display.password.completeMessage" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value />
         </default>
@@ -366,56 +402,52 @@
     </setting>
     <setting hidden="false" key="ldap.serverUrls" level="0" required="false">
         <regex>^(ldap|ldaps)://[a-zA-Z0-9.-]+:[0-9]+$</regex>
-        <placeholder>ldaps://ldap.example.com:636</placeholder>
+        <example>ldaps://ldap.example.com:636</example>
+        <example template="AD">ldaps://server1.ad.example.com:636</example>
         <default/>
     </setting>
     <setting hidden="false" key="ldap.serverCerts" level="0" required="true">
         <default/>
-        <options>
-            <option value="ImportHandler">password.pwm.config.function.LdapCertImportFunction</option>
-        </options>
+        <properties>
+            <property key="Cert_ImportHandler">password.pwm.config.function.LdapCertImportFunction</property>
+        </properties>
     </setting>
     <setting hidden="false" key="ldap.proxy.username" level="0" required="false">
-        <placeholder>cn=@PwmAppName@-Proxy,o=example</placeholder>
-        <placeholder template="AD">CN=@PwmAppName@-Proxy,CN=Users,DC=ad,DC=DC=site,DC=example,DC=com</placeholder>
-        <placeholder template="ORACLE_DS">cn=@PwmAppName@-Proxy,cn=Administrators,cn=config</placeholder>
-        <placeholder template="OPEN_LDAP">cn=@PwmAppName@-Proxy,dc=example,dc=com</placeholder>
+        <flag>ldapDNsyntax</flag>
+        <example>cn=@PwmAppName@-Proxy,o=example</example>
+        <example template="AD">CN=@PwmAppName@-Proxy,CN=Users,DC=ad,DC=site,DC=example,DC=com</example>
+        <example template="ORACLE_DS">cn=@PwmAppName@-Proxy,cn=Administrators,cn=config</example>
+        <example template="OPEN_LDAP">cn=@PwmAppName@-Proxy,dc=example,dc=com</example>
         <default/>
-        <options>
-            <option value="ldapDNsyntax">true</option>
-        </options>
     </setting>
     <setting hidden="false" key="ldap.proxy.password" level="0">
     </setting>
     <setting hidden="false" key="ldap.rootContexts" level="0">
-        <placeholder>ou=users,o=example</placeholder>
-        <placeholder template="AD">cn=users,dc=site,dc=example,dc=net</placeholder>
+        <flag>ldapDNsyntax</flag>
+        <example>ou=users,o=example</example>
+        <example template="AD">cn=users,dc=site,dc=example,dc=net</example>
         <default/>
-        <options>
-            <option value="ldapDNsyntax">true</option>
-        </options>
     </setting>
     <setting hidden="false" key="ldap.selectableContexts" level="2">
         <regex>^.+:::.+$</regex>
         <default />
     </setting>
     <setting hidden="false" key="ldap.testuser.username" level="0">
-        <placeholder>cn=@PwmAppName@-Testuser,o=example</placeholder>
-        <placeholder template="AD">CN=@PwmAppName@-Testuser,CN=Users,DC=ad,DC=DC=site,DC=example,DC=com</placeholder>
-        <placeholder template="ORACLE_DS">cn=@PwmAppName@-Testuser,cn=Administrators,cn=config</placeholder>
-        <placeholder template="OPEN_LDAP">cn=@PwmAppName@-Testuser,dc=example,dc=com</placeholder>
+        <flag>ldapDNsyntax</flag>
+        <example>cn=@PwmAppName@-Testuser,o=example</example>
+        <example template="AD">CN=@PwmAppName@-Testuser,CN=Users,DC=ad,DC=site,DC=example,DC=com</example>
+        <example template="ORACLE_DS">cn=@PwmAppName@-Testuser,cn=Administrators,cn=config</example>
+        <example template="OPEN_LDAP">cn=@PwmAppName@-Testuser,dc=example,dc=com</example>
         <default>
             <value />
         </default>
-        <options>
-            <option value="ldapDNsyntax">true</option>
-        </options>
     </setting>
     <setting hidden="false" key="pwmAdmin.queryMatch" level="0" required="true">
-        <placeholder>cn=@PwmAppName@-Admins,ou=Groups,o=example</placeholder>
-        <placeholder template="AD">CN=@PwmAppName@-Administrators,CN=Builtin,DC=site,DC=example,DC=net</placeholder>
-        <placeholder template="ORACLE_DS">cn=@PwmAppName@-Admins,OU=Groups,DC=ad,DC=site,DC=example,DC=net</placeholder>
-        <placeholder template="OPEN_LDAP">cn=@PwmAppName@-Admins,dc=example,dc=com</placeholder>
+        <ldapPermission actor="proxy" access="read"/>
+        <example>cn=@PwmAppName@-Admins,ou=Groups,o=example</example>
+        <example template="AD">CN=@PwmAppName@-Administrators,CN=Builtin,DC=site,DC=example,DC=net</example>
+        <example template="ORACLE_DS">cn=@PwmAppName@-Admins,OU=Groups,DC=ad,DC=site,DC=example,DC=net</example>
+        <example template="OPEN_LDAP">cn=@PwmAppName@-Admins,dc=example,dc=com</example>
         <default>
             <value/>
         </default>
@@ -436,13 +468,20 @@
         <default>
             <value><![CDATA[pwmUser]]></value>
         </default>
+        <default template="DB">
+            <value><![CDATA[]]></value>
+        </default>
     </setting>
     <setting hidden="false" key="passwordLastUpdateAttribute" level="2">
+        <ldapPermission actor="proxy" access="write"/>
         <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
-        <default>
+        <default template="ORACLE_DS">
+            <value/>
+        </default>
+        <default template="LDAP">
             <value><![CDATA[pwmLastPwdUpdate]]></value>
         </default>
-        <default template="ORACLE_DS">
+        <default>
             <value/>
         </default>
     </setting>
@@ -473,10 +512,10 @@
         <default>
             <value>30</value>
         </default>
-        <options>
-            <option value="max">500</option>
-            <option value="min">1</option>
-        </options>
+        <properties>
+            <property key="Maximum">500</property>
+            <property key="Minimum">1</property>
+        </properties>
     </setting>
     <setting hidden="false" key="ldap.guidAttribute" level="1" required="true">
         <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
@@ -488,6 +527,7 @@
         </default>
     </setting>
     <setting hidden="false" key="ldap.namingAttribute" level="1" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
         <default>
             <value><![CDATA[cn]]></value>
@@ -545,9 +585,10 @@
         </default>
     </setting>
     <setting hidden="false" key="ldap.username.attr" level="2">
+        <ldapPermission actor="proxy" access="read"/>
         <regex>(^$|^[a-zA-Z][a-zA-Z0-9-]*$)</regex>
         <default>
-            <value />
+            <value>cn</value>
         </default>
         <default template="AD">
             <value><![CDATA[sAMAccountName]]></value>
@@ -581,10 +622,10 @@
         <default>
             <value>25</value>
         </default>
-        <options>
-            <option value="min">1</option>
-            <option value="max">65535</option>
-        </options>
+        <properties>
+            <property key="Minimum">1</property>
+            <property key="Maximum">65535</property>
+        </properties>
     </setting>
     <setting hidden="false" key="email.default.fromAddress" level="1">
         <default>
@@ -599,6 +640,7 @@
     <setting hidden="false" key="email.smtp.userpassword" level="2">
     </setting>
     <setting hidden="false" key="email.userMailAttribute" level="2" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
         <default>
             <value><![CDATA[mail]]></value>
@@ -610,71 +652,91 @@
         </default>
     </setting>
     <setting hidden="false" key="email.changePassword" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"Change Password Notice \u003c@DefaultEmailFromAddress@\u003e","subject":"Password Change Notification","bodyPlain":"You have changed your password.  If you did not initiate a password change please contact your help desk immediately.","bodyHtml":"\u003cb\u003eYou have changed your password.\u003c/b\u003e  If you have changed your password, then no action is required.  If you did not initiate a password change please contact your help desk."}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.changePassword.helpdesk" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"Change Password Notice \u003c@DefaultEmailFromAddress@\u003e","subject":"Password Change Notification","bodyPlain":"Your password has been changed by the heldesk.   You should set a new password immediately.  If you did not initiate a password change please contact your helpdesk.","bodyHtml":"\u003cb\u003eYour password has been changed by the helpdesk.\u003c/b\u003e  You should set a new password immediately.  If you did not initiate a password change please contact your helpdesk."}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.updateProfile" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"Profile Update \u003c@DefaultEmailFromAddress@\u003e","subject":"Profile Update","bodyPlain":"Thank you for updating your profile information, @LDAP:givenName@.","bodyHtml":"\u003cb\u003eThank you for updating your profile information, \u003c/b\u003e\u003cb\u003e@LDAP:givenName@.\u003c/b\u003e"}</value>
         </default>
     </setting>
+    <setting hidden="false" key="email.updateProfile.token" level="1">
+        <flag>MacroSupport</flag>
+        <default>
+            <value>{"to":"@User:Email@","from":"Profile Update \u003c@DefaultEmailFromAddress@\u003e","subject":"Profile Update","bodyPlain":"Thank you for updating your profile information. To continue with the update, please copy and paste the following code on the registration form:\n\n%TOKEN%\n\nIf you did not request to change your profile, you do not need to take any action.","bodyHtml":"Thank you for updating your profile.  To complete the update, please \u003ca href\u003d\"@SiteURL@/public/newuser/%TOKEN%\"\u003eclick here\u003c/a\u003e to continue.\u003cbr /\u003e\u003cbr /\u003eIf for some reason this link does not work, you can copy and paste the following code on the registration form:\u003cbr /\u003e\u003cbr /\u003e\u003cb\u003e\u003cpre\u003e%TOKEN%\u003c/pre\u003e\u003c/b\u003e\u003cbr /\u003eIf you did not request to change your profile, you do not need to take any action."}</value>
+        </default>
+    </setting>
     <setting hidden="false" key="email.newUser" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"New User Registration \u003c@DefaultEmailFromAddress@\u003e","subject":"Welcome","bodyPlain":"Thank you for registering your account, @LDAP:givenName@.","bodyHtml":"\u003cb\u003eThank you for registering your account, \u003c/b\u003e\u003cb\u003e@LDAP:givenName@.\u003c/b\u003e"}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.newUser.token" level="1">
+        <flag>MacroSupport</flag>
         <default>
-            <value>{"to":"@User:Email@","from":"New User Registration \u003c@DefaultEmailFromAddress@\u003e","subject":"New User Verification","bodyPlain":"Thank you for requesting a new account. To continue with your account registration, please copy and paste the following code on the registration form:\n\n%TOKEN%\n\nIf you did not request to create a new account, you do not need to take any action.","bodyHtml":"Thank you for requesting a new account.  To continue with your account registration, please \u003ca href\u003d\"@SiteURL@/public/NewUser/%TOKEN%\"\u003eclick here\u003c/a\u003e to continue.\u003cbr /\u003e\u003cbr /\u003eIf for some reason this link does not work, you can copy and paste the following code on the registration form:\u003cbr /\u003e\u003cbr /\u003e\u003cb\u003e\u003cpre\u003e%TOKEN%\u003c/pre\u003e\u003c/b\u003e\u003cbr /\u003eIf you did not request to create a new account, you do not need to take any action."}</value>
+            <value>{"to":"@User:Email@","from":"New User Registration \u003c@DefaultEmailFromAddress@\u003e","subject":"New User Verification","bodyPlain":"Thank you for requesting a new account. To continue with your account registration, please copy and paste the following code on the registration form:\n\n%TOKEN%\n\nIf you did not request to create a new account, you do not need to take any action.","bodyHtml":"Thank you for requesting a new account.  To continue with your account registration, please \u003ca href\u003d\"@SiteURL@/public/newuser/%TOKEN%\"\u003eclick here\u003c/a\u003e to continue.\u003cbr /\u003e\u003cbr /\u003eIf for some reason this link does not work, you can copy and paste the following code on the registration form:\u003cbr /\u003e\u003cbr /\u003e\u003cb\u003e\u003cpre\u003e%TOKEN%\u003c/pre\u003e\u003c/b\u003e\u003cbr /\u003eIf you did not request to create a new account, you do not need to take any action."}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.activation" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"Activation Notification \u003c@DefaultEmailFromAddress@\u003e","subject":"Account Activated","bodyPlain":"Thank you for activating your account, @LDAP:givenName@.","bodyHtml":"\u003cb\u003eThank you for activating your account, @LDAP:givenName@.\u003c/b\u003e"}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.activation.token" level="1">
+        <flag>MacroSupport</flag>
         <default>
-            <value>{"to":"@User:Email@","from":"Activation Verification \u003c@DefaultEmailFromAddress@\u003e","subject":"Account Verification","bodyPlain":"Thank you for requesting your account activation. To continue with your account activation, please copy and paste the following code onto the activation form:\n\n%TOKEN%\n\nIf you did not request to create a new account, you do not need to take any action.","bodyHtml":"Thank you for requesting your account activation.  To continue with your account activation, please \u003ca href\u003d\"@SiteURL@/public/ActivateUser/%TOKEN%\"\u003eclick here\u003c/a\u003e to continue.\u003cbr /\u003e\u003cbr /\u003eIf for some reason this link doesn\u0027t work, you can copy and paste the following code onto the activation form:\u003cbr /\u003e\u003cbr /\u003e\u003cb\u003e\u003cpre\u003e%TOKEN%\u003c/pre\u003e\u003c/b\u003e\u003cbr /\u003eIf you did not request to create a new account, you do not need to take any action."}</value>
+            <value>{"to":"@User:Email@","from":"Activation Verification \u003c@DefaultEmailFromAddress@\u003e","subject":"Account Verification","bodyPlain":"Thank you for requesting your account activation. To continue with your account activation, please copy and paste the following code onto the activation form:\n\n%TOKEN%\n\nIf you did not request to create a new account, you do not need to take any action.","bodyHtml":"Thank you for requesting your account activation.  To continue with your account activation, please \u003ca href\u003d\"@SiteURL@/public/activate/%TOKEN%\"\u003eclick here\u003c/a\u003e to continue.\u003cbr /\u003e\u003cbr /\u003eIf for some reason this link doesn\u0027t work, you can copy and paste the following code onto the activation form:\u003cbr /\u003e\u003cbr /\u003e\u003cb\u003e\u003cpre\u003e%TOKEN%\u003c/pre\u003e\u003c/b\u003e\u003cbr /\u003eIf you did not request to create a new account, you do not need to take any action."}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.challenge.token" level="1">
+        <flag>MacroSupport</flag>
         <default>
-            <value>{"to":"@User:Email@","from":"Forgotten Password \u003c@DefaultEmailFromAddress@\u003e","subject":"Forgotten Password Verification","bodyPlain":"Thank you for requesting a password reset. To continue with your password reset, please copy and paste the following code onto the password reset form:\n\n%TOKEN%\n\nIf you do not wish to change your password at this time, you do not need to take any action.","bodyHtml":"Thank you for requesting a password reset.  To continue with your password reset, please \u003ca href\u003d\"@SiteURL@/public/ForgottenPassword/%TOKEN%\"\u003eclick here\u003c/a\u003e to continue.\u003cbr /\u003e\u003cbr /\u003eIf for some reason this link doesn\u0027t work, you can copy and paste the following code onto the password reset form:\u003cbr /\u003e\u003cbr /\u003e%TOKEN%\u003cbr /\u003e\u003cbr /\u003eIf you do not wish to change your password at this time, you do not need to take any action."}</value>
+            <value>{"to":"@User:Email@","from":"Forgotten Password \u003c@DefaultEmailFromAddress@\u003e","subject":"Forgotten Password Verification","bodyPlain":"Thank you for requesting a password reset. To continue with your password reset, please copy and paste the following code onto the password reset form:\n\n%TOKEN%\n\nIf you do not wish to change your password at this time, you do not need to take any action.","bodyHtml":"Thank you for requesting a password reset.  To continue with your password reset, please \u003ca href\u003d\"@SiteURL@/public/forgottenpassword/%TOKEN%\"\u003eclick here\u003c/a\u003e to continue.\u003cbr /\u003e\u003cbr /\u003eIf for some reason this link doesn\u0027t work, you can copy and paste the following code onto the password reset form:\u003cbr /\u003e\u003cbr /\u003e%TOKEN%\u003cbr /\u003e\u003cbr /\u003eIf you do not wish to change your password at this time, you do not need to take any action."}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.helpdesk.token" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"Helpdesk \u003c@DefaultEmailFromAddress@\u003e","subject":"Helpdesk Verification","bodyPlain":"Your helpdesk has sent you a code to verify your identity. Your verification code is:\n\n%TOKEN%","bodyHtml":"Your helpdesk has sent you a code to verify your identity. Your verification code is: %TOKEN%."}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.guest" level="2">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"Guest Registration Agent \u003c@DefaultEmailFromAddress@\u003e","subject":"Welcome","bodyPlain":"Your account has been created.\n\nYour username is: @User:ID@\nYour password is: @User:Password@","bodyHtml":"\u003cb\u003eYour account has been created.\u003c/b\u003e\u003cp\u003eYour username is:@User:ID@\u003cbr /\u003eYour password is: \u003cb\u003e@User:Password@\u003c/b\u003e\u003c/p\u003e"}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.updateguest" level="2">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"Guest Registration Agent \u003c@DefaultEmailFromAddress@\u003e","subject":"Account update notification","bodyPlain":"Your account has been updated.","bodyHtml":"\u003cb\u003eYour account has been created.\u003c/b\u003e"}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.sendpassword" level="2">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"Password Notifier \u003c@DefaultEmailFromAddress@\u003e","subject":"Password Information","bodyPlain":"Your new password is:\n\n@User:Password@\n\nPlease change your password as soon as possible.","bodyHtml":"Thank you for requesting a password reset.  Your new password is:\u003cbr /\u003e\u003cbr /\u003e\u003cfont face\u003d\"\u0027Courier New\u0027\"\u003e\u003cb\u003e@User:Password@\u003cbr /\u003e\u003cbr /\u003e\u003c/b\u003e\u003c/font\u003e"}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.sendUsername" level="2">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"Username Notifier \u003c@DefaultEmailFromAddress@\u003e","subject":"Username Information","bodyPlain":"Your username is:\n\n@User:ID@\n\n","bodyHtml":"Your username is:\u003cbr /\u003e\u003cbr /\u003e\u003cfont face\u003d\"\u0027Courier New\u0027\"\u003e\u003cb\u003e@User:ID@\u003cbr /\u003e\u003cbr /\u003e\u003c/b\u003e\u003c/font\u003e"}</value>
         </default>
     </setting>
     <setting hidden="false" key="email.intruderNotice" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value>{"to":"@User:Email@","from":"Intruder Notifier \u003c@DefaultEmailFromAddress@\u003e","subject":"Password Information","bodyPlain":"Your account has been temporarily disabled due to several incorrect login/password reset attempts.  If this activity was not caused by you, please contact your administrator.","bodyHtml":"Your account has been temporarily disabled due to several incorrect login/password reset attempts.  If this activity was not caused by you, please contact your administrator."}</value>
         </default>
@@ -684,6 +746,7 @@
         <default/>
     </setting>
     <setting hidden="false" key="sms.userSmsAttribute" level="1" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
         <default>
             <value><![CDATA[personalMobile]]></value>
@@ -696,7 +759,7 @@
     </setting>
     <setting hidden="false" key="sms.gatewayURL" level="1">
         <regex>^$|^https?://[A-Za-z0-9_\.-]{3,}(\:[0-9]{1,5})?(/.*)?</regex>
-        <placeholder>https://sms.example.com/service</placeholder>
+        <example>https://sms.example.com/service</example>
         <default>
             <value/>
         </default>
@@ -762,10 +825,10 @@
         <default>
             <value>140</value>
         </default>
-        <options>
-            <option value="min">1</option>
-            <option value="max">10000</option>
-        </options>
+        <properties>
+            <property key="Minimum">1</property>
+            <property key="Maximum">10000</property>
+        </properties>
     </setting>
     <setting hidden="false" key="sms.responseOkRegex" level="2">
         <default>
@@ -805,27 +868,32 @@
     </setting>
     <setting hidden="false" key="sms.challenge.token.message" level="1" required="true">
         <default>
-            <value><![CDATA[Your security code is %TOKEN%.]]></value>
+            <value><![CDATA[Your security code is %TOKEN%]]></value>
         </default>
     </setting>
     <setting hidden="false" key="sms.challenge.newpassword.message" level="1" required="true">
         <default>
-            <value><![CDATA[Your new password is %TOKEN%.]]></value>
+            <value><![CDATA[Your new password is %TOKEN%]]></value>
         </default>
     </setting>
     <setting hidden="false" key="sms.newUser.token.message" level="1" required="true">
         <default>
-            <value><![CDATA[Your account verification token is %TOKEN%.]]></value>
+            <value><![CDATA[Your account verification code is %TOKEN%]]></value>
         </default>
     </setting>
     <setting hidden="false" key="sms.helpdesk.token.message" level="1" required="true">
         <default>
-            <value><![CDATA[Your security code is %TOKEN%.]]></value>
+            <value><![CDATA[Your security code is %TOKEN%]]></value>
         </default>
     </setting>
     <setting hidden="false" key="sms.forgottenUsername.message" level="1" required="true">
         <default>
             <value><![CDATA[Your username is @User:ID@]]></value>
+        </default>
+    </setting>
+    <setting hidden="false" key="sms.updateProfile.token.message" level="1" required="true">
+        <default>
+            <value><![CDATA[Your verification code is %TOKEN%]]></value>
         </default>
     </setting>
     <setting hidden="false" key="sms.activation.token.message" level="1" required="true">
@@ -851,11 +919,15 @@
     </setting>
     <setting hidden="true" key="password.profile.list" level="1">
         <regex>^(?!.*all.*)([a-zA-Z][a-zA-Z0-9-]{2,15})$</regex>
+        <properties>
+            <property key="Minimum">1</property>
+        </properties>
         <default>
             <value>default</value>
         </default>
     </setting>
     <setting hidden="false" key="password.policy.queryMatch" level="1">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value><![CDATA[{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(objectClass=*)"}]]></value>
         </default>
@@ -1027,10 +1099,10 @@
         <default>
             <value>2</value>
         </default>
-        <options>
-            <option value="min">1</option>
-            <option value="max">5</option>
-        </options>
+        <properties>
+            <property key="Minimum">1</property>
+            <property key="Maximum">5</property>
+        </properties>
     </setting>
     <setting hidden="false" key="password.policy.regExMatch" level="2">
         <default/>
@@ -1045,7 +1117,8 @@
         </default>
     </setting>
     <setting hidden="false" key="password.policy.disallowedAttributes" level="2">
-        <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
+        <ldapPermission actor="proxy" access="read"/>
+        <regex>^[a-zA-Z][a-zA-Z0-9-]*(:[0-9]+)*$</regex>
         <default>
             <value><![CDATA[cn]]></value>
             <value><![CDATA[givenName]]></value>
@@ -1110,6 +1183,10 @@
     </setting>
     <setting hidden="false" key="pwm.securityKey" level="0">
         <regex>.{32}.*</regex>
+        <properties>
+            <property key="Minimum">32</property>
+            <property key="Maximum">100000</property>
+        </properties>
     </setting>
     <setting hidden="false" key="intruder.user.resetTime" level="1" required="true">
         <default>
@@ -1313,6 +1390,24 @@
             <value>28800</value>
         </default>
     </setting>
+    <setting hidden="false" key="security.loginSession.mode" level="2">
+        <default>
+            <value>CRYPTCOOKIE</value>
+        </default>
+        <options>
+            <option value="LOCAL">Local</option>
+            <option value="CRYPTCOOKIE">Encrypted Cookie</option>
+        </options>
+    </setting>
+    <setting hidden="false" key="security.moduleSession.mode" level="2">
+        <default>
+            <value>CRYPTCOOKIE</value>
+        </default>
+        <options>
+            <option value="LOCAL">Local</option>
+            <option value="CRYPTCOOKIE">Encrypted Cookie</option>
+        </options>
+    </setting>
     <setting hidden="false" key="security.preventFraming" level="2">
         <default>
             <value>true</value>
@@ -1326,13 +1421,14 @@
     </setting>
     <setting hidden="false" key="security.cspHeader" level="2">
         <default>
-            <value><![CDATA[]]></value>
-            <!--<value><![CDATA[default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval' 'nonce-%NONCE%' www.google.com/recaptcha]]></value>-->
+            <!--<value><![CDATA[]]></value>-->
+            <value><![CDATA[default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ 'self' 'unsafe-eval' 'unsafe-inline' 'nonce-%NONCE%' ; frame-src https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; report-uri /sspr/public/command/csp-report]]></value>
+            <!-- 'unsafe-inline' on script-src is included for backward compatibilty of CSP Level1 browsers.  CSP2 and future ignore it when the nonce is specified -->
         </default>
     </setting>
     <setting hidden="false" key="email.adminAlert.toAddress" level="1">
         <default/>
-        <placeholder><![CDATA[admin@example.com]]></placeholder>
+        <example><![CDATA[admin@example.com]]></example>
     </setting>
     <setting hidden="false" key="audit.system.eventList" level="1">
         <default>
@@ -1353,7 +1449,7 @@
     </setting>
     <setting hidden="false" key="audit.userEvent.toAddress" level="1">
         <default/>
-        <placeholder><![CDATA[admin@example.com]]></placeholder>
+        <example><![CDATA[admin@example.com]]></example>
     </setting>
     <setting hidden="false" key="audit.user.eventList" level="1">
         <default>
@@ -1379,6 +1475,11 @@
             <value>HELPDESK_VIEW_DETAIL</value>
             <value>HELPDESK_ACTION</value>
             <value>HELPDESK_VERIFY_OTP</value>
+            <value>HELPDESK_VERIFY_OTP_INCORRECT</value>
+            <value>HELPDESK_VERIFY_TOKEN</value>
+            <value>HELPDESK_VERIFY_TOKEN_INCORRECT</value>
+            <value>HELPDESK_VERIFY_ATTRIBUTES</value>
+            <value>HELPDESK_VERIFY_ATTRIBUTES_INCORRECT</value>
         </default>
         <options>
             <option value="AUTHENTICATE">Authenticate</option>
@@ -1403,6 +1504,11 @@
             <option value="HELPDESK_VIEW_DETAIL">Helpdesk View Detail</option>
             <option value="HELPDESK_ACTION">Helpdesk Action</option>
             <option value="HELPDESK_VERIFY_OTP">Helpdesk Verify OTP</option>
+            <option value="HELPDESK_VERIFY_OTP_INCORRECT">Helpdesk Incorrect Verify OTP</option>
+            <option value="HELPDESK_VERIFY_TOKEN">Helpdesk Verify Token</option>
+            <option value="HELPDESK_VERIFY_TOKEN_INCORRECT">Helpdesk Incorrect Verify Token</option>
+            <option value="HELPDESK_VERIFY_ATTRIBUTES">Helpdesk Verify Attributes</option>
+            <option value="HELPDESK_VERIFY_ATTRIBUTES_INCORRECT">Helpdesk Incorrect Verify Attributes</option>
         </options>
     </setting>
     <setting hidden="false" key="audit.syslog.servers" level="1" required="false">
@@ -1413,13 +1519,19 @@
     </setting>
     <setting hidden="false" key="audit.syslog.certificates" level="1" required="false">
         <default/>
-        <options>
-            <option value="ImportHandler">password.pwm.config.function.SyslogCertImportFunction</option>
-        </options>
+        <properties>
+            <property key="Cert_ImportHandler">password.pwm.config.function.SyslogCertImportFunction</property>
+        </properties>
     </setting>
     <setting hidden="false" key="token.storageMethod" level="1" required="true">
         <default>
             <value><![CDATA[STORE_CRYPTO]]></value>
+        </default>
+        <default template="LOCALDB">
+            <value><![CDATA[STORE_LOCALDB]]></value>
+        </default>
+        <default template="DB">
+            <value><![CDATA[STORE_DB]]></value>
         </default>
         <options>
             <option value="STORE_LOCALDB">LocalDB</option>
@@ -1468,6 +1580,12 @@
         <default>
             <value><![CDATA[LDAP]]></value>
         </default>
+        <default template="DB">
+            <value><![CDATA[DB]]></value>
+        </default>
+        <default template="LOCALDB">
+            <value><![CDATA[LOCALDB]]></value>
+        </default>
         <options>
             <option value="LDAP">LDAP</option>
             <option value="LDAP-DB">LDAP, Database</option>
@@ -1489,6 +1607,12 @@
     <setting hidden="false" key="otp.secret.writePreference" level="1" required="true">
         <default>
             <value><![CDATA[LDAP]]></value>
+        </default>
+        <default template="DB">
+            <value><![CDATA[DB]]></value>
+        </default>
+        <default template="LOCALDB">
+            <value><![CDATA[LOCALDB]]></value>
         </default>
         <options>
             <option value="LDAP">LDAP</option>
@@ -1517,11 +1641,15 @@
         </default>
     </setting>
     <setting hidden="false" key="otp.secret.ldap.attribute" level="2" required="false">
+        <ldapPermission actor="proxy" access="read"/>
+        <ldapPermission actor="proxy" access="write"/>
+        <ldapPermission actor="self" access="write"/>
         <default>
             <value>pwmOtpSecret</value>
         </default>
     </setting>
     <setting hidden="false" key="otp.secret.allowSetup.queryMatch" level="1" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value><![CDATA[{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(objectClass=*)"}]]></value>
         </default>
@@ -1559,10 +1687,10 @@
         <default>
             <value>1000000</value>
         </default>
-        <options>
-            <option value="min">1</option>
-            <option value="max">1000000000</option>
-        </options>
+        <properties>
+            <property key="Minimum">0</property>
+            <property key="Maximum">1000000000</property>
+        </properties>
     </setting>
     <setting hidden="false" key="events.pwmDB.maxAge" level="1" required="true">
         <default>
@@ -1599,10 +1727,13 @@
     </setting>
     <setting hidden="false" key="events.user.storageMethod" level="2" required="true">
         <default>
-            <value><![CDATA[AUTO]]></value>
+            <value><![CDATA[LDAP]]></value>
+        </default>
+        <default template="DB">
+            <value><![CDATA[DATABASE]]></value>
         </default>
         <options>
-            <option value="AUTO">Auto Configure - Database if configured, LDAP otherwise</option>
+            <!--<option value="AUTO">Auto Configure - Database if configured, LDAP otherwise</option>-->
             <option value="DATABASE">Remote Database</option>
             <option value="LDAP">LDAP</option>
         </options>
@@ -1651,6 +1782,7 @@
         </options>
     </setting>
     <setting hidden="false" key="events.ldap.attribute" level="2">
+        <ldapPermission actor="proxy" access="write"/>
         <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
         <default>
             <value><![CDATA[pwmEventLog]]></value>
@@ -1660,10 +1792,10 @@
         <default>
             <value>20</value>
         </default>
-        <options>
-            <option value="min">0</option>
-            <option value="max">1000</option>
-        </options>
+        <properties>
+            <property key="Minimum">0</property>
+            <property key="Maximum">1000</property>
+        </properties>
     </setting>
     <setting hidden="false" key="ldap.wireTrace.enable" level="2" required="true">
         <default>
@@ -1677,7 +1809,7 @@
     </setting>
     <setting hidden="false" key="events.audit.maxAge" level="2" required="true">
         <default>
-            <value>2592000</value>
+            <value>15552000</value>
         </default>
     </setting>
     <setting hidden="false" key="challenge.enable" level="1">
@@ -1878,11 +2010,13 @@
         </default>
     </setting>
     <setting hidden="false" key="challenge.allowSetup.queryMatch" level="2" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value><![CDATA[{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(objectClass=*)"}]]></value>
         </default>
     </setting>
     <setting hidden="false" key="command.checkResponses.queryMatch" level="2" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value><![CDATA[{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(objectClass=*)"}]]></value>
         </default>
@@ -1894,11 +2028,15 @@
     </setting>
     <setting hidden="true" key="challenge.profile.list" level="1">
         <regex>^(?!.*all.*)([a-zA-Z][a-zA-Z0-9-]{2,15})$</regex>
+        <properties>
+            <property key="Minimum">1</property>
+        </properties>
         <default>
             <value>default</value>
         </default>
     </setting>
     <setting hidden="false" key="challenge.policy.queryMatch" level="1">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value><![CDATA[{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(objectClass=*)"}]]></value>
         </default>
@@ -1922,6 +2060,8 @@
         </default>
     </setting>
     <setting hidden="false" key="recovery.form" level="1" required="true">
+        <ldapPermission actor="proxy" access="read"/>
+        <flag>Form_ShowRequiredOption</flag>
         <default>
             <value>{"name":"cn","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Username"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
@@ -1938,6 +2078,12 @@
     <setting hidden="false" key="recovery.response.readPreference" level="1" required="true">
         <default>
             <value><![CDATA[LDAP]]></value>
+        </default>
+        <default template="DB">
+            <value><![CDATA[DB]]></value>
+        </default>
+        <default template="LOCALDB">
+            <value><![CDATA[LOCALDB]]></value>
         </default>
         <options>
             <option value="LDAP">LDAP</option>
@@ -1961,6 +2107,12 @@
         <default>
             <value><![CDATA[LDAP]]></value>
         </default>
+        <default template="DB">
+            <value><![CDATA[DB]]></value>
+        </default>
+        <default template="LOCALDB">
+            <value><![CDATA[LOCALDB]]></value>
+        </default>
         <options>
             <option value="LDAP">LDAP</option>
             <option value="LDAP-DB">LDAP, Database</option>
@@ -1972,6 +2124,8 @@
         </options>
     </setting>
     <setting hidden="false" key="challenge.userAttribute" level="1">
+        <ldapPermission actor="self" access="write"/>
+        <ldapPermission actor="proxy" access="read"/>
         <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
         <default>
             <value><![CDATA[pwmResponseSet]]></value>
@@ -1994,11 +2148,14 @@
             <option value="SHA256_SALT">SHA-256 with Salt</option>
             <option value="SHA512_SALT">SHA-512 with Salt</option>
             <option value="PBKDF2">PBKDF2WithHmacSHA1</option>
+            <option value="PBKDF2_SHA256">PBKDF2WithHmacSHA256</option>
+            <option value="PBKDF2_SHA512">PBKDF2WithHmacSHA512</option>
             <option value="BCRYPT">BCrypt</option>
             <option value="SCRYPT">SCrypt</option>
         </options>
     </setting>
     <setting hidden="false" key="challenge.requiredAttributes" level="1">
+        <ldapPermission actor="proxy" access="read"/>
         <default />
     </setting>
     <setting hidden="false" key="challenge.token.enable" level="1" required="true">
@@ -2057,6 +2214,8 @@
         </default>
     </setting>
     <setting hidden="false" key="forgottenUsername.form" level="1" required="true">
+        <ldapPermission actor="proxy" access="read"/>
+        <flag>Form_ShowRequiredOption</flag>
         <default>
             <value>{"name":"mail","minimumLength":1,"maximumLength":64,"type":"email","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Email Address"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"sn","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Last Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
@@ -2065,13 +2224,31 @@
     <setting hidden="false" key="forgottenUsername.searchFilter" level="2">
         <default/>
     </setting>
-    <setting hidden="false" key="forgottenUsername.usernameAttribute" level="1" required="true">
-        <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
+    <setting hidden="false" key="forgottenUsername.message" level="1">
+        <flag>MacroSupport</flag>
         <default>
-            <value><![CDATA[cn]]></value>
-        </default>
-        <default template="AD">
-            <value>sAMAccountName</value>
+            <value>Your username is @User:ID@.  Please record your username for future use.</value>
+            <value locale="zh">您的用户名是 @User:ID@。请记录你的用户名以供将来使用。</value>
+            <value locale="zh_TW">您的使用者名稱為 @User:ID@。請記錄您的使用者名稱以供日後使用。</value>
+            <value locale="cs">Vaše přihlašovací jméno je @User:ID@. Prosíme zapamatujte si své přihlašovací jméno.</value>
+            <value locale="nl">Uw gebruikersnaam is @User:ID@.  Onthoud uw gebruikersnaam voor later gebruik.</value>
+            <value locale="fi">Käyttäjätunnuksesi on @User:ID@. Tallenna se myöhempää käyttöä varten.</value>
+            <value locale="fr">Votre nom d'utilisateur est @User:ID@. Enregistrez-le pour pouvoir l'utiliser ultérieurement.</value>
+            <value locale="de">Ihr Benutzername ist @User:ID@. Notieren Sie sich den Benutzernamen für den späteren Gebrauch.</value>
+            <value locale="iw">שם המשתמש שלך הינו @User:ID@. אנא זכור מידע זה לשימוש עתידי.</value>
+            <value locale="hu">Az Ön felhasználóneve %field%. Kérem jegyezze föl, hogy a jövőben használni tudja.</value>
+            <value locale="it">Il tuo nome utente è @User:ID@.  Per favore annotati il tuo nome utente per uso futuro.</value>
+            <value locale="ja">ユーザ名は @User:ID@ です。将来の使用に備えてユーザ名を記録しておいてください。</value>
+            <value locale="no">Brukernavnet ditt er @User:ID@.  Vennligst ta vare pï¿½ ditt brukernavn for fremtidig bruk.</value>
+            <value locale="nn">Brukarnamnet ditt er %field%. Ver venleg ï¿½ ta vare pï¿½ brukarnamnet ditt for framtidig bruk.</value>
+            <value locale="pl">Twoja nazwa użytkownika to @User:ID@. Należy zapisać swoją nazwę użytkownika na przyszłość.</value>
+            <value locale="pt">Seu nome de utilizador é @User:ID@. Por favor, registe seu nome de utilizador para uso futuro.</value>
+            <value locale="pt_BR">Seu nome de usuário é @User:ID@. Registre seu nome de usuário para uso futuro.</value>
+            <value locale="sk">Vaše používateľské meno je @User:ID@. Uložte si toto meno pre ďalšie použitie.</value>
+            <value locale="es">Su nombre de usuario es @User:ID@. Guarde el nombre de usuario para tener una referencia en el futuro.</value>
+            <value locale="sv">Ditt användarnamn är @User:ID@. Anteckna ditt användarnamn för framtida bruk.</value>
+            <value locale="th">ชื้อผู้ใช้ของคุณคือ @User:ID@ กรุณาใส่ชื่อผู้ใช้ของคุณสำหรับการใช้งานในอนาคต</value>
+            <value locale="tr">Kullanıcı adınız @User:ID@ . Kullanıcı adınızı unutmayın.</value>
         </default>
     </setting>
     <setting hidden="false" key="forgottenUsername.sendUsername.sendMethod" level="1">
@@ -2094,34 +2271,53 @@
     </setting>
     <setting hidden="true" key="newUser.profile.list" level="1">
         <regex>^(?!.*all.*)([a-zA-Z][a-zA-Z0-9-]{2,15})$</regex>
+        <properties>
+            <property key="Minimum">1</property>
+        </properties>
         <default>
             <value>default</value>
         </default>
     </setting>
     <setting hidden="false" key="newUser.createContext" level="1" required="true">
+        <flag>ldapDNsyntax</flag>
         <default>
             <value><![CDATA[ou=users,o=example]]></value>
         </default>
-        <options>
-            <option value="ldapDNsyntax">true</option>
-        </options>
     </setting>
     <setting hidden="false" key="display.newuser.agreement" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value />
         </default>
     </setting>
-    <setting hidden="true" key="newUser.form" level="1">
+    <setting hidden="false" key="newUser.form" level="1">
+        <ldapPermission actor="proxy" access="write"/>
+        <flag>Form_ShowUniqueOption</flag>
+        <flag>Form_ShowRequiredOption</flag>
         <default>
             <value>{"name":"mail","minimumLength":1,"maximumLength":64,"type":"email","required":true,"confirmationRequired":false,"readonly":false,"unique":true,"labels":{"":"Email Address"},"regexErrors":{"":""},"description":{"":""},"placeholder":"username@example.com","selectOptions":{},regex:"^[a-zA-Z0-9 .,'@]*$"}</value>
             <value>{"name":"givenName","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"First Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{},regex:"^[a-zA-Z0-9 .,'@]*$"}</value>
             <value>{"name":"sn","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Last Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{},regex:"^[a-zA-Z0-9 .,'@]*$"}</value>
         </default>
         <options>
-            <option value="unique">show</option>
+            <option value="text">text</option>
+            <option value="email">email</option>
+            <option value="number">number</option>
+            <option value="password">password</option>
+            <option value="random">random</option>
+            <option value="tel">tel</option>
+            <option value="hidden">hidden</option>
+            <option value="date">date</option>
+            <option value="datetime">datetime</option>
+            <option value="week">week</option>
+            <option value="month">month</option>
+            <option value="url">url</option>
+            <option value="select">select</option>
+            <option value="checkbox">checkbox</option>
         </options>
     </setting>
     <setting hidden="false" key="newUser.writeAttributes" level="1">
+        <ldapPermission actor="proxy" access="write"/>
         <default />
     </setting>
     <setting hidden="false" key="newUser.deleteOnFail" level="2">
@@ -2153,6 +2349,10 @@
         <default>
             <value>10</value>
         </default>
+        <properties>
+            <property key="Minimum">0</property>
+            <property key="Maximum">120</property>
+        </properties>
     </setting>
     <setting hidden="false" key="newUser.profile.displayName" level="1">
         <default>
@@ -2165,12 +2365,10 @@
         </default>
     </setting>
     <setting hidden="false" key="guest.createContext" level="1" required="true">
+        <flag>ldapDNsyntax</flag>
         <default>
             <value><![CDATA[ou=guests,o=example]]></value>
         </default>
-        <options>
-            <option value="ldapDNsyntax">true</option>
-        </options>
     </setting>
     <setting hidden="false" key="guest.adminGroup" level="1" required="true">
         <default syntaxVersion="2">
@@ -2178,6 +2376,9 @@
         </default>
     </setting>
     <setting hidden="false" key="guest.form" level="1" required="true">
+        <ldapPermission actor="guestManager" access="write"/>
+        <flag>Form_ShowUniqueOption</flag>
+        <flag>Form_ShowRequiredOption</flag>
         <default>
             <value>{"name":"cn","minimumLength":2,"maximumLength":32,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"unique":true,"labels":{"":"Username"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"givenName","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"First Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
@@ -2186,10 +2387,26 @@
             <value>{"name":"telephoneNumber","minimumLength":1,"maximumLength":64,"type":"tel","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Telephone Number"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
         <options>
-            <option value="unique">show</option>
+            <option value="text">text</option>
+            <option value="email">email</option>
+            <option value="number">number</option>
+            <option value="password">password</option>
+            <option value="random">random</option>
+            <option value="tel">tel</option>
+            <option value="hidden">hidden</option>
+            <option value="date">date</option>
+            <option value="datetime">datetime</option>
+            <option value="week">week</option>
+            <option value="month">month</option>
+            <option value="url">url</option>
+            <option value="select">select</option>
+            <option value="checkbox">checkbox</option>
         </options>
     </setting>
     <setting hidden="false" key="guest.update.form" level="1" required="true">
+        <ldapPermission actor="guestManager" access="write"/>
+        <flag>Form_ShowUniqueOption</flag>
+        <flag>Form_ShowRequiredOption</flag>
         <default>
             <value>{"name":"cn","minimumLength":2,"maximumLength":32,"type":"text","required":false,"confirmationRequired":false,"readonly":true,"labels":{"":"Username"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"givenName","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"First Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
@@ -2198,7 +2415,20 @@
             <value>{"name":"telephoneNumber","minimumLength":1,"maximumLength":64,"type":"tel","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Telephone Number"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
         <options>
-            <option value="unique">show</option>
+            <option value="text">text</option>
+            <option value="email">email</option>
+            <option value="number">number</option>
+            <option value="password">password</option>
+            <option value="random">random</option>
+            <option value="tel">tel</option>
+            <option value="hidden">hidden</option>
+            <option value="date">date</option>
+            <option value="datetime">datetime</option>
+            <option value="week">week</option>
+            <option value="month">month</option>
+            <option value="url">url</option>
+            <option value="select">select</option>
+            <option value="checkbox">checkbox</option>
         </options>
     </setting>
     <setting hidden="false" key="guest.creationUniqueAttributes" level="1">
@@ -2209,9 +2439,11 @@
         </default>
     </setting>
     <setting hidden="false" key="guest.writeAttributes" level="1">
+        <ldapPermission actor="guestManager" access="write"/>
         <default />
     </setting>
     <setting hidden="false" key="guest.adminAttribute" level="1">
+        <ldapPermission actor="proxy" access="write"/>
         <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
         <default>
             <value><![CDATA[manager]]></value>
@@ -2228,6 +2460,7 @@
         </default>
     </setting>
     <setting hidden="false" key="guest.expirationAttribute" level="1">
+        <ldapPermission actor="proxy" access="write"/>
         <regex>^[a-zA-Z][a-zA-Z0-9-]*$</regex>
         <default>
             <value><![CDATA[loginExpirationTime]]></value>
@@ -2249,11 +2482,14 @@
         </default>
     </setting>
     <setting hidden="false" key="display.activateUser.agreement" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value />
         </default>
     </setting>
     <setting hidden="false" key="activateUser.form" level="1" required="true">
+        <ldapPermission actor="proxy" access="read"/>
+        <flag>Form_ShowRequiredOption</flag>
         <default>
             <value>{"name":"cn","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Username"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
@@ -2263,11 +2499,28 @@
         <default template="ORACLE_DS">
             <value>{"name":"uid","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Username"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
+        <options>
+            <option value="text">text</option>
+            <option value="email">email</option>
+            <option value="number">number</option>
+            <option value="password">password</option>
+            <option value="random">random</option>
+            <option value="tel">tel</option>
+            <option value="hidden">hidden</option>
+            <option value="date">date</option>
+            <option value="datetime">datetime</option>
+            <option value="week">week</option>
+            <option value="month">month</option>
+            <option value="url">url</option>
+            <option value="select">select</option>
+            <option value="checkbox">checkbox</option>
+        </options>
     </setting>
     <setting hidden="false" key="activateUser.searchFilter" level="2" required="false">
         <default/>
     </setting>
     <setting hidden="false" key="activateUser.queryMatch" level="1" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value><![CDATA[{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(&(objectclass=person)(!(loginDisabled=TRUE))(!(loginTime=*)))"}]]></value>
         </default>
@@ -2276,11 +2529,13 @@
         </default>
     </setting>
     <setting hidden="false" key="activateUser.writePreAttributes" level="1">
+        <ldapPermission actor="proxy" access="write"/>
         <default>
             <value/>
         </default>
     </setting>
     <setting hidden="false" key="activateUser.writePostAttributes" level="1">
+        <ldapPermission actor="proxy" access="write"/>
         <default>
             <value/>
         </default>
@@ -2303,36 +2558,64 @@
             <value>false</value>
         </default>
     </setting>
+    <setting hidden="true" key="updateAttributes.profile.list" level="1">
+        <regex>^(?!.*all.*)([a-zA-Z][a-zA-Z0-9-]{2,15})$</regex>
+        <properties>
+            <property key="Minimum">1</property>
+        </properties>
+        <default>
+            <value>default</value>
+        </default>
+    </setting>
     <setting hidden="false" key="updateAttributes.forceSetup" level="1" required="true">
         <default>
             <value>false</value>
         </default>
     </setting>
     <setting hidden="false" key="display.updateAttributes.agreement" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value />
         </default>
     </setting>
     <setting hidden="false" key="updateAttributes.queryMatch" level="1" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value><![CDATA[{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(objectClass=person)"}]]></value>
         </default>
     </setting>
     <setting hidden="false" key="updateAttributes.writeAttributes" level="1">
+        <ldapPermission actor="proxy" access="write"/>
         <default />
     </setting>
     <setting hidden="false" key="updateAttributes.form" level="1" required="true">
+        <ldapPermission actor="self" access="write"/>
+        <flag>Form_ShowUniqueOption</flag>
+        <flag>Form_ShowReadOnlyOption</flag>
         <default>
             <value>{"name":"mail","minimumLength":1,"maximumLength":64,"type":"email","required":true,"confirmationRequired":false,"readonly":false,"unique":true,"labels":{"":"Email Address"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"title","minimumLength":1,"maximumLength":64,"type":"text","required":false,"confirmationRequired":false,"readonly":false,"labels":{"":"Title"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"telephoneNumber","minimumLength":1,"maximumLength":64,"type":"tel","required":false,"confirmationRequired":false,"readonly":false,"labels":{"":"Telephone Number"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
         <options>
-            <option value="readonly">show</option>
-            <option value="unique">show</option>
+            <option value="text">text</option>
+            <option value="email">email</option>
+            <option value="number">number</option>
+            <option value="password">password</option>
+            <option value="random">random</option>
+            <option value="tel">tel</option>
+            <option value="hidden">hidden</option>
+            <option value="date">date</option>
+            <option value="datetime">datetime</option>
+            <option value="week">week</option>
+            <option value="month">month</option>
+            <option value="url">url</option>
+            <option value="select">select</option>
+            <option value="checkbox">checkbox</option>
         </options>
     </setting>
-    <setting hidden="false" key="updateAttributes.check.queryMatch" level="1">
+    <setting hidden="true" key="updateAttributes.check.queryMatch" level="3">
+        <ldapPermission actor="proxy" access="read"/>
         <default>
             <value />
         </default>
@@ -2342,6 +2625,17 @@
             <value>true</value>
         </default>
     </setting>
+    <setting hidden="false" key="updateAttributes.email.verification" level="1">
+        <default>
+            <value>false</value>
+        </default>
+    </setting>
+    <setting hidden="false" key="updateAttributes.sms.verification" level="1">
+        <default>
+            <value>false</value>
+        </default>
+    </setting>
+
     <setting hidden="false" key="shortcut.enable" level="1">
         <default>
             <value>false</value>
@@ -2380,11 +2674,13 @@
         </default>
     </setting>
     <setting hidden="false" key="peopleSearch.queryMatch" level="1" required="true">
+        <ldapPermission actor="self_other" access="read"/>
         <default syntaxVersion="2">
-            <value><![CDATA[{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(objectClass=*)"}]]></value>
+            <value>{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(objectClass=*)"}</value>
         </default>
     </setting>
     <setting hidden="false" key="peopleSearch.searchAttributes" level="1" required="false">
+        <ldapPermission actor="self_other" access="read"/>
         <default>
             <value>givenName</value>
             <value>sn</value>
@@ -2396,12 +2692,12 @@
         <default/>
     </setting>
     <setting hidden="false" key="peopleSearch.searchBase" level="2">
+        <flag>ldapDNsyntax</flag>
         <default />
-        <options>
-            <option value="ldapDNsyntax">true</option>
-        </options>
     </setting>
     <setting hidden="false" key="peopleSearch.result.form" level="1" required="true">
+        <flag>Form_HideOptions</flag>
+        <ldapPermission actor="self_other" access="read"/>
         <default>
             <value>{"name":"givenName","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"First Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"sn","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Last Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
@@ -2409,13 +2705,11 @@
             <value>{"name":"mail","minimumLength":1,"maximumLength":64,"type":"email","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Email"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"telephoneNumber","minimumLength":1,"maximumLength":64,"type":"tel","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Telephone"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
-        <options>
-            <option value="types">[]</option>
-            <option value="required">hide</option>
-            <option value="hideOptions">true</option>
-        </options>
     </setting>
     <setting hidden="false" key="peopleSearch.detail.form" level="1" required="true">
+        <flag>Form_HideStandardOptions</flag>
+        <flag>Form_ShowMultiValueOption</flag>
+        <ldapPermission actor="self_other" access="read"/>
         <default>
             <value>{"name":"givenName","minimumLength":1,"maximumLength":64,"type":"text","required":false,"confirmationRequired":false,"readonly":true,"labels":{"":"First Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"sn","minimumLength":1,"maximumLength":64,"type":"text","required":false,"confirmationRequired":false,"readonly":true,"labels":{"":"Last Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
@@ -2437,21 +2731,19 @@
             <value>{"name":"directReports","minimumLength":1,"maximumLength":64,"type":"userDN","required":false,"confirmationRequired":false,"readonly":true,"labels":{"":"Direct Reports"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
         <options>
-            <option value="types">["text","email","userDN"]</option>
-            <option value="hideOptions">true</option>
-            <option value="required">hide</option>
-            <option value="type-userDN">show</option>
-            <option value="readonly">true</option>
+            <option value="text">text</option>
+            <option value="email">email</option>
+            <option value="userDN">userDN</option>
         </options>
     </setting>
     <setting hidden="false" key="peopleSearch.result.limit" level="1" required="true">
         <default>
             <value>200</value>
         </default>
-        <options>
-            <option value="min">1</option>
-            <option value="max">10000</option>
-        </options>
+        <properties>
+            <property key="Minimum">1</property>
+            <property key="Maximum">10000</property>
+        </properties>
     </setting>
     <setting hidden="false" key="peopleSearch.useProxy" level="2" required="true">
         <default>
@@ -2459,22 +2751,25 @@
         </default>
     </setting>
     <setting hidden="false" key="peopleSearch.displayName.cardLabels" level="1">
+        <flag>MacroSupport</flag>
         <default>
             <value>@LDAP:givenName@ @LDAP:sn@</value>
             <value>@LDAP:title@</value>
             <value>@LDAP:mail@</value>
             <value>@LDAP:telephoneNumber@</value>
         </default>
-        <options>
-            <option value="max">4</option>
-        </options>
+        <properties>
+            <property key="Maximum">4</property>
+        </properties>
     </setting>
     <setting hidden="false" key="peopleSearch.displayName.user" level="1" required="true">
+        <flag>MacroSupport</flag>
         <default>
             <value>@LDAP:givenName@ @LDAP:sn@ - @LDAP:title@</value>
         </default>
     </setting>
     <setting hidden="false" key="peopleSearch.photo.ldapAttribute" level="2">
+        <ldapPermission actor="self_other" access="read"/>
         <default>
             <value>photo</value>
         </default>
@@ -2498,11 +2793,13 @@
         </default>
     </setting>
     <setting hidden="false" key="peopleSearch.orgChart.parentAttribute" level="1">
+        <ldapPermission actor="proxy" access="read"/>
         <default>
             <value>manager</value>
         </default>
     </setting>
     <setting hidden="false" key="peopleSearch.orgChart.childAttribute" level="1">
+        <ldapPermission actor="self_other" access="read"/>
         <default>
             <value>directReports</value>
         </default>
@@ -2624,12 +2921,14 @@
         <default/>
     </setting>
     <setting hidden="false" key="helpdesk.result.form" level="1" required="true">
+        <flag>Form_HideOptions</flag>
+        <ldapPermission actor="helpdesk" access="read"/>
         <default>
-            <value>{"name":"CN","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Username"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
+            <value>{"name":"cn","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Username"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"givenName","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"First Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"sn","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Last Name"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"mail","minimumLength":1,"maximumLength":64,"type":"email","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Email"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
-            <value>{"name":"WorkforceID","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Workforce ID"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
+            <value>{"name":"workforceID","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Workforce ID"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
         <default template="AD">
             <value>{"name":"sAMAccountName","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Username"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
@@ -2638,12 +2937,11 @@
             <value>{"name":"mail","minimumLength":1,"maximumLength":64,"type":"email","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Email"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"userPrincipalName","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"UPN"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
-        <options>
-            <option value="types">[]</option>
-            <option value="hideOptions">true</option>
-        </options>
     </setting>
     <setting hidden="false" key="helpdesk.detail.form" level="1" required="true">
+        <flag>Form_HideStandardOptions</flag>
+        <flag>Form_ShowMultiValueOption</flag>
+        <ldapPermission actor="helpdesk" access="read"/>
         <default>
             <value>{"name":"cn","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"CN"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"uid","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"uid"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
@@ -2664,30 +2962,26 @@
             <value>{"name":"l","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Location"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"employeeType","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Employee Type"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
             <value>{"name":"employeeStatus","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Employee Status"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
-            <value>{"name":"WorkforceID","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Workforce ID"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
+            <value>{"name":"workforceID","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Workforce ID"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
         <options>
-            <option value="types">["text","email","userDN"]</option>
-            <option value="hideOptions">true</option>
-            <option value="required">hide</option>
-            <option value="type-userDN">show</option>
-            <option value="readonly">true</option>
+            <option value="text">text</option>
+            <option value="email">email</option>
+            <option value="userDN">userDN</option>
         </options>
     </setting>
     <setting hidden="false" key="helpdesk.searchBase" level="1">
+        <flag>ldapDNsyntax</flag>
         <default />
-        <options>
-            <option value="ldapDNsyntax">true</option>
-        </options>
     </setting>
     <setting hidden="false" key="helpdesk.result.limit" level="2" required="true">
         <default>
             <value>500</value>
         </default>
-        <options>
-            <option value="min">1</option>
-            <option value="max">10000</option>
-        </options>
+        <properties>
+            <property key="Minimum">1</property>
+            <property key="Maximum">10000</property>
+        </properties>
     </setting>
     <setting hidden="false" key="helpdesk.setPassword.mode" level="1">
         <default>
@@ -2702,6 +2996,7 @@
         </options>
     </setting>
     <setting hidden="false" key="helpdesk.setPassword.writeAttributes" level="2">
+        <ldapPermission actor="helpdesk" access="write"/>
         <default />
     </setting>
     <setting hidden="false" key="helpdesk.sendPassword" level="1" required="true">
@@ -2710,6 +3005,7 @@
         </default>
     </setting>
     <setting hidden="false" key="helpdesk.actions" level="2">
+        <ldapPermission actor="helpdesk" access="write"/>
         <default />
     </setting>
     <setting hidden="false" key="helpdesk.enableUnlock" level="1" required="true">
@@ -2814,6 +3110,11 @@
             <value>@LDAP:givenName@ @LDAP:sn@ - @User:ID@ - @User:Email@</value>
         </default>
     </setting>
+    <setting hidden="false" key="helpdesk.enable" level="1" required="true">
+        <default>
+            <value>false</value>
+        </default>
+    </setting>
     <setting hidden="true" key="helpdesk.profile.list" level="1">
         <regex>^(?!.*all.*)([a-zA-Z][a-zA-Z0-9-]{2,15})$</regex>
         <default>
@@ -2821,31 +3122,28 @@
         </default>
     </setting>
     <setting hidden="false" key="helpdesk.queryMatch" level="1" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
-            <value><![CDATA[{"type":"ldapGroup","ldapProfileID":"all","ldapBase":"cn=Helpdesk,ou=Groups,o=example"}]]></value>
-        </default>
-        <default syntaxVersion="2" template="AD">
-            <value><![CDATA[{"type":"ldapGroup","ldapProfileID":"all","ldapBase":"cn=Helpdesk,cn=Domain Admins,cn=Users,DC=site,DC=example,DC=net"}]]></value>
-        </default>
-        <default syntaxVersion="2" template="ORACLE_DS">
-            <value><![CDATA[{"type":"ldapGroup","ldapProfileID":"all","ldapBase":"cn=Helpdesk,cn=Users,DC=site,DC=example,DC=net"}]]></value>
+            <value/>
         </default>
     </setting>
     <setting hidden="true" key="helpdesk.search.filters" level="1">
+        <flag>Permission_HideGroups</flag>
+        <flag>Permission_HideMatch</flag>
         <default syntaxVersion="2">
         </default>
-        <options>
-            <option value="hideGroups">true</option>
-            <option value="hideMatch">true</option>
-        </options>
     </setting>
     <setting hidden="true" key="recovery.profile.list" level="1">
         <regex>^(?!.*all.*)([a-zA-Z][a-zA-Z0-9-]{2,15})$</regex>
+        <properties>
+            <property key="Minimum">1</property>
+        </properties>
         <default>
             <value>default</value>
         </default>
     </setting>
     <setting hidden="false" key="recovery.queryMatch" level="1" required="true">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value><![CDATA[{"type":"ldapQuery","ldapProfileID":"all","ldapQuery":"(objectClass=*)"}]]></value>
         </default>
@@ -2864,20 +3162,30 @@
             <option value="NONE">None - Token verification will not be available</option>
             <option value="EMAILONLY">Email Only - Send to email address</option>
             <option value="SMSONLY">SMS Only - Send via SMS</option>
-            <option value="BOTH">Both - Send token to both email and SMS</option>
-            <option value="EMAILFIRST">Email First - Try to send token via email; if no email address is available, send via SMS</option>
-            <option value="SMSFIRST">SMS First - Try to send token via SMS; if no SMS number is available, send via email</option>
             <option value="CHOICE_SMS_EMAIL">Operator Choice - If both SMS and email address is available, helpdesk operator decides</option>
         </options>
-    </setting>
-    <setting hidden="false" key="helpdesk.otp.verify" level="1">
-        <default>
-            <value>false</value>
-        </default>
     </setting>
     <setting hidden="false" key="helpdesk.setPassword.maskValue" level="1">
         <default>
             <value>false</value>
+        </default>
+    </setting>
+    <setting hidden="false" key="helpdesk.verificationMethods" level="1">
+        <flag>Verification_HideMinimumOptional</flag>
+        <default>
+            <value>{"methodSettings":{},"minOptionalRequired":0}</value>
+        </default>
+        <options>
+            <option value="ATTRIBUTES">LDAP Attributes</option>
+            <option value="TOKEN">SMS/Email Token Verification</option>
+            <option value="OTP">OTP (Mobile Device) Verification</option>
+        </options>
+    </setting>
+    <setting hidden="false" key="helpdesk.verification.form" level="1" required="false">
+        <flag>Form_HideOptions</flag>
+        <ldapPermission actor="helpdesk" access="read"/>
+        <default>
+            <value>{"name":"postalCode","minimumLength":1,"maximumLength":64,"type":"text","required":true,"confirmationRequired":false,"readonly":false,"labels":{"":"Postal Code"},"regexErrors":{"":""},"description":{"":""},"selectOptions":{}}</value>
         </default>
     </setting>
     <setting hidden="false" key="pwmDb.location" level="2" required="true">
@@ -2907,14 +3215,29 @@
             <value />
         </default>
     </setting>
+    <setting hidden="false" key="db.vendor.template" level="1">
+        <default>
+            <value>DB_ORACLE</value>
+        </default>
+        <options>
+            <option value="DB_ORACLE">Oracle</option>
+            <option value="DB_OTHER">Other</option>
+        </options>
+    </setting>
     <setting hidden="false" key="db.columnType.key" level="2" required="true">
         <default>
             <value>VARCHAR</value>
+        </default>
+        <default template="DB_ORACLE">
+            <value>VARCHAR2</value>
         </default>
     </setting>
     <setting hidden="false" key="db.columnType.value" level="2" required="true">
         <default>
             <value>TEXT</value>
+        </default>
+        <default template="DB_ORACLE">
+            <value>CLOB</value>
         </default>
     </setting>
     <setting hidden="false" key="db.debugTrace.enable" level="2" required="true">
@@ -2946,19 +3269,19 @@
         <default>
             <value>-1</value>
         </default>
-        <options>
-            <option value="min">-1</option>
-            <option value="max">10000</option>
-        </options>
+        <properties>
+            <property key="Minimum">-1</property>
+            <property key="Maximum">10000</property>
+        </properties>
     </setting>
     <setting hidden="false" key="reporting.ldap.maxQuerySize" level="2">
         <default>
             <value>100000</value>
         </default>
-        <options>
-            <option value="min">1</option>
-            <option value="max">100000000</option>
-        </options>
+        <properties>
+            <property key="Minimum">1</property>
+            <property key="Maximum">100000000</property>
+        </properties>
     </setting>
     <setting hidden="false" key="reporting.job.timeOffset" level="2">
         <default>
@@ -3024,6 +3347,7 @@
         </default>
     </setting>
     <setting hidden="false" key="webservices.queryMatch" level="2">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value/>
         </default>
@@ -3032,6 +3356,7 @@
         </default>
     </setting>
     <setting hidden="false" key="webservices.thirdParty.queryMatch" level="2">
+        <ldapPermission actor="proxy" access="read"/>
         <default syntaxVersion="2">
             <value/>
         </default>
@@ -3049,25 +3374,26 @@
         <default />
     </setting>
     <setting hidden="false" key="webservice.userAttributes" level="2">
+        <ldapPermission actor="proxy" access="read"/>
         <default />
     </setting>
     <setting hidden="false" key="oauth.idserver.loginUrl" level="2">
-        <placeholder>https://oauthserver.example.com/osp/a/idm/auth/oauth2/grant</placeholder>
+        <example>https://oauthserver.example.com/osp/a/idm/auth/oauth2/grant</example>
         <default/>
     </setting>
     <setting hidden="false" key="oauth.idserver.codeResolveUrl" level="2">
-        <placeholder>https://oauthserver.example.com/osp/a/idm/auth/oauth2/authcoderesolve</placeholder>
+        <example>https://oauthserver.example.com/osp/a/idm/auth/oauth2/authcoderesolve</example>
         <default/>
     </setting>
     <setting hidden="false" key="oauth.idserver.attributesUrl" level="2">
-        <placeholder>https://oauthserver.example.com/osp/a/idm/auth/oauth2/getattributes</placeholder>
+        <example>https://oauthserver.example.com/osp/a/idm/auth/oauth2/getattributes</example>
         <default/>
     </setting>
     <setting hidden="false" key="oauth.idserver.serverCerts" level="2">
         <default/>
-        <options>
-            <option value="ImportHandler">password.pwm.config.function.OAuthCertImportFunction</option>
-        </options>
+        <properties>
+            <property key="Cert_ImportHandler">password.pwm.config.function.OAuthCertImportFunction</property>
+        </properties>
     </setting>
     <setting hidden="false" key="oauth.idserver.clientName" level="2">
         <default/>
@@ -3079,15 +3405,15 @@
         <default/>
     </setting>
     <setting hidden="false" key="naaf.ws.url" level="2">
-        <placeholder>https://www.example.com/api/v1</placeholder>
+        <example>https://www.example.com/api/v1</example>
         <regex>^(http|https)://.+</regex>
         <default/>
     </setting>
     <setting hidden="false" key="naaf.ws.serverCerts" level="2">
         <default/>
-        <options>
-            <option value="ImportHandler">password.pwm.config.function.NAAFCertImportFunction</option>
-        </options>
+        <properties>
+            <property key="Cert_ImportHandler">password.pwm.config.function.NAAFCertImportFunction</property>
+        </properties>
     </setting>
     <setting hidden="false" key="naaf.userIdentifier" level="2">
         <default>
@@ -3109,10 +3435,7 @@
             <option value="VOICE">Voice</option>
         </options>
     </setting>
-    <setting hidden="false" key="https.server.cert.pkcs12" level="1">
-        <default/>
-    </setting>
-    <setting hidden="false" key="https.server.cert.password" level="1">
+    <setting hidden="false" key="https.server.cert" level="1">
         <default/>
     </setting>
     <setting hidden="false" key="https.server.tls.protocols" level="1">
@@ -3134,17 +3457,13 @@
             <value>TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,TLS_DHE_DSS_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_SHA256,TLS_ECDHE_RSA_WITH_AES_128_SHA,TLS_ECDHE_ECDSA_WITH_AES_128_SHA,TLS_DHE_RSA_WITH_AES_128_SHA256,TLS_DHE_RSA_WITH_AES_128_SHA,TLS_DHE_DSS_WITH_AES_128_SHA256</value>
         </default>
     </setting>
+    <setting hidden="false" key="pwm.wordlist.location" level="1">
+        <default/>
+    </setting>
+    <setting hidden="false" key="pwm.seedlist.location" level="2">
+        <default/>
+    </setting>
     <!-- DEPRECATED SETTINGS -->
-    <setting hidden="true" key="pwm.wordlist.location" level="1">
-        <default>
-            <value><![CDATA[wordlist.zip]]></value>
-        </default>
-    </setting>
-    <setting hidden="true" key="pwm.seedlist.location" level="2">
-        <default>
-            <value><![CDATA[seedlist.zip]]></value>
-        </default>
-    </setting>
     <setting hidden="true" key="password.policy.ADComplexity" level="99" required="false">
         <default>
             <value>false</value>
@@ -3163,6 +3482,16 @@
             <value>true</value>
         </default>
     </setting>
+    <setting hidden="true" key="helpdesk.otp.verify" level="1">
+        <default>
+            <value>false</value>
+        </default>
+    </setting>
+    <!-- DEPRECATED SETTINGS -->
+    <category hidden="false" key="TEMPLATES">
+    </category>
+    <category hidden="false" key="NOTES">
+    </category>
     <category hidden="false" key="SETTINGS">
     </category>
     <category hidden="false" key="PROFILES">
@@ -3180,7 +3509,15 @@
     </category>
     <category hidden="false" key="LDAP_SETTINGS">
     </category>
+    <category hidden="false" key="APPLICATION">
+    </category>
     <category hidden="false" key="GENERAL">
+    </category>
+    <category hidden="false" key="LOCALIZATION">
+    </category>
+    <category hidden="false" key="TELEMETRY">
+    </category>
+    <category hidden="false" key="CLUSTERING">
     </category>
     <category hidden="false" key="USER_INTERFACE">
     </category>
@@ -3211,6 +3548,8 @@
     <category hidden="false" key="SMS_MESSAGES">
     </category>
     <category hidden="false" key="SECURITY">
+    </category>
+    <category hidden="false" key="WORDLISTS">
     </category>
     <category hidden="false" key="APP_SECURITY">
     </category>
@@ -3249,6 +3588,10 @@
     <category hidden="false" key="ORACLE_DS">
     </category>
     <category hidden="false" key="DATABASE">
+    </category>
+    <category hidden="false" key="DATABASE_SETTINGS">
+    </category>
+    <category hidden="false" key="DATABASE_ADV">
     </category>
     <category hidden="false" key="REPORTING">
     </category>
@@ -3294,32 +3637,22 @@
     </category>
     <category hidden="false" key="UPDATE">
     </category>
+    <category hidden="false" key="UPDATE_SETTINGS">
+    </category>
+    <category hidden="false" key="UPDATE_PROFILE">
+        <profile setting="updateAttributes.profile.list"/>
+    </category>
     <category hidden="false" key="SHORTCUT">
     </category>
     <category hidden="false" key="PEOPLE_SEARCH">
     </category>
+    <category hidden="false" key="HELPDESK">
+    </category>
     <category hidden="false" key="HELPDESK_PROFILE">
         <profile setting="helpdesk.profile.list"/>
     </category>
+    <category hidden="false" key="HELPDESK_SETTINGS">
+    </category>
     <category hidden="true" key="NAAF">
     </category>
-    <template hidden="false" key="NOVL">
-    </template>
-    <template hidden="false" key="NOVL_IDM">
-    </template>
-    <template hidden="false" key="AD">
-    </template>
-    <template hidden="false" key="ORACLE_DS">
-    </template>
-    <template hidden="false" key="OPEN_LDAP">
-    </template>
-    <template hidden="false" key="DEFAULT">
-    </template>
-
-    <template hidden="false" key="LOCALDB">
-    </template>
-    <template hidden="false" key="DB">
-    </template>
-    <template hidden="false" key="LDAP">
-    </template>
 </settings>

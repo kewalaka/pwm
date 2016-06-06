@@ -1,11 +1,12 @@
 <%@ page import="password.pwm.http.JspUtility" %>
 <%@ page import="password.pwm.http.servlet.PwmServletDefinition" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -26,7 +27,7 @@
 <%@ page language="java" session="true" isThreadSafe="true"
          contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <% final PwmRequest index_pwmRequest = JspUtility.getPwmRequest(pageContext); %>
 <%@ include file="../WEB-INF/jsp/fragment/header.jsp" %>
 <body class="nihilo">
@@ -39,7 +40,7 @@
             <tr>
                 <td class="menubutton_key">
                     <a class="menubutton" id="Button_Login" href="<pwm:context/><pwm:url url='/private'/>">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-sign-in"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-sign-in"></span></pwm:if>
                         <pwm:display key="Button_Login"/>
                     </a>
                 </td>
@@ -51,7 +52,7 @@
             <tr>
                 <td class="menubutton_key">
                     <a class="menubutton" id="Title_ForgottenPassword" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.ForgottenPassword.servletUrl()%>'/>">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-unlock"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-unlock"></span></pwm:if>
                         <pwm:display key="Title_ForgottenPassword"/>
                     </a>
                 </td>
@@ -64,7 +65,7 @@
             <tr>
                 <td class="menubutton_key">
                     <a class="menubutton" id="Title_ForgottenUsername" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.ForgottenUsername.servletUrl()%>'/>">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-unlock"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-unlock"></span></pwm:if>
                         <pwm:display key="Title_ForgottenUsername"/>
                     </a>
                 </td>
@@ -77,7 +78,7 @@
             <tr>
                 <td class="menubutton_key">
                     <a class="menubutton" id="Title_ActivateUser" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.ActivateUser.servletUrl()%>'/>">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-graduation-cap"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-graduation-cap"></span></pwm:if>
                         <pwm:display key="Title_ActivateUser"/>
                     </a>
                 </td>
@@ -90,7 +91,7 @@
             <tr>
                 <td class="menubutton_key">
                     <a class="menubutton" id="Title_NewUser" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.NewUser.servletUrl()%>'/>">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-file-text-o"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-file-text-o"></span></pwm:if>
                         <pwm:display key="Title_NewUser"/>
                     </a>
                 </td>
@@ -103,7 +104,7 @@
             <tr>
                 <td class="menubutton_key">
                     <a class="menubutton" href="<pwm:url addContext="true" url='<%=PwmConstants.URL_PREFIX_PUBLIC + "/" + PwmServletDefinition.PeopleSearch.servletUrlName()%>'/>">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-search"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-search"></span></pwm:if>
                         <pwm:display key="Title_PeopleSearch"/>
                     </a>
                 </td>

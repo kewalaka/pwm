@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,12 +26,37 @@ import java.security.cert.X509Certificate;
 
 public class PwmHttpClientConfiguration {
     private X509Certificate[] certificates;
+    private boolean promiscuous;
 
-    public PwmHttpClientConfiguration(X509Certificate[] certificate) {
+    private PwmHttpClientConfiguration(X509Certificate[] certificate, boolean promiscuous) {
         this.certificates = certificate;
+        this.promiscuous = promiscuous;
     }
 
     public X509Certificate[] getCertificates() {
         return certificates;
+    }
+
+    public boolean isPromiscuous() {
+        return promiscuous;
+    }
+
+    public static class Builder {
+        private X509Certificate[] certificate;
+        private boolean promiscuous;
+
+        public Builder setCertificate(X509Certificate[] certificate) {
+            this.certificate = certificate;
+            return this;
+        }
+
+        public Builder setPromiscuous(boolean promiscuous) {
+            this.promiscuous = promiscuous;
+            return this;
+        }
+
+        public PwmHttpClientConfiguration create() {
+            return new PwmHttpClientConfiguration(certificate, promiscuous);
+        }
     }
 }

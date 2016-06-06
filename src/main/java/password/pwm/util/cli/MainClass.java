@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.varia.NullAppender;
 import password.pwm.PwmApplication;
+import password.pwm.PwmApplicationMode;
 import password.pwm.PwmConstants;
 import password.pwm.PwmEnvironment;
 import password.pwm.config.Configuration;
@@ -56,7 +57,7 @@ public class MainClass {
 
     private static MainOptions MAIN_OPTIONS = new MainOptions();
 
-    public static final Map<String,CliCommand> COMMANDS;
+    private static final Map<String,CliCommand> COMMANDS;
     static {
         final List<CliCommand> commandList = new ArrayList<>();
         commandList.add(new LocalDBInfoCommand());
@@ -78,6 +79,7 @@ public class MainClass {
         commandList.add(new LdapSchemaExtendCommand());
         commandList.add(new ConfigDeleteCommand());
         commandList.add(new ResponseStatsCommand());
+        commandList.add(new ImportHttpsKeyStoreCommand());
         commandList.add(new ExportHttpsKeyStoreCommand());
         commandList.add(new ExportHttpsTomcatConfigCommand());
         commandList.add(new ShellCommand());
@@ -90,7 +92,7 @@ public class MainClass {
         COMMANDS = Collections.unmodifiableMap(sortedMap);
     }
 
-    public static String helpTextFromCommands(Collection<CliCommand> commands) {
+    static String helpTextFromCommands(Collection<CliCommand> commands) {
         final StringBuilder output = new StringBuilder();
         for (CliCommand command : commands) {
             output.append(command.getCliParameters().commandName);
@@ -111,13 +113,13 @@ public class MainClass {
         return output.toString();
     }
 
-    public static String makeHelpTextOutput() {
+    private static String makeHelpTextOutput() {
         final StringBuilder output = new StringBuilder();
         output.append(helpTextFromCommands(COMMANDS.values()));
         output.append("\n");
         output.append("options:\n");
         output.append(" -force                force operations skipping any confirmation\n");
-        output.append(" -debugLevel=x         set the debug level where x is TRACE, DEBUG, INFO, WARN or FATAL\n");
+        output.append(" -debugLevel=x         set the debug level where x is TRACE, DEBUG, INFO, ERROR, WARN or FATAL\n");
         output.append(" -applicationPath=x    set the application path, default is current path\n");
         output.append("\n");
         output.append("usage: \n");
@@ -259,6 +261,9 @@ public class MainClass {
                     try {
                         cliEnvironment = createEnv(command.getCliParameters(), argList);
                     } catch (Exception e) {
+                        final String errorMsg = "unable to establish operating environment: " + e.getMessage();
+                        final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_ENVIRONMENT_ERROR, errorMsg);
+                        LOGGER.error(errorInformation.toDebugStr(),e);
                         System.out.println("unable to establish operating environment: " + e.getMessage());
                         System.exit(-1);
                         return;
@@ -277,6 +282,7 @@ public class MainClass {
                             cliEnvironment.getPwmApplication().shutdown();
                         } catch (Exception e) {
                             System.out.println("error closing operating environment: " + e.getMessage());
+                            e.printStackTrace();
                         }
                     }
                     if (cliEnvironment.getLocalDB() != null) {
@@ -295,7 +301,7 @@ public class MainClass {
         }
     }
 
-    static String[] parseMainCommandLineOptions(String[] args) {
+    private static String[] parseMainCommandLineOptions(String[] args) {
         final String OPT_DEBUG_LEVEL = "-debugLevel";
         final String OPT_APP_PATH = "-applicationPath";
         final String OPT_APP_FLAGS= "-applicationFlags";
@@ -350,7 +356,7 @@ public class MainClass {
         return outputArgs.toArray(new String[outputArgs.size()]);
     }
 
-    static void initLog4j(PwmLogLevel logLevel) {
+    private static void initLog4j(PwmLogLevel logLevel) {
         if (logLevel == null) {
             Logger.getRootLogger().removeAllAppenders();
             Logger.getRootLogger().addAppender(new NullAppender());
@@ -370,7 +376,7 @@ public class MainClass {
         PwmLogger.markInitialized();
     }
 
-    static LocalDB loadPwmDB(
+    private static LocalDB loadPwmDB(
             final Configuration config,
             final boolean readonly,
             final File applicationPath
@@ -383,10 +389,10 @@ public class MainClass {
         return LocalDBFactory.getInstance(databaseDirectory, readonly, null, config);
     }
 
-    static ConfigurationReader loadConfiguration(final File configurationFile) throws Exception {
+    private static ConfigurationReader loadConfiguration(final File configurationFile) throws Exception {
         final ConfigurationReader reader = new ConfigurationReader(configurationFile);
 
-        if (reader.getConfigMode() == PwmApplication.MODE.ERROR) {
+        if (reader.getConfigMode() == PwmApplicationMode.ERROR) {
             final String errorMsg = reader.getConfigFileError() == null ? "error" : reader.getConfigFileError().toDebugStr();
             out("unable to load configuration: " + errorMsg);
             System.exit(-1);
@@ -395,7 +401,7 @@ public class MainClass {
         return reader;
     }
 
-    static PwmApplication loadPwmApplication(
+    private static PwmApplication loadPwmApplication(
             final File applicationPath,
             final Collection<PwmEnvironment.ApplicationFlag> flags,
             final Configuration config,
@@ -404,10 +410,13 @@ public class MainClass {
     )
             throws LocalDBException, PwmUnrecoverableException
     {
-        final PwmApplication.MODE mode = readonly ? PwmApplication.MODE.READ_ONLY : PwmApplication.MODE.RUNNING;
-        final Collection<PwmEnvironment.ApplicationFlag> applicationFlags = flags == null
-                ? PwmEnvironment.ParseHelper.readApplicationFlagsFromSystem(null)
-                : flags;
+        final PwmApplicationMode mode = readonly ? PwmApplicationMode.READ_ONLY : PwmApplicationMode.RUNNING;
+        final Collection<PwmEnvironment.ApplicationFlag> applicationFlags = new HashSet<>();
+        if (flags == null) {
+            applicationFlags.addAll(PwmEnvironment.ParseHelper.readApplicationFlagsFromSystem(null));
+        } else {
+            applicationFlags.addAll(flags);
+        }
         applicationFlags.add(PwmEnvironment.ApplicationFlag.CommandLineInstance);
         final PwmEnvironment pwmEnvironment = new PwmEnvironment.Builder(config, applicationPath)
                 .setApplicationMode(mode)
@@ -415,7 +424,7 @@ public class MainClass {
                 .setFlags(applicationFlags)
                 .createPwmEnvironment();
         final PwmApplication pwmApplication = new PwmApplication(pwmEnvironment);
-        final PwmApplication.MODE runningMode = pwmApplication.getApplicationMode();
+        final PwmApplicationMode runningMode = pwmApplication.getApplicationMode();
 
         if (runningMode != mode) {
             out("unable to start application in required state '" + mode + "', current state: " + runningMode);
@@ -425,7 +434,7 @@ public class MainClass {
         return pwmApplication;
     }
 
-    static File locateConfigurationFile(File applicationPath) {
+    private static File locateConfigurationFile(File applicationPath) {
         return new File(applicationPath + File.separator + PwmConstants.DEFAULT_CONFIG_FILE_FILENAME);
     }
 
@@ -433,7 +442,7 @@ public class MainClass {
         System.out.println(txt + "\n");
     }
 
-    public static class MainOptions {
+    static class MainOptions {
         private PwmLogLevel pwmLogLevel = null;
         private File applicationPath = null;
         private boolean forceFlag = false;
@@ -447,7 +456,7 @@ public class MainClass {
             return applicationPath;
         }
 
-        public boolean isForceFlag() {
+        boolean isForceFlag() {
             return forceFlag;
         }
     }

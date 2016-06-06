@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@ import password.pwm.PwmApplication;
 import password.pwm.bean.UserIdentity;
 import password.pwm.bean.UserInfoBean;
 import password.pwm.config.PwmSetting;
+import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.util.logging.PwmLogger;
@@ -111,8 +112,17 @@ class LdapXmlUserHistory implements UserHistoryStore, Serializable {
         // read current value;
         final StoredHistory storedHistory;
         final ConfigObjectRecord theCor;
+        final List corList;
         try {
-            final List corList = ConfigObjectRecord.readRecordFromLDAP(theUser, corAttribute, corRecordIdentifer, null, null);
+            corList = ConfigObjectRecord.readRecordFromLDAP(theUser, corAttribute, corRecordIdentifer, null, null);
+        } catch (Exception e) {
+            final String errorMsg = "error reading LDAP user event history for user " + userIdentity.toDisplayString() + ", error: " + e.getMessage();
+            final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_UNKNOWN, errorMsg);
+            LOGGER.error(errorInformation.toDebugStr(),e);
+            throw new PwmUnrecoverableException(errorInformation, e);
+        }
+
+        try {
             if (!corList.isEmpty()) {
                 theCor = (ConfigObjectRecord) corList.get(0);
             } else {
@@ -120,7 +130,7 @@ class LdapXmlUserHistory implements UserHistoryStore, Serializable {
             }
 
             storedHistory = StoredHistory.fromXml(theCor.getPayload());
-        } catch (ChaiOperationException e) {
+        } catch (Exception e) {
             LOGGER.error("ldap error writing user event log: " + e.getMessage());
             return;
         }
@@ -243,8 +253,8 @@ class LdapXmlUserHistory implements UserHistoryStore, Serializable {
                     final long timeStamp = hrElement.getAttribute(XML_ATTR_TIMESTAMP).getLongValue();
                     final String transactionCode = hrElement.getAttribute(XML_ATTR_TRANSACTION).getValue();
                     final AuditEvent eventCode = AuditEvent.forKey(transactionCode);
-                    final String srcAddr = hrElement.getAttribute(XML_ATTR_SRC_IP) != null ? hrElement.getAttribute(XML_ATTR_SRC_IP).toString() : "";
-                    final String srcHost = hrElement.getAttribute(XML_ATTR_SRC_HOST) != null ? hrElement.getAttribute(XML_ATTR_SRC_HOST).toString() : "";
+                    final String srcAddr = hrElement.getAttribute(XML_ATTR_SRC_IP) != null ? hrElement.getAttribute(XML_ATTR_SRC_IP).getValue() : "";
+                    final String srcHost = hrElement.getAttribute(XML_ATTR_SRC_HOST) != null ? hrElement.getAttribute(XML_ATTR_SRC_HOST).getValue() : "";
                     final String message = hrElement.getText();
                     final StoredEvent storedEvent = new StoredEvent(eventCode,timeStamp,message,srcAddr,srcHost);
                     returnHistory.addEvent(storedEvent);

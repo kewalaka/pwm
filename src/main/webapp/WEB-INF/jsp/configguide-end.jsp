@@ -1,11 +1,12 @@
+<%@ page import="password.pwm.http.servlet.PwmServletDefinition" %>
 <%@ page import="password.pwm.http.servlet.configguide.ConfigGuideForm" %>
 <%@ page import="password.pwm.util.StringUtil" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -22,17 +23,15 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_LOCALE); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_THEME); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_LOCALE); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.INCLUDE_CONFIG_CSS); %>
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<% final ConfigGuideBean configGuideBean = (ConfigGuideBean) JspUtility.getPwmSession(pageContext).getSessionBean(ConfigGuideBean.class);%>
-<% final PwmRequest pwmRequest = PwmRequest.forRequest(request,response); %>
-<html dir="<pwm:LocaleOrientation/>">
+<% ConfigGuideBean configGuideBean = JspUtility.getSessionBean(pageContext, ConfigGuideBean.class);%>
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
-<link href="<pwm:context/><pwm:url url='/public/resources/configStyle.css'/>" rel="stylesheet" type="text/css"/>
 <div id="wrapper">
     <%@ include file="fragment/configguide-header.jsp"%>
     <div id="centerbody">
@@ -45,10 +44,10 @@
             <div class="setting_body">
                 <table>
                     <tr>
-                        <td><b>Template</b>
+                        <td><b>LDAP Template</b>
                         </td>
                         <td>
-                            <%=StringUtil.escapeHtml(configGuideBean.getStoredConfiguration().getTemplate().getLabel(pwmRequest.getLocale()))%>
+                            <%=StringUtil.escapeHtml(PwmSetting.TEMPLATE_LDAP.getOptions().get(configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_TEMPLATE_LDAP)))%>
                         </td>
                     </tr>
                     <tr>
@@ -116,15 +115,7 @@
                         <td><b>Response Storage Preference</b>
                         </td>
                         <td>
-                            <% if ("LDAP".equals(configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_CR_STORAGE_PREF))) { %>
-                            LDAP
-                            <% } else if ("DB".equals(configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_CR_STORAGE_PREF))) { %>
-                            Remote Database
-                            <% } else if ("LOCALDB".equals(configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_CR_STORAGE_PREF))) { %>
-                            Local Embedded Database (Testing only)
-                            <% } else { %>
-                            Not Configured
-                            <% } %>
+                            <%=StringUtil.escapeHtml(PwmSetting.TEMPLATE_STORAGE.getOptions().get(configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_TEMPLATE_STORAGE)))%>
                         </td>
                     </tr>
                 </table>
@@ -133,12 +124,12 @@
         <br/>
         <div class="buttonbar">
             <button class="btn" id="button_previous">
-                <pwm:if test="showIcons"><span class="btn-icon fa fa-backward"></span></pwm:if>
+                <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-backward"></span></pwm:if>
                 <pwm:display key="Button_Previous" bundle="Config"/>
             </button>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <button class="btn" id="button_next">
-                <pwm:if test="showIcons"><span class="btn-icon fa fa-save"></span></pwm:if>
+                <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-save"></span></pwm:if>
                 Save Configuration
             </button>
         </div>
@@ -149,15 +140,11 @@
     <script type="text/javascript">
         PWM_GLOBAL['startupFunctions'].push(function(){
             PWM_MAIN.addEventHandler('button_next','click',function(){
-                var htmlBody = '<p>After saving the configuration, the application will be automatically restarted.</p>'
-                        + '<p>The application will then be in open configuration mode.  While in open configuration mode, the configuration can be accessed '
-                        + 'without LDAP authentication.  Once you have completed any LDAP configuration changes you may wish to make, close the configuration so that '
-                        + 'LDAP authentication will be required. </p>';
+                var htmlBody = '<p>After saving the configuration, the application will be automatically restarted.</p>';
 
                 htmlBody += '<br/><br/><table><tr><td colspan="3" class="title">URLs</td></tr>';
                 htmlBody += '<tr><td class="key">Application</td><td> <a href="<pwm:context/>"><pwm:context/></a></td></tr>';
-                htmlBody += '<tr><td class="key">Configuration Manager</td><td> <a href="<pwm:context/>/private/config/ConfigManager"><pwm:context/>/private/config/ConfigManager</a></td></tr>';
-                htmlBody += '<tr><td class="key">Configuration Editor</td><td> <a href="<pwm:context/>/private/config/ConfigEditor"><pwm:context/>/private/config/ConfigEditor</a></td></tr>';
+                htmlBody += '<tr><td class="key">Configuration</td><td> <a href="<pwm:context/>/private/config"><pwm:context/>/private/config</a></td></tr>';
                 htmlBody += '</table>';
 
                 PWM_MAIN.showConfirmDialog({text:htmlBody,okAction:function(){
@@ -169,9 +156,6 @@
         });
     </script>
 </pwm:script>
-<pwm:script-ref url="/public/resources/js/configguide.js"/>
-<pwm:script-ref url="/public/resources/js/configmanager.js"/>
-<pwm:script-ref url="/public/resources/js/admin.js"/>
 <%@ include file="fragment/footer.jsp" %>
 </body>
 </html>

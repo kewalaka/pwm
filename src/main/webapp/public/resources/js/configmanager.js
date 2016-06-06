@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,6 +73,7 @@ PWM_CONFIG.waitForRestart=function(options) {
         console.log('Waiting for server restart, unable to contact server: ' + error);
     };
     var url = PWM_GLOBAL['url-restservice'] + "/app-data/client?checkForRestart=true";
+    url = PWM_MAIN.addParamToUrl(url,'pageUrl',window.location.href);
     PWM_MAIN.ajaxRequest(url,loadFunction,{errorFunction:errorFunction,method:'GET'});
 };
 
@@ -93,63 +94,69 @@ PWM_CONFIG.startNewConfigurationEditor=function(template) {
     }});
 };
 
-PWM_CONFIG.startConfigurationEditor=function() {
-    require(["dojo"],function(dojo){
-        if(dojo.isIE <= 8){ // only IE8 and below
-            alert('Internet Explorer 8 and below is not able to edit the configuration.  Please use a newer version of Internet Explorer or a different browser.');
-            document.forms['cancelEditing'].submit();
-        } else {
-            PWM_MAIN.goto('/private/config/editor');
-        }
+PWM_CONFIG.uploadConfigDialog=function() {
+    PWM_MAIN.preloadAll(function() {
+        var uploadOptions = {};
+        uploadOptions['url'] = window.location.pathname + '?processAction=uploadConfig';
+        uploadOptions['title'] = 'Upload Configuration';
+        uploadOptions['nextFunction'] = function () {
+            PWM_MAIN.showWaitDialog({
+                title: 'Save complete, restarting application...', loadFunction: function () {
+                    PWM_CONFIG.waitForRestart({location: '/'});
+                }
+            });
+        };
+        UILibrary.uploadFileDialog(uploadOptions);
     });
 };
 
-
-PWM_CONFIG.uploadConfigDialog=function() {
-    var uploadOptions = {};
-    uploadOptions['url'] = window.location.pathname + '?processAction=uploadConfig';
-    uploadOptions['title'] = 'Upload Configuration';
-    uploadOptions['nextFunction'] = function() {
-        PWM_MAIN.showWaitDialog({title:'Save complete, restarting application...',loadFunction:function(){
-            PWM_CONFIG.waitForRestart({location:'/'});
-        }});
-    };
-    UILibrary.uploadFileDialog(uploadOptions);
-};
-
 PWM_CONFIG.uploadLocalDB=function() {
-    PWM_MAIN.showConfirmDialog({
-        text:PWM_CONFIG.showString('Confirm_UploadLocalDB'),
-        okAction:function(){
-            var uploadOptions = {};
-            uploadOptions['url'] = 'localdb?processAction=importLocalDB';
-            uploadOptions['title'] = 'Upload and Import LocalDB Archive';
-            uploadOptions['nextFunction'] = function() {
-                PWM_MAIN.showWaitDialog({title:'Save complete, restarting application...',loadFunction:function(){
-                    PWM_CONFIG.waitForRestart({location:'/'});
-                }});
-            };
-            PWM_MAIN.IdleTimeoutHandler.cancelCountDownTimer();
-            UILibrary.uploadFileDialog(uploadOptions);
-        }
+    PWM_MAIN.preloadAll(function() {
+        PWM_MAIN.showConfirmDialog({
+            text: PWM_CONFIG.showString('Confirm_UploadLocalDB'),
+            okAction: function () {
+                var uploadOptions = {};
+                uploadOptions['url'] = 'localdb?processAction=importLocalDB';
+                uploadOptions['title'] = 'Upload and Import LocalDB Archive';
+                uploadOptions['nextFunction'] = function () {
+                    PWM_MAIN.showWaitDialog({
+                        title: 'Save complete, restarting application...', loadFunction: function () {
+                            PWM_CONFIG.waitForRestart({location: '/'});
+                        }
+                    });
+                };
+                PWM_MAIN.IdleTimeoutHandler.cancelCountDownTimer();
+                UILibrary.uploadFileDialog(uploadOptions);
+            }
+        });
     });
 };
 
 PWM_CONFIG.closeHeaderWarningPanel = function() {
     console.log('action closeHeader');
+    PWM_CONFIG.headerResizeListener.pause();
+
     PWM_MAIN.setStyle('header-warning','display','none');
+    PWM_MAIN.setStyle('header-warning-backdrop','display','none');
     PWM_MAIN.setStyle('button-openHeader','display','inherit');
-    PWM_MAIN.Preferences.writeSessionStorage('headerVisibility','hide');
 };
 
 PWM_CONFIG.openHeaderWarningPanel = function() {
     console.log('action openHeader');
-    PWM_MAIN.setStyle('header-warning','display','inherit');
-    PWM_MAIN.setStyle('button-openHeader','display','none');
-    PWM_MAIN.Preferences.writeSessionStorage('headerVisibility','show');
+    PWM_CONFIG.headerResizeListener.resume();
+
+    require(['dojo/dom','dijit/place','dojo/on'], function(dom, place, on) {
+        place.around(dom.byId("header-warning"), dom.byId("header-username-caret"), ["below-alt"], false);
+
+        on.once(dom.byId("header-warning-backdrop"), "click", function(event) {
+            PWM_CONFIG.closeHeaderWarningPanel();
+        });
+
+        PWM_MAIN.setStyle('header-warning-backdrop','display','inherit');
+        PWM_MAIN.setStyle('header-warning','display','inherit');
+        PWM_MAIN.setStyle('button-openHeader','display','none');
+    });
 };
-
-
 
 PWM_CONFIG.showString=function (key, options) {
     options = options === undefined ? {} : options;
@@ -183,13 +190,7 @@ PWM_CONFIG.showHeaderHealth = function() {
                     }
                 }
                 if (hasWarnTopics) {
-                    PWM_MAIN.addCssClass('button-openHeader','blink');
-                    PWM_MAIN.setStyle('button-openHeader','color','red');
-
-                    parentDiv.innerHTML = '<div id="panel-healthHeaderErrors" class="header-error"><span class="fa fa-warning"></span> ' + PWM_ADMIN.showString('Header_HealthWarningsPresent') + '</div>';
-                } else {
-                    PWM_MAIN.removeCssClass('button-openHeader','blink');
-                    PWM_MAIN.setStyle('button-openHeader','color');
+                    parentDiv.innerHTML = '<div id="panel-healthHeaderErrors" class="header-error"><span class="pwm-icon pwm-icon-warning"></span> ' + PWM_ADMIN.showString('Header_HealthWarningsPresent') + '</div>';
                 }
                 setTimeout(function () {
                     PWM_CONFIG.showHeaderHealth()
@@ -301,21 +302,16 @@ PWM_CONFIG.heartbeatCheck = function() {
         handleErrorFunction('I/O error communicating with server.');
     };
     var url = PWM_GLOBAL['url-restservice'] + "/app-data/client?heartbeat=true";
+    url = PWM_MAIN.addParamToUrl(url,'pageUrl',window.location.href);
     PWM_MAIN.ajaxRequest(url,loadFunction,{errorFunction:errorFunction,method:'GET'});
 };
 
 PWM_CONFIG.initConfigHeader = function() {
-    // header initialization
-    if (PWM_MAIN.getObject('header_configEditorButton')) {
-        PWM_MAIN.addEventHandler('header_configEditorButton', 'click', function () {
-            PWM_CONFIG.startConfigurationEditor();
-        });
-    }
     PWM_MAIN.addEventHandler('header_openLogViewerButton', 'click', function () {
         PWM_CONFIG.openLogViewer(null)
     });
     PWM_MAIN.addEventHandler('panel-header-healthData','click',function(){
-        PWM_MAIN.goto('/private/config/ConfigManager');
+        PWM_MAIN.goto('/private/config/manager');
     });
     PWM_MAIN.addEventHandler('button-closeHeader','click',function(){
         PWM_CONFIG.closeHeaderWarningPanel();
@@ -323,12 +319,21 @@ PWM_CONFIG.initConfigHeader = function() {
     PWM_MAIN.addEventHandler('button-openHeader','click',function(){
         PWM_CONFIG.openHeaderWarningPanel();
     });
+    PWM_MAIN.addEventHandler('header-menu','click',function(){
+        PWM_CONFIG.openHeaderWarningPanel();
+    });
+
+    require(["dojo/dom-construct", "dojo/_base/window", "dojo/dom", "dijit/place", "dojo/on"], function(domConstruct, win, dom, place, on){
+        domConstruct.create("div", { id: "header-warning-backdrop" }, win.body());
+
+        PWM_CONFIG.headerResizeListener = on.pausable(window, "resize", function () {
+            place.around(dom.byId("header-warning"), dom.byId("header-menu-wrapper"), ["below-alt"], false);
+        });
+
+        PWM_CONFIG.headerResizeListener.pause();
+    });
 
     PWM_CONFIG.showHeaderHealth();
-
-    if (PWM_MAIN.Preferences.readSessionStorage('headerVisibility') != 'hide') {
-        PWM_CONFIG.openHeaderWarningPanel();
-    }
 
     console.log('initConfigHeader completed');
 };
@@ -357,7 +362,11 @@ PWM_CONFIG.initConfigManagerWordlistPage = function() {
                         var loadFunction = function (data) {
                             PWM_MAIN.showDialog({
                                 text: data['successMessage'], okAction: function () {
-                                    PWM_MAIN.goto('wordlists');
+                                    PWM_MAIN.showWaitDialog({
+                                        loadFunction: function(){
+                                            PWM_MAIN.goto('wordlists');
+                                        }
+                                    });
                                 }
                             });
                         };
@@ -399,25 +408,34 @@ PWM_CONFIG.initConfigManagerWordlistPage = function() {
         };
         var updateWordlistActionButtons = function (data) {
             var disabled;
-            disabled = !data['WORDLIST']['completed'];
+            disabled = !data['WORDLIST']['allowUpload'];
             PWM_MAIN.setStyle('MenuItem_UploadWordlist','visibility', disabled ? 'hidden' : 'visible');
 
-            disabled = !(data['WORDLIST']['completed'] && !(data['WORDLIST']['builtIn']));
+            disabled = !data['WORDLIST']['allowClear'];
             PWM_MAIN.setStyle('MenuItem_ClearWordlist','visibility', disabled ? 'hidden' : 'visible');
 
-            disabled = !data['SEEDLIST']['completed'];
+            disabled = !data['SEEDLIST']['allowUpload'];
             PWM_MAIN.setStyle('MenuItem_UploadSeedlist','visibility', disabled ? 'hidden' : 'visible');
 
-            disabled = !(data['SEEDLIST']['completed'] && !(data['SEEDLIST']['builtIn']));
+            disabled = !data['SEEDLIST']['allowClear'];
             PWM_MAIN.setStyle('MenuItem_ClearSeedlist','visibility', disabled ? 'hidden' : 'visible');
         };
         var dataHandler = function (data) {
-            PWM_MAIN.getObject('table-wordlistInfo').innerHTML = makeTableData(data['data']['WORDLIST']['presentableData'], 'Wordlist');
-            PWM_MAIN.getObject('table-seedlistInfo').innerHTML = makeTableData(data['data']['SEEDLIST']['presentableData'], 'Seedlist');
+            PWM_MAIN.getObject('table-wordlistInfo').innerHTML = makeTableData(
+                data['data']['WORDLIST']['presentableData'],
+                PWM_CONFIG.showString('Label_Wordlist')
+            );
+            PWM_MAIN.getObject('table-seedlistInfo').innerHTML = makeTableData(
+                data['data']['SEEDLIST']['presentableData'],
+                PWM_CONFIG.showString('Label_Seedlist')
+            );
             PWM_MAIN.TimestampHandler.initAllElements();
             updateWordlistActionButtons(data['data']);
         };
-        PWM_MAIN.ajaxRequest('wordlists?processAction=readWordlistData', dataHandler);
+        var errorHandler = function(data) {
+            console.log('error during info refresh: ' + data);
+        };
+        PWM_MAIN.ajaxRequest('wordlists?processAction=readWordlistData', dataHandler,{errorFunction:errorHandler});
     }
 };
 
@@ -455,4 +473,3 @@ PWM_CONFIG.configClosedWarning = function() {
         text:"This operation is not available when the configuration is restricted."
     });
 };
-

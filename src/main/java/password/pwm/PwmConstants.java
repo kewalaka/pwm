@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,15 +88,13 @@ public abstract class PwmConstants {
 
     public static final String DEFAULT_DATETIME_FORMAT_STR = readPwmConstantsBundle("locale.defaultDateTimeFormat");
     public static final TimeZone DEFAULT_TIMEZONE = TimeZone.getTimeZone(readPwmConstantsBundle("locale.defaultTimeZone"));
-    public static final DateFormat DEFAULT_DATETIME_FORMAT = new SimpleDateFormat(DEFAULT_DATETIME_FORMAT_STR);
+    public static final DateFormat DEFAULT_DATETIME_FORMAT = new SimpleDateFormat(DEFAULT_DATETIME_FORMAT_STR, DEFAULT_LOCALE);
     static {
         DEFAULT_DATETIME_FORMAT.setTimeZone(DEFAULT_TIMEZONE);
     }
 
     public static final String APPLICATION_PATH_INFO_FILE = readPwmConstantsBundle("applicationPathInfoFile");
 
-    public static final int LOCALDB_LOGGER_MAX_QUEUE_SIZE = Integer.parseInt(readPwmConstantsBundle("pwmDBLoggerMaxQueueSize"));
-    public static final int LOCALDB_LOGGER_MAX_DIRTY_BUFFER_MS = Integer.parseInt(readPwmConstantsBundle("pwmDBLoggerMaxDirtyBufferMS"));
     public static final boolean ENABLE_EULA_DISPLAY = Boolean.parseBoolean(readPwmConstantsBundle("enableEulaDisplay"));
     public static final boolean TRIAL_MODE = Boolean.parseBoolean(readPwmConstantsBundle("trial"));
     public static final int TRIAL_MAX_AUTHENTICATIONS = 100;
@@ -125,62 +123,19 @@ public abstract class PwmConstants {
     public static final String CONTEXT_ATTR_RESOURCE_DATA = "ResourceFileServlet-Data";
 
     public static final String SESSION_ATTR_PWM_SESSION = "PwmSession";
+    public static final String SESSION_ATTR_BEANS = "SessionBeans";
     public static final String SESSION_ATTR_CONTEXT_GUID = "ContextInstanceGUID";
 
     public static final PwmBlockAlgorithm IN_MEMORY_PASSWORD_ENCRYPT_METHOD = PwmBlockAlgorithm.AES;
     public static final PwmHashAlgorithm SETTING_CHECKSUM_HASH_METHOD = PwmHashAlgorithm.SHA256;
-
-    public enum REQUEST_ATTR {
-        PwmErrorInfo,
-        PwmRequest,
-        OriginalUri,
-        AgreementText,
-        CompleteText,
-        AvailableAuthMethods,
-        ConfigurationSummaryOutput,
-        PageTitle,
-        ModuleBean,
-        ModuleBean_String,
-
-        FormConfiguration,
-        FormReadOnly,
-        FormShowPasswordFields,
-        FormData,
-
-        SetupResponses_ResponseInfo,
-
-        HelpdeskDetail,
-        HelpdeskObfuscatedDN,
-        HelpdeskUsername,
-
-        ConfigFilename,
-        ConfigLastModified,
-        ConfigHasPassword,
-        ConfigPasswordRememberTime,
-        ConfigLoginHistory,
-        ApplicationPath,
-
-        CaptchaClientUrl,
-        CaptchaIframeUrl,
-        CaptchaPublicKey,
-
-        ForgottenPasswordChallengeSet,
-        ForgottenPasswordOptionalPageView,
-        ForgottenPasswordPrompts,
-        ForgottenPasswordInstructions,
-
-        GuestCurrentExpirationDate,
-        GuestMaximumExpirationDate,
-        GuestMaximumValidDays,
-
-        NewUser_FormShowBackButton,
-    }
 
 
     public static final String DOWNLOAD_FILENAME_STATISTICS_CSV = "Statistics.csv";
     public static final String DOWNLOAD_FILENAME_USER_REPORT_SUMMARY_CSV = "UserReportSummary.csv";
     public static final String DOWNLOAD_FILENAME_USER_REPORT_RECORDS_CSV = "UserReportRecords.csv";
     public static final String DOWNLOAD_FILENAME_AUDIT_RECORDS_CSV = "AuditRecords.csv";
+    public static final String DOWNLOAD_FILENAME_LDAP_PERMISSION_CSV = "LDAPPermissionRecommendations.csv";
+
 
     public static final String LOG_REMOVED_VALUE_REPLACEMENT = readPwmConstantsBundle("log.removedValue");
 
@@ -208,6 +163,7 @@ public abstract class PwmConstants {
         ADMIN_LOGVIEW_WINDOW("admin-logview-window.jsp"),
         ADMIN_LOGVIEW("admin-logview.jsp"),
         ADMIN_URLREFERENCE("admin-urlreference.jsp"),
+        ADMIN_DEBUG("admin-user-debug.jsp"),
         ACTIVATE_USER("activateuser.jsp"),
         ACTIVATE_USER_AGREEMENT("activateuser-agreement.jsp"),
         ACTIVATE_USER_ENTER_CODE("activateuser-entercode.jsp"),
@@ -239,8 +195,10 @@ public abstract class PwmConstants {
         SETUP_OTP_SECRET_TEST("setupotpsecret-test.jsp"),
         SETUP_OTP_SECRET_SUCCESS("setupotpsecret-success.jsp"),
         FORGOTTEN_USERNAME("forgottenusername-search.jsp"),
+        FORGOTTEN_USERNAME_COMPLETE("forgottenusername-complete.jsp"),
         UPDATE_ATTRIBUTES("updateprofile.jsp"),
         UPDATE_ATTRIBUTES_AGREEMENT("updateprofile-agreement.jsp"),
+        UPDATE_ATTRIBUTES_ENTER_CODE("updateprofile-entercode.jsp"),
         UPDATE_ATTRIBUTES_CONFIRM("updateprofile-confirm.jsp"),
         NEW_USER("newuser.jsp"),
         NEW_USER_ENTER_CODE("newuser-entercode.jsp"),
@@ -256,6 +214,7 @@ public abstract class PwmConstants {
         PEOPLE_SEARCH("peoplesearch.jsp"),
         CONFIG_MANAGER_EDITOR("configeditor.jsp"),
         CONFIG_MANAGER_EDITOR_SUMMARY("configmanager-summary.jsp"),
+        CONFIG_MANAGER_PERMISSIONS("configmanager-permissions.jsp"),
         CONFIG_MANAGER_MODE_CONFIGURATION("configmanager.jsp"),
         CONFIG_MANAGER_WORDLISTS("configmanager-wordlists.jsp"),
         CONFIG_MANAGER_LOCALDB("configmanager-localdb.jsp"),
@@ -285,7 +244,6 @@ public abstract class PwmConstants {
 
     public static final String PARAM_ACTION_REQUEST = "processAction";
     public static final String PARAM_ACTION_STATE = "actionState";
-    public static final String PARAM_VERIFICATION_KEY = "session_verification_key";
     public static final String PARAM_RESPONSE_PREFIX = "PwmResponse_R_";
     public static final String PARAM_QUESTION_PREFIX = "PwmResponse_Q_";
     public static final String PARAM_FORM_ID = "pwmFormID";
@@ -297,6 +255,7 @@ public abstract class PwmConstants {
     public static final String PARAM_LDAP_PROFILE = "ldapProfile";
     public static final String PARAM_SKIP_CAPTCHA = "skipCaptcha";
     public static final String PARAM_POST_LOGIN_URL = "posturl";
+    public static final String PARAM_FILE_UPLOAD = "fileUpload";
 
     public static final String COOKIE_PERSISTENT_CONFIG_LOGIN = "persistentConfigLogin";
 
@@ -383,9 +342,11 @@ public abstract class PwmConstants {
         WWW_Authenticate("WWW-Authenticate"),
         ContentDisposition("content-disposition"),
         ContentTransferEncoding("Content-Transfer-Encoding"),
+        Content_Language("Content-Language"),
         Accept_Encoding("Accept-Encoding"),
         Accept_Language("Accept-Language"),
         Authorization("Authorization"),
+        UserAgent("User-Agent"),
 
         XFrameOptions("X-Frame-Options"),
         XContentTypeOptions("X-Content-Type-Options"),

@@ -1,12 +1,13 @@
 <%@ page import="password.pwm.http.servlet.configguide.ConfigGuideForm" %>
 <%@ page import="password.pwm.util.StringUtil" %>
-<%@ page import="java.util.Map" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
+<%@ page import="password.pwm.config.PwmSettingTemplate" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -23,17 +24,15 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_LOCALE); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_THEME); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_LOCALE); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.INCLUDE_CONFIG_CSS); %>
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
-<% ConfigGuideBean configGuideBean = JspUtility.getPwmSession(pageContext).getSessionBean(ConfigGuideBean.class);%>
-<% Map<ConfigGuideForm.FormParameter,String> PLACEHOLDER_FORM = ConfigGuideForm.placeholderForm(configGuideBean.getStoredConfiguration().getTemplate()); %>
+<% ConfigGuideBean configGuideBean = JspUtility.getSessionBean(pageContext, ConfigGuideBean.class);%>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
-<link href="<pwm:context/><pwm:url url='/public/resources/configStyle.css'/>" rel="stylesheet" type="text/css"/>
 <div id="wrapper">
     <%@ include file="fragment/configguide-header.jsp"%>
     <div id="centerbody">
@@ -47,15 +46,17 @@
                 <div class="setting_body">
                     <pwm:display key="ldap_context_admin_description" bundle="ConfigGuide"/>
                     <div class="setting_item">
+                        Example: <code><%=PwmSetting.QUERY_MATCH_PWM_ADMIN.getExample(ConfigGuideForm.generateStoredConfig(configGuideBean).getTemplateSet())%></code>
+                        <br/><br/>
                         <b>Administrator Group DN</b>
                         <br/>
-                        <input style="width:400px;" class="configStringInput" id="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_ADMIN_GROUP%>" name="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_ADMIN_GROUP%>" value="<%=StringUtil.escapeHtml(configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_LDAP_ADMIN_GROUP))%>" placeholder="<%=PLACEHOLDER_FORM.get(ConfigGuideForm.FormParameter.PARAM_LDAP_ADMIN_GROUP)%>" required/>
+                        <input style="width:400px;" class="configStringInput" id="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_ADMIN_GROUP%>" name="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_ADMIN_GROUP%>" value="<%=StringUtil.escapeHtml(configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_LDAP_ADMIN_GROUP))%>" <pwm:autofocus/> required/>
                         <button type="button" class="btn" id="button-browse-adminGroup">
-                            <span class="btn-icon fa fa-sitemap"></span>
+                            <span class="btn-icon pwm-icon pwm-icon-sitemap"></span>
                             <pwm:display key="Button_Browse"/>
                         </button>
                         <button type="button" id="button-viewAdminMatches" class="btn">
-                            <span class="btn-icon fa fa-eye"></span>
+                            <span class="btn-icon pwm-icon pwm-icon-eye"></span>
                             View Group Members
                         </button>
                     </div>
@@ -66,7 +67,7 @@
         <div id="healthBody" style="border:0; margin:0; padding:0; cursor: pointer">
             <div style="text-align: center">
                 <button class="menubutton" style="margin-left: auto; margin-right: auto">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-check"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-check"></span></pwm:if>
                     <pwm:display key="Button_CheckSettings" bundle="Config"/>
                 </button>
             </div>
@@ -98,7 +99,7 @@
 
             PWM_MAIN.addEventHandler('button-viewAdminMatches','click',function(){
                 PWM_MAIN.showWaitDialog({loadFunction:function(){
-                    var url = 'ConfigGuide?processAction=viewAdminMatches';
+                    var url = PWM_MAIN.addParamToUrl(window.location.href, 'processAction', 'viewAdminMatches');
                     var loadFunction = function(data){
                         if (data['error']) {
                             PWM_MAIN.showErrorDialog(data);
@@ -142,10 +143,6 @@
         }
     </script>
 </pwm:script>
-<pwm:script-ref url="/public/resources/js/configguide.js"/>
-<pwm:script-ref url="/public/resources/js/uilibrary.js"/>
-<pwm:script-ref url="/public/resources/js/configmanager.js"/>
-<pwm:script-ref url="/public/resources/js/admin.js"/>
 <%@ include file="fragment/footer.jsp" %>
 </body>
 </html>

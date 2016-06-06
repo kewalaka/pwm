@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,13 +22,13 @@
 
 package password.pwm.http.tag;
 
-import password.pwm.bean.SessionStateBean;
+import password.pwm.PwmApplicationMode;
 import password.pwm.http.JspUtility;
 import password.pwm.http.PwmRequest;
-import password.pwm.http.PwmSession;
 import password.pwm.util.Helper;
 import password.pwm.util.logging.PwmLogger;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.tagext.TagSupport;
 import java.io.IOException;
 
@@ -40,11 +40,13 @@ public class PwmFormIDTag extends TagSupport {
     public int doEndTag()
             throws javax.servlet.jsp.JspTagException
     {
+        if (PwmApplicationMode.determineMode((HttpServletRequest) pageContext.getRequest()) == PwmApplicationMode.ERROR) {
+            return EVAL_PAGE;
+        }
+
         try {
             final PwmRequest pwmRequest = JspUtility.getPwmRequest(pageContext);
-            final PwmSession pwmSession = pwmRequest.getPwmSession();
-            final SessionStateBean ssBean = pwmSession.getSessionStateBean();
-            final String pwmFormID = Helper.buildPwmFormID(ssBean);
+            final String pwmFormID = Helper.buildPwmFormID(pwmRequest);
 
             pageContext.getOut().write(pwmFormID);
         } catch (Exception e) {
@@ -57,5 +59,4 @@ public class PwmFormIDTag extends TagSupport {
         }
         return EVAL_PAGE;
     }
-
 }

@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -20,18 +20,19 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<%@ page import="password.pwm.bean.SessionStateBean" %>
+<%@ page import="password.pwm.bean.LocalSessionStateBean" %>
 <%@ page import="password.pwm.bean.UserInfoBean" %>
 <%@ page import="password.pwm.http.JspUtility" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%@ page import="java.text.DateFormat" %>
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
 <% final UserInfoBean uiBean = JspUtility.getPwmSession(pageContext).getUserInfoBean(); %>
-<% final SessionStateBean ssBean = JspUtility.getPwmSession(pageContext).getSessionStateBean(); %>
+<% final LocalSessionStateBean ssBean = JspUtility.getPwmSession(pageContext).getSessionStateBean(); %>
 <% final DateFormat dateFormatter = java.text.DateFormat.getDateInstance(DateFormat.FULL, ssBean.getLocale()); %>
 <% final DateFormat timeFormatter = java.text.DateFormat.getTimeInstance(DateFormat.FULL, ssBean.getLocale()); %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="/WEB-INF/jsp/fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
@@ -39,6 +40,7 @@
         <jsp:param name="pwm.PageName" value="Title_PasswordWarning"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_PasswordWarning" displayIfMissing="true"/></div>
         <p>
             <% if (uiBean.getPasswordExpirationTime() != null) { %>
             <pwm:display key="Display_PasswordWarn"
@@ -55,8 +57,8 @@
                 <input type="hidden" name="processAction" value="warnResponse"/>
                 <input type="hidden" name="warnResponse" value="change"/>
 
-                <button type="submit" name="changePassword" class="btn" id="changePassword">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-key"></span></pwm:if>
+                <button type="submit" <pwm:autofocus/> name="changePassword" class="btn" id="changePassword">
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-key"></span></pwm:if>
                     <pwm:display key="Button_ChangePassword"/>
                 </button>
                 <input type="hidden" id="pwmFormID" name="pwmFormID" value="<pwm:FormID/>"/>
@@ -65,8 +67,8 @@
                   enctype="application/x-www-form-urlencoded" id="setupOtpSecret-skip" class="pwm-form">
                 <input type="hidden" name="processAction" value="warnResponse"/>
                 <input type="hidden" name="warnResponse" value="skip"/>
-                <button type="submit" name="skipbutton" class="btn" id="skipbutton">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-fighter-jet"></span></pwm:if>
+                <button type="submit" <pwm:autofocus/> name="skipbutton" class="btn" id="skipbutton">
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-fighter-jet"></span></pwm:if>
                     <pwm:display key="Button_Skip"/>
                 </button>
                 <input type="hidden" name="pwmFormID" value="<pwm:FormID/>"/>

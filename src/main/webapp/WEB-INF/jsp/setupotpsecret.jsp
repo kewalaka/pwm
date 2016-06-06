@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 
 <%@page import="password.pwm.config.option.ForceSetupPolicy"%>
 <%@page import="password.pwm.http.bean.SetupOtpBean"%>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%@ page import="password.pwm.util.otp.OTPUserRecord" %>
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true"
@@ -33,7 +34,7 @@
     boolean forcedPageView = false;
     try {
         final PwmRequest pwmRequest = PwmRequest.forRequest(request, response);
-        final SetupOtpBean setupOtpBean = pwmRequest.getPwmSession().getSetupOtpBean();
+        final SetupOtpBean setupOtpBean = JspUtility.getSessionBean(pageContext, SetupOtpBean.class);
         otpUserRecord = setupOtpBean.getOtpUserRecord();
         allowSkip = pwmRequest.getConfig().readSettingAsEnum(PwmSetting.OTP_FORCE_SETUP, ForceSetupPolicy.class) == ForceSetupPolicy.FORCE_ALLOW_SKIP;
         forcedPageView = pwmRequest.isForcedPageView();
@@ -42,7 +43,7 @@
     }
 
 %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
@@ -50,20 +51,21 @@
         <jsp:param name="pwm.PageName" value="Title_SetupOtpSecret"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_SetupOtpSecret" displayIfMissing="true"/></div>
         <p><pwm:display key="Display_SetupOtpSecret"/></p>
         <%@ include file="fragment/message.jsp" %>
         <div data-dojo-type="dijit.layout.TabContainer" data-dojo-props="doLayout: false, persist: true">
             <div data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Display_SetupOtp_Android_Title"/>">
                 <pwm:display key="Display_SetupOtp_Android_Steps"/>
-                <img class="qrcodeimage" src="SetupOtp?processAction=showQrImage&pwmFormID=<pwm:FormID/>" alt="QR Code"/>
+                <img class="qrcodeimage" src="<%=JspUtility.getAttribute(pageContext,PwmRequest.Attribute.SetupOtp_QrCodeValue)%>" alt="QR Code"/>
             </div>
             <div data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Display_SetupOtp_iPhone_Title"/>">
                 <pwm:display key="Display_SetupOtp_iPhone_Steps"/>
-                <img class="qrcodeimage" src="SetupOtp?processAction=showQrImage&pwmFormID=<pwm:FormID/>" alt="QR code"/>
+                <img class="qrcodeimage" src="<%=JspUtility.getAttribute(pageContext,PwmRequest.Attribute.SetupOtp_QrCodeValue)%>" alt="QR Code"/>
             </div>
             <div data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Display_SetupOtp_Other_Title"/>">
                 <pwm:display key="Display_SetupOtp_Other_Steps"/>
-                <img class="qrcodeimage" src="SetupOtp?processAction=showQrImage&&pwmFormID=<pwm:FormID/>" alt="QR code"/>
+                <img class="qrcodeimage" src="<%=JspUtility.getAttribute(pageContext,PwmRequest.Attribute.SetupOtp_QrCodeValue)%>" alt="QR Code"/>
                 <table border="0" style="width: 300px; margin-right: auto; margin-left: auto">
                     <tr valign="top">
                         <td><b><pwm:display key="Field_OTP_Identifier"/></b></td>
@@ -84,7 +86,7 @@
             <form action="<pwm:current-url/>" method="post" name="setupOtpSecret" enctype="application/x-www-form-urlencoded" id="setupOtpSecret" class="pwm-form">
                 <input type="hidden" name="processAction" value="toggleSeen"/>
                 <button type="submit" name="continue" class="btn" id="continuebutton">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-forward"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-forward"></span></pwm:if>
                     <pwm:display key="Button_Continue"/>
                 </button>
                 <input type="hidden" name="pwmFormID" value="<pwm:FormID/>"/>
@@ -95,15 +97,15 @@
                 <% if (forcedPageView) { %>
                 <% if (allowSkip) { %>
                 <button type="submit" name="continue" class="btn" id="skipbutton">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-fighter-jet"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-fighter-jet"></span></pwm:if>
                     <pwm:display key="Button_Skip"/>
                 </button>
                 <% } %>
                 <% } else { %>
-                <pwm:if test="showCancel">
-                    <pwm:if test="forcedPageView" negate="true">
+                <pwm:if test="<%=PwmIfTest.showCancel%>">
+                    <pwm:if test="<%=PwmIfTest.forcedPageView%>" negate="true">
                         <button type="submit" name="button" class="btn" id="button-cancel">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-times"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-times"></span></pwm:if>
                             <pwm:display key="Button_Cancel"/>
                         </button>
                     </pwm:if>
@@ -126,6 +128,7 @@
     </script>
 </pwm:script>
 <pwm:script-ref url="/public/resources/js/responses.js"/>
+<pwm:script-ref url="/public/resources/js/otpsecret.js"/>
 <%@ include file="fragment/footer.jsp" %>
 </body>
 </html>

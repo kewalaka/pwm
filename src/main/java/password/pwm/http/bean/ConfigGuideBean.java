@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,35 +22,24 @@
 
 package password.pwm.http.bean;
 
-import password.pwm.config.PwmSettingTemplate;
-import password.pwm.config.stored.StoredConfigurationImpl;
 import password.pwm.config.value.FileValue;
-import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.servlet.configguide.ConfigGuideForm;
 import password.pwm.http.servlet.configguide.GuideStep;
 
 import java.security.cert.X509Certificate;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
-public class ConfigGuideBean implements PwmSessionBean {
+public class ConfigGuideBean extends PwmSessionBean {
 
     private GuideStep step = GuideStep.START;
-    private StoredConfigurationImpl storedConfiguration;
-    private PwmSettingTemplate selectedTemplate = null;
-    private Map<ConfigGuideForm.FormParameter,String> formData = new HashMap<>();
+    private Map<ConfigGuideForm.FormParameter,String> formData = new HashMap<>(ConfigGuideForm.defaultForm());
     private X509Certificate[] ldapCertificates;
     private boolean certsTrustedbyKeystore = false;
     private boolean useConfiguredCerts = false;
     private FileValue databaseDriver = null;
-
-    public ConfigGuideBean() {
-        try {
-            storedConfiguration = StoredConfigurationImpl.newStoredConfiguration();
-        } catch (PwmUnrecoverableException e) {
-            throw new IllegalStateException(e);
-        }
-    }
 
     public GuideStep getStep() {
         return step;
@@ -58,14 +47,6 @@ public class ConfigGuideBean implements PwmSessionBean {
 
     public void setStep(GuideStep step) {
         this.step = step;
-    }
-
-    public StoredConfigurationImpl getStoredConfiguration() {
-        return storedConfiguration;
-    }
-
-    public void setStoredConfiguration(StoredConfigurationImpl storedConfiguration) {
-        this.storedConfiguration = storedConfiguration;
     }
 
     public Map<ConfigGuideForm.FormParameter, String> getFormData() {
@@ -100,21 +81,19 @@ public class ConfigGuideBean implements PwmSessionBean {
         this.useConfiguredCerts = useConfiguredCerts;
     }
 
-    public PwmSettingTemplate getSelectedTemplate()
-    {
-        return selectedTemplate;
-    }
-
-    public void setSelectedTemplate(PwmSettingTemplate selectedTemplate)
-    {
-        this.selectedTemplate = selectedTemplate;
-    }
-
     public FileValue getDatabaseDriver() {
         return databaseDriver;
     }
 
     public void setDatabaseDriver(FileValue databaseDriver) {
         this.databaseDriver = databaseDriver;
+    }
+
+    public Type getType() {
+        return Type.PUBLIC;
+    }
+
+    public Set<Flag> getFlags() {
+        return Collections.singleton(Flag.ProhibitCookieSession);
     }
 }

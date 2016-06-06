@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,39 @@
 package password.pwm.http.bean;
 
 import java.io.Serializable;
+import java.util.Date;
+import java.util.Set;
 
-public interface PwmSessionBean extends Serializable {
+public abstract class PwmSessionBean implements Serializable {
+    public enum Type {
+        PUBLIC,
+        AUTHENTICATED,
+    }
+
+    public enum Flag {
+        ProhibitCookieSession,
+    }
+
+    private String guid;
+    private Date timestamp;
+
+    public String getGuid() {
+        return guid;
+    }
+
+    public void setGuid(String guid) {
+        this.guid = guid;
+    }
+
+    public Date getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Date timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public abstract Type getType();
+
+    public abstract Set<Flag> getFlags();
 }

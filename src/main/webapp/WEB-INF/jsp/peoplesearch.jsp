@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="/WEB-INF/jsp/fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper" class="peoplesearch-wrapper">
@@ -31,35 +31,27 @@
         <jsp:param name="pwm.PageName" value="Title_PeopleSearch"/>
     </jsp:include>
     <div id="centerbody" class="wide tall" style="height:100%">
+        <div id="page-content-title"><pwm:display key="Title_PeopleSearch" displayIfMissing="true"/></div>
+
         <%@ include file="/WEB-INF/jsp/fragment/message.jsp" %>
         <div id="panel-searchbar" class="searchbar">
-            <table class="noborder" style="margin-left: auto; margin-right: auto; width:100px;" >
-                <tr>
-                    <td style="width:5%">
-                        <span class="fa fa-search"></span>
-                    </td>
-                    <td style="width:90%">
-                        <input type="search" id="username" name="username" class="peoplesearch-input-username" <pwm:autofocus/> autocomplete="off"/>
-                    </td>
-                    <td style="width:5%">
-                        <div style="width:20px; max-width: 20px">
-                            <div id="searchIndicator" style="display: none">
-                                <span style="" class="fa fa-lg fa-spin fa-spinner"></span>
-                            </div>
-                            <div id="maxResultsIndicator" style="display: none;">
-                                <span style="color: #ffcd59;" class="fa fa-lg fa-exclamation-circle"></span>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            </table>
+	        <input id="username" name="username" placeholder="<pwm:display key="Placeholder_Search"/>" class="peoplesearch-input-username" <pwm:autofocus/> autocomplete="off" />
+            <div class="searchbar-extras">
+                <div id="searchIndicator" style="display: none">
+                    <span style="" class="pwm-icon pwm-icon-lg pwm-icon-spin pwm-icon-spinner"></span>
+                </div>
+
+                <div id="maxResultsIndicator" style="display: none;">
+                    <span style="color: #ffcd59;" class="pwm-icon pwm-icon-lg pwm-icon-exclamation-circle"></span>
+                </div>
+            </div>
+
             <noscript>
                 <span><pwm:display key="Display_JavascriptRequired"/></span>
                 <a href="<pwm:context/>"><pwm:display key="Title_MainPage"/></a>
             </noscript>
         </div>
-        <br/>
-        <div id="peoplesearch-searchResultsGrid" class="grid tall">
+        <div id="peoplesearch-searchResultsGrid" class="searchResultsGrid grid tall">
         </div>
     </div>
     <div class="push"></div>

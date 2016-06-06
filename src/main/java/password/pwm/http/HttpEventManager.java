@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,8 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionActivationListener;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Servlet event listener, defined in web.xml
@@ -87,6 +89,8 @@ public class HttpEventManager implements
 
     public void contextInitialized(final ServletContextEvent servletContextEvent)
     {
+        Logger.getLogger("org.glassfish.jersey").setLevel(Level.SEVERE);
+
         if (null != servletContextEvent.getServletContext().getAttribute(PwmConstants.CONTEXT_ATTR_CONTEXT_MANAGER)) {
             LOGGER.warn("notice, previous servlet ContextManager exists");
         }

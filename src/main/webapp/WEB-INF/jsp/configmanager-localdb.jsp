@@ -1,5 +1,6 @@
 <%@ page import="password.pwm.error.PwmException" %>
 <%@ page import="password.pwm.http.JspUtility" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%@ page import="password.pwm.i18n.Config" %>
 <%@ page import="password.pwm.i18n.Display" %>
 <%@ page import="password.pwm.util.FileSystemUtility" %>
@@ -7,10 +8,10 @@
 <%@ page import="password.pwm.util.LocaleHelper" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -29,6 +30,7 @@
 
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.INCLUDE_CONFIG_CSS);%>
 <%@ taglib uri="pwm" prefix="pwm" %>
 <%
     PwmRequest localdb_pwmRequest = null;
@@ -42,7 +44,7 @@
 %>
 
 
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
 <link href="<pwm:context/><pwm:url url='/public/resources/configmanagerStyle.css'/>" rel="stylesheet" type="text/css"/>
@@ -51,6 +53,7 @@
         <jsp:param name="pwm.PageName" value="<%=LocaleHelper.getLocalizedMessage(Config.Title_ConfigManager, JspUtility.getPwmRequest(pageContext))%>"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><%=LocaleHelper.getLocalizedMessage(Config.Title_ConfigManager, JspUtility.getPwmRequest(pageContext))%></div>
         <%@ include file="fragment/configmanager-nav.jsp" %>
         <table style="width:550px" id="table-localDBAbout">
             <tr>
@@ -125,7 +128,7 @@
             <tr class="buttonrow">
                 <td class="buttoncell">
                     <a class="menubutton" id="MenuItem_ExportLocalDB">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-download"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-download"></span></pwm:if>
                         <pwm:display key="MenuItem_ExportLocalDB" bundle="Config"/>
                     </a>
                     <pwm:script>
@@ -139,7 +142,7 @@
                 </td>
                 <td class="buttoncell">
                     <a class="menubutton" id="MenuItem_UploadLocalDB">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-upload"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-upload"></span></pwm:if>
                         Import (Upload) LocalDB Archive File
                     </a>
                     <pwm:script>
@@ -147,10 +150,10 @@
                             PWM_GLOBAL['startupFunctions'].push(function(){
                                 makeTooltip('MenuItem_UploadConfig',PWM_CONFIG.showString('MenuDisplay_UploadConfig'));
                                 PWM_MAIN.addEventHandler('MenuItem_UploadLocalDB',"click",function(){
-                                    <pwm:if test="configurationOpen">
+                                    <pwm:if test="<%=PwmIfTest.configurationOpen%>">
                                     PWM_CONFIG.uploadLocalDB();
                                     </pwm:if>
-                                    <pwm:if test="configurationOpen" negate="true">
+                                    <pwm:if test="<%=PwmIfTest.configurationOpen%>" negate="true">
                                     PWM_CONFIG.configClosedWarning();
                                     </pwm:if>
                                 });

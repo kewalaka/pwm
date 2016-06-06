@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,10 @@ package password.pwm.health;
 import com.novell.ldapchai.ChaiEntry;
 import com.novell.ldapchai.ChaiFactory;
 import com.novell.ldapchai.ChaiUser;
-import com.novell.ldapchai.exception.*;
+import com.novell.ldapchai.exception.ChaiError;
+import com.novell.ldapchai.exception.ChaiErrors;
+import com.novell.ldapchai.exception.ChaiException;
+import com.novell.ldapchai.exception.ChaiUnavailableException;
 import com.novell.ldapchai.provider.ChaiConfiguration;
 import com.novell.ldapchai.provider.ChaiProvider;
 import com.novell.ldapchai.provider.ChaiProviderFactory;
@@ -47,6 +50,7 @@ import password.pwm.error.PwmError;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.ldap.LdapOperationsHelper;
 import password.pwm.ldap.UserStatusReader;
+import password.pwm.util.Helper;
 import password.pwm.util.PasswordData;
 import password.pwm.util.RandomPasswordGenerator;
 import password.pwm.util.TimeDuration;
@@ -65,8 +69,6 @@ public class LDAPStatusChecker implements HealthChecker {
 
     final private static PwmLogger LOGGER = PwmLogger.forClass(LDAPStatusChecker.class);
     final private static String TOPIC = "LDAP";
-
-    private ChaiProvider.DIRECTORY_VENDOR directoryVendor = null;
 
     public List<HealthRecord> doHealthCheck(final PwmApplication pwmApplication)
     {
@@ -162,9 +164,11 @@ public class LDAPStatusChecker implements HealthChecker {
                 ));
                 return returnRecords;
             } catch (Throwable e) {
+                final String msgString = e.getMessage();
+                LOGGER.trace(PwmConstants.HEALTH_SESSION_LABEL, "unexpected error while testing test user (during object creation): message=" + msgString + " debug info: " + Helper.readHostileExceptionMessage(e));
                 returnRecords.add(HealthRecord.forMessage(HealthMessage.LDAP_TestUserUnexpected,
                         PwmSetting.LDAP_TEST_USER_DN.toMenuLocationDebug(ldapProfile.getIdentifier(), PwmConstants.DEFAULT_LOCALE),
-                        e.getMessage()
+                        msgString
                 ));
                 return returnRecords;
             }
@@ -201,16 +205,18 @@ public class LDAPStatusChecker implements HealthChecker {
                                 pwmApplication);
                         theUser.setPassword(newPassword.getStringValue());
                         userPassword = newPassword;
-                    } catch (ChaiPasswordPolicyException e) {
+                    } catch (ChaiException e) {
                         returnRecords.add(HealthRecord.forMessage(HealthMessage.LDAP_TestUserPolicyError,
                                 PwmSetting.LDAP_TEST_USER_DN.toMenuLocationDebug(ldapProfile.getIdentifier(), PwmConstants.DEFAULT_LOCALE),
                                 e.getMessage()
                         ));
                         return returnRecords;
                     } catch (Exception e) {
+                        final String msg = "error setting test user password: " + Helper.readHostileExceptionMessage(e);
+                        LOGGER.error(PwmConstants.HEALTH_SESSION_LABEL, msg, e);
                         returnRecords.add(HealthRecord.forMessage(HealthMessage.LDAP_TestUserUnexpected,
                                 PwmSetting.LDAP_TEST_USER_DN.toMenuLocationDebug(ldapProfile.getIdentifier(), PwmConstants.DEFAULT_LOCALE),
-                                e.getMessage()
+                                msg
                         ));
                         return returnRecords;
                     }
@@ -303,6 +309,7 @@ public class LDAPStatusChecker implements HealthChecker {
         final List<HealthRecord> returnRecords = new ArrayList<>();
         ChaiProvider chaiProvider = null;
         try{
+            ChaiProvider.DIRECTORY_VENDOR directoryVendor = null;
             try {
                 final String proxyDN = ldapProfile.readSettingAsString(PwmSetting.LDAP_PROXY_USER_DN);
                 final PasswordData proxyPW = ldapProfile.readSettingAsPassword(PwmSetting.LDAP_PROXY_USER_PASSWORD);
@@ -438,9 +445,9 @@ public class LDAPStatusChecker implements HealthChecker {
     }
 
     private List<HealthRecord> checkVendorSameness(final PwmApplication pwmApplication) {
-        final Map<HealthMonitor.HealthProperty,Serializable> healthProperties = pwmApplication.getHealthMonitor().getHealthProperties();
-        if (healthProperties.containsKey(HealthMonitor.HealthProperty.LdapVendorSameCheck)) {
-            return (List<HealthRecord>)healthProperties.get(HealthMonitor.HealthProperty.LdapVendorSameCheck);
+        final Map<HealthMonitor.HealthMonitorFlag,Serializable> healthProperties = pwmApplication.getHealthMonitor().getHealthProperties();
+        if (healthProperties.containsKey(HealthMonitor.HealthMonitorFlag.LdapVendorSameCheck)) {
+            return (List<HealthRecord>)healthProperties.get(HealthMonitor.HealthMonitorFlag.LdapVendorSameCheck);
         }
 
         LOGGER.trace(PwmConstants.HEALTH_SESSION_LABEL,"beginning check for replica vendor sameness");
@@ -478,13 +485,13 @@ public class LDAPStatusChecker implements HealthChecker {
             }
             healthRecords.add(HealthRecord.forMessage(HealthMessage.LDAP_VendorsNotSame, vendorMsg.toString()));
             // cache the error
-            healthProperties.put(HealthMonitor.HealthProperty.LdapVendorSameCheck, healthRecords);
+            healthProperties.put(HealthMonitor.HealthMonitorFlag.LdapVendorSameCheck, healthRecords);
 
             LOGGER.warn(PwmConstants.HEALTH_SESSION_LABEL,"multiple ldap vendors found: " + vendorMsg.toString());
         } else if (discoveredVendors.size() == 1) {
             if (!errorReachingServer) {
                 // cache the no errors
-                healthProperties.put(HealthMonitor.HealthProperty.LdapVendorSameCheck, healthRecords);
+                healthProperties.put(HealthMonitor.HealthMonitorFlag.LdapVendorSameCheck, healthRecords);
             }
         }
 
@@ -499,9 +506,9 @@ public class LDAPStatusChecker implements HealthChecker {
             return Collections.emptyList();
         }
 
-        final Map<HealthMonitor.HealthProperty,Serializable> healthProperties = pwmApplication.getHealthMonitor().getHealthProperties();
-        if (healthProperties.containsKey(HealthMonitor.HealthProperty.AdPasswordPolicyApiCheck)) {
-            return (List<HealthRecord>)healthProperties.get(HealthMonitor.HealthProperty.AdPasswordPolicyApiCheck);
+        final Map<HealthMonitor.HealthMonitorFlag,Serializable> healthProperties = pwmApplication.getHealthMonitor().getHealthProperties();
+        if (healthProperties.containsKey(HealthMonitor.HealthMonitorFlag.AdPasswordPolicyApiCheck)) {
+            return (List<HealthRecord>)healthProperties.get(HealthMonitor.HealthMonitorFlag.AdPasswordPolicyApiCheck);
         }
 
         LOGGER.trace(PwmConstants.HEALTH_SESSION_LABEL,"beginning check for ad api password policy (asn " + PwmConstants.LDAP_AD_PASSWORD_POLICY_CONTROL_ASN + ") support");
@@ -539,7 +546,7 @@ public class LDAPStatusChecker implements HealthChecker {
         }
 
         if (!errorReachingServer) {
-            healthProperties.put(HealthMonitor.HealthProperty.AdPasswordPolicyApiCheck, healthRecords);
+            healthProperties.put(HealthMonitor.HealthMonitorFlag.AdPasswordPolicyApiCheck, healthRecords);
         }
 
         return healthRecords;

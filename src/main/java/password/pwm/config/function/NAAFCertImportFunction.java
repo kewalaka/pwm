@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,11 +23,31 @@
 package password.pwm.config.function;
 
 import password.pwm.config.PwmSetting;
+import password.pwm.config.stored.StoredConfigurationImpl;
+import password.pwm.error.ErrorInformation;
+import password.pwm.error.PwmError;
+import password.pwm.error.PwmOperationalException;
+
+import java.net.URI;
 
 public class NAAFCertImportFunction extends AbstractUriCertImportFunction {
 
+    final static PwmSetting uriSourceSetting = PwmSetting.NAAF_WS_URL;
+
     @Override
-    PwmSetting getSetting() {
-        return PwmSetting.NAAF_WS_URL;
+    String getUri(StoredConfigurationImpl storedConfiguration, PwmSetting pwmSetting, String profile, String extraData) throws PwmOperationalException {
+        final String uriString = (String)storedConfiguration.readSetting(uriSourceSetting).toNativeObject();
+        if (uriString == null || uriString.isEmpty()) {
+            ErrorInformation errorInformation = new ErrorInformation(PwmError.CONFIG_FORMAT_ERROR,"Setting " + uriSourceSetting.toMenuLocationDebug(profile, null) + " must first be configured");
+            throw new PwmOperationalException(errorInformation);
+        }
+        try {
+            URI.create(uriString);
+        } catch (IllegalArgumentException e) {
+            ErrorInformation errorInformation = new ErrorInformation(PwmError.CONFIG_FORMAT_ERROR,"Setting " + uriSourceSetting.toMenuLocationDebug(profile, null) + " has an invalid URL syntax");
+            throw new PwmOperationalException(errorInformation);
+        }
+        return uriString;
     }
+
 }

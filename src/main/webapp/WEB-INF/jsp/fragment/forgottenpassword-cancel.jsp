@@ -1,13 +1,14 @@
 <%@ page import="password.pwm.http.servlet.PwmServletDefinition" %>
 <%@ page import="password.pwm.http.servlet.forgottenpw.ForgottenPasswordServlet" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -24,9 +25,9 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<pwm:if test="showCancel">
+<pwm:if test="<%=PwmIfTest.showCancel%>">
     <button type="button" name="button" class="btn" id="button-sendReset">
-        <pwm:if test="showIcons"><span class="btn-icon fa fa-times"></span></pwm:if>
+        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-times"></span></pwm:if>
         <pwm:display key="Button_Cancel"/>
     </button>
     <pwm:script>

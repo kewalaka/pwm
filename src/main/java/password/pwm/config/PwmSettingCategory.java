@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,12 +25,15 @@ package password.pwm.config;
 import org.jdom2.Attribute;
 import org.jdom2.Element;
 import password.pwm.i18n.Config;
-import password.pwm.i18n.ConfigEditor;
+import password.pwm.i18n.PwmSetting;
 import password.pwm.util.LocaleHelper;
 
 import java.util.*;
 
 public enum PwmSettingCategory {
+
+    TEMPLATES                   (null),
+    NOTES                       (null),
 
     LDAP                        (null),
     SETTINGS                    (null),
@@ -48,7 +51,11 @@ public enum PwmSettingCategory {
     ACTIVE_DIRECTORY            (LDAP_SETTINGS),
     ORACLE_DS                   (LDAP_SETTINGS),
 
-    GENERAL                     (SETTINGS),
+    APPLICATION                 (SETTINGS),
+    GENERAL                     (APPLICATION),
+    CLUSTERING                  (APPLICATION),
+    LOCALIZATION                (APPLICATION),
+    TELEMETRY                   (APPLICATION),
 
     AUDITING                    (SETTINGS),
     AUDIT_CONFIG                (AUDITING),
@@ -77,12 +84,16 @@ public enum PwmSettingCategory {
     APP_SECURITY                (SECURITY),
     WEB_SECURITY                (SECURITY),
 
+    WORDLISTS                   (SETTINGS),
 
     TOKEN                       (SETTINGS),
     OTP                         (SETTINGS),
     LOGGING                     (SETTINGS),
 
     DATABASE                    (SETTINGS),
+    DATABASE_SETTINGS           (DATABASE),
+    DATABASE_ADV                (DATABASE),
+
     REPORTING                   (SETTINGS),
     NAAF                        (SETTINGS),
     
@@ -108,26 +119,31 @@ public enum PwmSettingCategory {
     RECOVERY_SETTINGS           (RECOVERY),
     RECOVERY_PROFILE            (RECOVERY),
 
-    
     FORGOTTEN_USERNAME          (MODULES),
     
     NEWUSER                     (MODULES),
     NEWUSER_SETTINGS            (NEWUSER),
     NEWUSER_PROFILE             (NEWUSER),
-    
+
+    UPDATE                      (MODULES),
+    UPDATE_SETTINGS             (UPDATE),
+    UPDATE_PROFILE              (UPDATE),
+
     GUEST                       (MODULES),
     ACTIVATION                  (MODULES),
-    UPDATE                      (MODULES),
     SHORTCUT                    (MODULES),
     PEOPLE_SEARCH               (MODULES),
-    HELPDESK_PROFILE            (MODULES),
+
+    HELPDESK                    (MODULES),
+    HELPDESK_PROFILE            (HELPDESK),
+    HELPDESK_SETTINGS           (HELPDESK),
 
     HTTPS_SERVER                (SETTINGS),
 
     ;
 
     private final PwmSettingCategory parent;
-    private static final Map<PwmSettingCategory,PwmSetting> CACHE_PROFILE_SETTING = new HashMap<>();
+    private static final Map<PwmSettingCategory, password.pwm.config.PwmSetting> CACHE_PROFILE_SETTING = new HashMap<>();
     private static List<PwmSettingCategory> cached_sortedSettings;
 
     private Integer level;
@@ -146,7 +162,7 @@ public enum PwmSettingCategory {
         return this.toString();
     }
 
-    public PwmSetting getProfileSetting()
+    public password.pwm.config.PwmSetting getProfileSetting()
     {
         if (!CACHE_PROFILE_SETTING.containsKey(this)) {
             CACHE_PROFILE_SETTING.put(this, readProfileSettingFromXml());
@@ -160,12 +176,12 @@ public enum PwmSettingCategory {
 
     public String getLabel(final Locale locale) {
         final String key = "Category_Label_" + this.getKey();
-        return LocaleHelper.getLocalizedMessage(locale, key, null, ConfigEditor.class);
+        return LocaleHelper.getLocalizedMessage(locale, key, null, PwmSetting.class);
     }
 
     public String getDescription(final Locale locale) {
         final String key = "Category_Description_" + this.getKey();
-        return LocaleHelper.getLocalizedMessage(locale, key, null, ConfigEditor.class);
+        return LocaleHelper.getLocalizedMessage(locale, key, null, PwmSetting.class);
     }
 
     public int getLevel() {
@@ -231,23 +247,23 @@ public enum PwmSettingCategory {
         return returnObj;
     }
 
-    private PwmSetting readProfileSettingFromXml()
+    private password.pwm.config.PwmSetting readProfileSettingFromXml()
     {
         final Element categoryElement = PwmSettingXml.readCategoryXml(this);
         final Element profileElement = categoryElement.getChild("profile");
         if (profileElement != null) {
             final String settingKey = profileElement.getAttributeValue("setting");
             if (settingKey != null) {
-                return PwmSetting.forKey(settingKey);
+                return password.pwm.config.PwmSetting.forKey(settingKey);
             }
         }
 
         return null;
     }
 
-    public List<PwmSetting> getSettings() {
-        final List<PwmSetting> returnList = new ArrayList<>();
-        for (final PwmSetting setting : PwmSetting.values()) {
+    public List<password.pwm.config.PwmSetting> getSettings() {
+        final List<password.pwm.config.PwmSetting> returnList = new ArrayList<>();
+        for (final password.pwm.config.PwmSetting setting : password.pwm.config.PwmSetting.values()) {
             if (setting.getCategory() == this) {
                 returnList.add(setting);
             }

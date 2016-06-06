@@ -1,10 +1,10 @@
-
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -21,14 +21,14 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<div class="buttonbar">
+<div class="buttonbar configguide">
     <button class="btn" id="button_previous">
-        <pwm:if test="showIcons"><span class="btn-icon fa fa-backward"></span></pwm:if>
+        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-backward"></span></pwm:if>
         <pwm:display key="Button_Previous" bundle="Config"/>
     </button>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <button class="btn" id="button_next">
-        <pwm:if test="showIcons"><span class="btn-icon fa fa-forward"></span></pwm:if>
+        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-forward"></span></pwm:if>
         <pwm:display key="Button_Next" bundle="Config"/>
     </button>
 </div>

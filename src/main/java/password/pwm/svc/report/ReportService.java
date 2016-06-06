@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ import com.novell.ldapchai.provider.ChaiProvider;
 import org.apache.commons.csv.CSVPrinter;
 import password.pwm.AppProperty;
 import password.pwm.PwmApplication;
+import password.pwm.PwmApplicationMode;
 import password.pwm.PwmConstants;
 import password.pwm.bean.UserIdentity;
 import password.pwm.bean.UserInfoBean;
@@ -99,7 +100,7 @@ public class ReportService implements PwmService {
         status = STATUS.OPENING;
         this.pwmApplication = pwmApplication;
 
-        if (pwmApplication.getApplicationMode() == PwmApplication.MODE.READ_ONLY) {
+        if (pwmApplication.getApplicationMode() == PwmApplicationMode.READ_ONLY) {
             LOGGER.debug(PwmConstants.REPORTING_SESSION_LABEL,"application mode is read-only, will remain closed");
             status = STATUS.CLOSED;
             return;
@@ -520,6 +521,7 @@ public class ReportService implements PwmService {
             headerRow.add(LocaleHelper.getLocalizedMessage(locale, "Field_Report_HasResponses", config, localeClass));
             headerRow.add(LocaleHelper.getLocalizedMessage(locale, "Field_Report_HasHelpdeskResponses", config, localeClass));
             headerRow.add(LocaleHelper.getLocalizedMessage(locale, "Field_Report_ResponseStorageMethod", config, localeClass));
+            headerRow.add(LocaleHelper.getLocalizedMessage(locale, "Field_Report_ResponseFormatType", config, localeClass));
             headerRow.add(LocaleHelper.getLocalizedMessage(locale, "Field_Report_PwdExpired", config, localeClass));
             headerRow.add(LocaleHelper.getLocalizedMessage(locale, "Field_Report_PwdPreExpired", config, localeClass));
             headerRow.add(LocaleHelper.getLocalizedMessage(locale, "Field_Report_PwdViolatesPolicy", config, localeClass));
@@ -575,6 +577,7 @@ public class ReportService implements PwmService {
         csvRow.add(userCacheRecord.isHasResponses() ? trueField : falseField);
         csvRow.add(userCacheRecord.isHasHelpdeskResponses() ? trueField : falseField);
         csvRow.add(userCacheRecord.getResponseStorageMethod() == null ? naField : userCacheRecord.getResponseStorageMethod().toString());
+        csvRow.add(userCacheRecord.getResponseFormatType() == null ? naField : userCacheRecord.getResponseFormatType().toString());
         csvRow.add(userCacheRecord.getPasswordStatus().isExpired() ? trueField : falseField);
         csvRow.add(userCacheRecord.getPasswordStatus().isPreExpired() ? trueField : falseField);
         csvRow.add(userCacheRecord.getPasswordStatus().isViolatesPolicy() ? trueField : falseField);

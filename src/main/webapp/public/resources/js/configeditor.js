@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ PWM_CFGEDIT.readSetting = function(keyName, valueWriter) {
     var maxLevel = parseInt(PWM_CFGEDIT.readNavigationFilters()['level']);
     PWM_VAR['outstandingOperations']++;
     PWM_CFGEDIT.handleWorkingIcon();
-    var url = "ConfigEditor?processAction=readSetting&key=" + keyName;
+    var url = "editor?processAction=readSetting&key=" + keyName;
     if (PWM_CFGEDIT.readCurrentProfile()) {
         url = PWM_MAIN.addParamToUrl(url, 'profile', PWM_CFGEDIT.readCurrentProfile());
     }
@@ -100,7 +100,7 @@ PWM_CFGEDIT.updateLastModifiedInfo = function(keyName, data) {
 PWM_CFGEDIT.writeSetting = function(keyName, valueData, nextAction) {
     PWM_VAR['outstandingOperations']++;
     PWM_CFGEDIT.handleWorkingIcon();
-    var url = "ConfigEditor?processAction=writeSetting&key=" + keyName;
+    var url = "editor?processAction=writeSetting&key=" + keyName;
     if (PWM_CFGEDIT.readCurrentProfile()) {
         url = PWM_MAIN.addParamToUrl(url,'profile',PWM_CFGEDIT.readCurrentProfile());
     }
@@ -129,7 +129,7 @@ PWM_CFGEDIT.writeSetting = function(keyName, valueData, nextAction) {
 };
 
 PWM_CFGEDIT.resetSetting=function(keyName, nextAction) {
-    var url = "ConfigEditor?processAction=resetSetting&key=" + keyName;
+    var url = "editor?processAction=resetSetting&key=" + keyName;
     if (PWM_CFGEDIT.readCurrentProfile()) {
         url = PWM_MAIN.addParamToUrl(url,'profile',PWM_CFGEDIT.readCurrentProfile());
     }
@@ -163,6 +163,10 @@ PWM_CFGEDIT.updateSettingDisplay = function(keyName, isDefault) {
         try {
             settingSyntax = PWM_SETTINGS['settings'][keyName]['syntax'];
         } catch (e) { /* noop */ }  //setting keys may not be loaded
+
+        if (PWM_MAIN.JSLibrary.arrayContains(PWM_SETTINGS['settings'][keyName]['flags'],'NoDefault')) {
+            isDefault = true;
+        }
 
         if (!isDefault) {
             resetImageButton.style.visibility = 'visible';
@@ -239,7 +243,7 @@ PWM_CFGEDIT.saveConfiguration = function() {
     PWM_MAIN.preloadAll(function(){
         var confirmText = PWM_CONFIG.showString('MenuDisplay_SaveConfig');
         var confirmFunction = function(){
-            var url = "ConfigEditor?processAction=finishEditing";
+            var url = "editor?processAction=finishEditing";
             var loadFunction = function(data) {
                 if (data['error'] == true) {
                     PWM_MAIN.showErrorDialog(data);
@@ -260,7 +264,7 @@ PWM_CFGEDIT.saveConfiguration = function() {
 
 PWM_CFGEDIT.setConfigurationPassword = function(password) {
     if (password) {
-        var url = "ConfigEditor?processAction=setConfigurationPassword";
+        var url = "editor?processAction=setConfigurationPassword";
         var loadFunction = function(data) {
             if (data['error']) {
                 PWM_MAIN.closeWaitDialog();
@@ -301,18 +305,6 @@ function handleResetClick(settingKey) {
 }
 
 PWM_CFGEDIT.initConfigEditor = function(nextFunction) {
-    if (PWM_SETTINGS['var']['configUnlocked']) {
-        PWM_MAIN.showDialog({
-            title:'Notice - Configuration Status: Open',
-            text:PWM_CONFIG.showString('Display_ConfigOpenInfo'),
-            loadFunction:function(){
-                PWM_MAIN.addEventHandler('link-configManager','click',function(){
-                    PWM_MAIN.goto('/private/config/ConfigManager');
-                });
-            }
-        });
-    }
-
     PWM_MAIN.addEventHandler('homeSettingSearch',['input','focus'],function(){PWM_CFGEDIT.processSettingSearch(PWM_MAIN.getObject('searchResults'));});
     PWM_MAIN.addEventHandler('button-navigationExpandAll','click',function(){PWM_VAR['navigationTree'].expandAll()});
     PWM_MAIN.addEventHandler('button-navigationCollapseAll','click',function(){PWM_VAR['navigationTree'].collapseAll()});
@@ -321,7 +313,7 @@ PWM_CFGEDIT.initConfigEditor = function(nextFunction) {
     PWM_MAIN.addEventHandler('saveButton_icon','click',function(){PWM_CFGEDIT.saveConfiguration()});
     PWM_MAIN.addEventHandler('setPassword_icon','click',function(){PWM_CFGEDIT.setConfigurationPassword()});
     PWM_MAIN.addEventHandler('referenceDoc_icon','click',function(){
-        PWM_MAIN.newWindowOpen(PWM_GLOBAL['url-context'] + '/public/reference','referencedoc');
+        PWM_MAIN.newWindowOpen(PWM_GLOBAL['url-context'] + '/public/reference/','referencedoc');
     });
     PWM_MAIN.addEventHandler('macroDoc_icon','click',function(){ PWM_CFGEDIT.showMacroHelp(); });
     PWM_MAIN.addEventHandler('settingFilter_icon','click',function(){ PWM_CFGEDIT.showSettingFilter(); });
@@ -344,10 +336,11 @@ PWM_CFGEDIT.initConfigEditor = function(nextFunction) {
     }
 };
 
-PWM_CFGEDIT.executeSettingFunction = function(setting, name, input, resultHandler) {
+PWM_CFGEDIT.executeSettingFunction = function (setting, name, resultHandler, extraData) {
     var jsonSendData = {};
     jsonSendData['setting'] = setting;
     jsonSendData['function'] = name;
+    jsonSendData['extraData'] = extraData;
 
     resultHandler = resultHandler !== undefined ? resultHandler : function(data) {
         var msgBody = '<div style="max-height: 400px; overflow-y: auto">' + data['successMessage'] + '</div>';
@@ -356,7 +349,7 @@ PWM_CFGEDIT.executeSettingFunction = function(setting, name, input, resultHandle
         }});
     };
 
-    var requestUrl = "ConfigEditor?processAction=executeSettingFunction";
+    var requestUrl = "editor?processAction=executeSettingFunction";
     if (PWM_CFGEDIT.readCurrentProfile()) {
         requestUrl = PWM_MAIN.addParamToUrl(requestUrl,'profile',PWM_CFGEDIT.readCurrentProfile());
     }
@@ -374,7 +367,7 @@ PWM_CFGEDIT.executeSettingFunction = function(setting, name, input, resultHandle
 };
 
 PWM_CFGEDIT.showChangeLog=function(confirmText, confirmFunction) {
-    var url = "ConfigEditor?processAction=readChangeLog";
+    var url = "editor?processAction=readChangeLog";
     var loadFunction = function(data) {
         PWM_MAIN.closeWaitDialog();
         if (data['error']) {
@@ -418,7 +411,7 @@ PWM_CFGEDIT.processSettingSearch = function(destinationDiv) {
     };
 
     console.log('beginning search #' + iteration);
-    var url = "ConfigEditor?processAction=search";
+    var url = "editor?processAction=search";
 
     var loadFunction = function(data) {
         resetDisplay();
@@ -454,9 +447,9 @@ PWM_CFGEDIT.processSettingSearch = function(destinationDiv) {
                         var settingID = "search_" + (profileID ? profileID + '_' : '') + settingIter;
                         bodyText += '<div><span id="' + linkID + '" class="panel-searchResultItem">';
                         bodyText += PWM_SETTINGS['settings'][settingIter]['label'];
-                        bodyText += '</span>&nbsp;<span id="' + settingID + '_popup" class="btn-icon fa fa-info-circle"></span>';
+                        bodyText += '</span>&nbsp;<span id="' + settingID + '_popup" class="btn-icon pwm-icon pwm-icon-info-circle"></span>';
                         if (!setting['default']) {
-                            bodyText += '<span class="fa fa-pencil-square modifiedNoticeIcon" title="' + PWM_CONFIG.showString('Tooltip_ModifiedNotice') + '">&nbsp;</span>';
+                            bodyText += '<span class="pwm-icon pwm-icon-pencil-square modifiedNoticeIcon" title="' + PWM_CONFIG.showString('Tooltip_ModifiedNotice') + '">&nbsp;</span>';
                         }
                         bodyText += '</div>';
                         resultCount++;
@@ -566,7 +559,7 @@ PWM_CFGEDIT.gotoSetting = function(category,settingKey,profile) {
 
 
 PWM_CFGEDIT.cancelEditing = function() {
-    var url =  "ConfigEditor?processAction=readChangeLog";
+    var url =  "editor?processAction=readChangeLog";
     PWM_MAIN.showWaitDialog({loadFunction:function(){
         var loadFunction = function(data) {
             if (data['error']) {
@@ -582,14 +575,14 @@ PWM_CFGEDIT.cancelEditing = function() {
                     PWM_MAIN.showConfirmDialog({dialogClass:'wide',showClose:true,allowMove:true,text:bodyText,okAction:
                         function () {
                             PWM_MAIN.showWaitDialog({loadFunction: function () {
-                                PWM_MAIN.ajaxRequest('ConfigEditor?processAction=cancelEditing',function(){
-                                    PWM_MAIN.goto('ConfigManager', {addFormID: true});
+                                PWM_MAIN.ajaxRequest('editor?processAction=cancelEditing',function(){
+                                    PWM_MAIN.goto('manager', {addFormID: true});
                                 });
                             }});
                         }
                     });
                 } else {
-                    PWM_MAIN.goto('ConfigManager', {addFormID: true});
+                    PWM_MAIN.goto('manager', {addFormID: true});
                 }
             }
         };
@@ -619,7 +612,7 @@ PWM_CFGEDIT.showMacroHelp = function() {
                     PWM_MAIN.getObject('panel-testMacroOutput').innerHTML = PWM_MAIN.showString('Display_PleaseWait');
                     var sendData = {};
                     sendData['input'] = PWM_MAIN.getObject('input-testMacroInput').value;
-                    var url = "ConfigEditor?processAction=testMacro";
+                    var url = "editor?processAction=testMacro";
                     var loadFunction = function(data) {
                         PWM_MAIN.getObject('panel-testMacroOutput').innerHTML = data['data'];
                     };
@@ -667,7 +660,7 @@ PWM_CFGEDIT.showDateTimeFormatHelp = function() {
 
 PWM_CFGEDIT.ldapHealthCheck = function() {
     PWM_MAIN.showWaitDialog({loadFunction:function() {
-        var url = "ConfigEditor?processAction=ldapHealthCheck";
+        var url = "editor?processAction=ldapHealthCheck";
         url = PWM_MAIN.addParamToUrl(url,'profile',PWM_CFGEDIT.readCurrentProfile());
         var loadFunction = function(data) {
             PWM_MAIN.closeWaitDialog();
@@ -686,7 +679,7 @@ PWM_CFGEDIT.ldapHealthCheck = function() {
 
 PWM_CFGEDIT.databaseHealthCheck = function() {
     PWM_MAIN.showWaitDialog({title:'Checking database connection...',loadFunction:function(){
-        var url =  "ConfigEditor?processAction=databaseHealthCheck";
+        var url =  "editor?processAction=databaseHealthCheck";
         var loadFunction = function(data) {
             PWM_MAIN.closeWaitDialog();
             if (data['error']) {
@@ -703,7 +696,7 @@ PWM_CFGEDIT.databaseHealthCheck = function() {
 
 PWM_CFGEDIT.httpsCertificateView = function() {
     PWM_MAIN.showWaitDialog({title:'Parsing...',loadFunction:function(){
-        var url =  "ConfigEditor?processAction=httpsCertificateView";
+        var url =  "editor?processAction=httpsCertificateView";
         var loadFunction = function(data) {
             PWM_MAIN.closeWaitDialog();
             if (data['error']) {
@@ -727,7 +720,7 @@ PWM_CFGEDIT.smsHealthCheck = function() {
         PWM_MAIN.showDialog({text:dialogBody,showCancel:true,title:'Test SMS connection',closeOnOk:false,okAction:function(){
             var formElement = PWM_MAIN.getObject("smsCheckParametersForm");
             var formData = domForm.toObject(formElement);
-            var url =  "ConfigEditor?processAction=smsHealthCheck";
+            var url =  "editor?processAction=smsHealthCheck";
             PWM_MAIN.showWaitDialog({loadFunction:function(){
                 var loadFunction = function(data) {
                     if (data['error']) {
@@ -750,8 +743,8 @@ PWM_CFGEDIT.selectTemplate = function(newTemplate) {
         text: PWM_CONFIG.showString('Warning_ChangeTemplate'),
         okAction: function () {
             PWM_MAIN.showWaitDialog({loadFunction: function () {
-                var url = "ConfigEditor?processAction=setOption&template=" + newTemplate;
-                PWM_MAIN.ajaxRequest(url, function(){ PWM_MAIN.goto('ConfigEditor'); });
+                var url = "editor?processAction=setOption&template=" + newTemplate;
+                PWM_MAIN.ajaxRequest(url, function(){ PWM_MAIN.goto('editor'); });
             }});
         }
     });
@@ -765,7 +758,7 @@ PWM_CFGEDIT.loadMainPageBody = function() {
     if (lastSelected) {
         PWM_CFGEDIT.dispatchNavigationItem(lastSelected);
     } else {
-        PWM_CFGEDIT.drawHomePage();
+        PWM_CFGEDIT.dispatchNavigationItem({id:'TEMPLATES',type:'category'});
     }
 
     require(["dojo/io-query"],function(ioQuery){
@@ -801,19 +794,15 @@ PWM_CFGEDIT.displaySettingsCategory = function(category) {
 
     if (category == 'LDAP_PROFILE') {
         htmlSettingBody += '<div style="width: 100%; text-align: center">'
-            + '<button class="btn" id="button-test-LDAP_PROFILE"><span class="btn-icon fa fa-bolt"></span>Test LDAP Profile</button>'
+            + '<button class="btn" id="button-test-LDAP_PROFILE"><span class="btn-icon pwm-icon pwm-icon-bolt"></span>Test LDAP Profile</button>'
             + '</div>';
-    } else if (category == 'DATABASE') {
+    } else if (category == 'DATABASE_SETTINGS') {
         htmlSettingBody += '<div style="width: 100%; text-align: center">'
-            + '<button class="btn" id="button-test-DATABASE"><span class="btn-icon fa fa-bolt"></span>Test Database Settings</button>'
+            + '<button class="btn" id="button-test-DATABASE_SETTINGS"><span class="btn-icon pwm-icon pwm-icon-bolt"></span>Test Database Connection</button>'
             + '</div>';
     } else if (category == 'SMS_GATEWAY') {
         htmlSettingBody += '<div style="width: 100%; text-align: center">'
-            + '<button class="btn" id="button-test-SMS"><span class="btn-icon fa fa-bolt"></span>Test SMS Settings</button>'
-            + '</div>';
-    } else if (category == 'HTTPS_SERVER') {
-        htmlSettingBody += '<div style="width: 100%; text-align: center">'
-            + '<button class="btn" id="button-test-HTTPS_SERVER"><span class="btn-icon fa fa-bolt"></span>View Certificate Info</button>'
+            + '<button class="btn" id="button-test-SMS"><span class="btn-icon pwm-icon pwm-icon-bolt"></span>Test SMS Settings</button>'
             + '</div>';
     }
 
@@ -839,8 +828,8 @@ PWM_CFGEDIT.displaySettingsCategory = function(category) {
     }
     if (category == 'LDAP_PROFILE') {
         PWM_MAIN.addEventHandler('button-test-LDAP_PROFILE', 'click', function(){PWM_CFGEDIT.ldapHealthCheck();});
-    } else if (category == 'DATABASE') {
-        PWM_MAIN.addEventHandler('button-test-DATABASE', 'click', function(){PWM_CFGEDIT.databaseHealthCheck();});
+    } else if (category == 'DATABASE_SETTINGS') {
+        PWM_MAIN.addEventHandler('button-test-DATABASE_SETTINGS', 'click', function(){PWM_CFGEDIT.databaseHealthCheck();});
     } else if (category == 'SMS_GATEWAY') {
         PWM_MAIN.addEventHandler('button-test-SMS', 'click', function(){PWM_CFGEDIT.smsHealthCheck();});
     } else if (category == 'HTTPS_SERVER') {
@@ -866,13 +855,13 @@ PWM_CFGEDIT.drawHtmlOutlineForSetting = function(settingInfo, options) {
     var htmlBody = '<div id="outline_' + settingKey + '" class="setting_outline" style="display:none">'
         + '<div class="setting_title" id="title_' + settingKey + '">'
         + '<a id="setting-' + settingKey + '" class="text">' + settingLabel + '</a>'
-        + '<div class="fa fa-pencil-square modifiedNoticeIcon" title="' + PWM_CONFIG.showString('Tooltip_ModifiedNotice') + '" id="modifiedNoticeIcon-' + settingKey + '" style="display: none" ></div>';
+        + '<div class="pwm-icon pwm-icon-pencil-square modifiedNoticeIcon" title="' + PWM_CONFIG.showString('Tooltip_ModifiedNotice') + '" id="modifiedNoticeIcon-' + settingKey + '" style="display: none" ></div>';
 
     if (settingInfo['description']) {
-        htmlBody += '<div class="fa fa-question-circle icon_button" title="' + PWM_CONFIG.showString('Tooltip_HelpButton') + '" id="helpButton-' + settingKey + '"></div>';
+        htmlBody += '<div class="pwm-icon pwm-icon-question-circle icon_button" title="' + PWM_CONFIG.showString('Tooltip_HelpButton') + '" id="helpButton-' + settingKey + '"></div>';
     }
 
-    htmlBody += '<div style="visibility: hidden" class="fa fa-undo icon_button" title="' + PWM_CONFIG.showString('Tooltip_ResetButton') + '" id="resetButton-' + settingKey + '"></div>'
+    htmlBody += '<div style="visibility: hidden" class="pwm-icon pwm-icon-undo icon_button" title="' + PWM_CONFIG.showString('Tooltip_ResetButton') + '" id="resetButton-' + settingKey + '"></div>'
         + '</div>' // close title
         + '<div id="titlePane_' + settingKey + '" class="setting_body">';
 
@@ -978,6 +967,10 @@ PWM_CFGEDIT.initSettingDisplay = function(setting, options) {
             X509CertificateHandler.init(settingKey);
             break;
 
+        case 'PRIVATE_KEY':
+            PrivateKeyHandler.init(settingKey);
+            break;
+
         case 'FILE':
             FileValueHandler.init(settingKey);
             break;
@@ -1067,7 +1060,7 @@ PWM_CFGEDIT.drawNavigationMenu = function() {
         );
     };
 
-    var url = 'ConfigEditor?processAction=menuTreeData';
+    var url = 'editor?processAction=menuTreeData';
     var filterParams = PWM_CFGEDIT.readNavigationFilters();
 
     PWM_MAIN.ajaxRequest(url,function(data){
@@ -1087,9 +1080,7 @@ PWM_CFGEDIT.readNavigationFilters = function() {
 PWM_CFGEDIT.dispatchNavigationItem = function(item) {
     var currentID = item['id'];
     var type = item['type'];
-    if (currentID == 'HOME') {
-        PWM_CFGEDIT.drawHomePage();
-    } else if (type == 'navigation') {
+    if  (type == 'navigation') {
         /* not used, nav tree set to auto-expand */
     } else if (type == 'category') {
         PWM_CFGEDIT.gotoSetting(currentID);
@@ -1099,8 +1090,8 @@ PWM_CFGEDIT.dispatchNavigationItem = function(item) {
     } else if (type == 'profile') {
         var category = item['category'];
         PWM_CFGEDIT.gotoSetting(category,null,currentID);
-    } else if (type == 'profile-definition') {
-        var profileSettingKey = item['profile-setting'];
+    } else if (type == 'profileDefinition') {
+        var profileSettingKey = item['profileSetting'];
         PWM_CFGEDIT.drawProfileEditorPage(profileSettingKey);
     }
 
@@ -1164,65 +1155,9 @@ PWM_CFGEDIT.drawDisplayTextPage = function(settingKey, keys) {
     checkForFinishFunction();
 };
 
-PWM_CFGEDIT.drawHomePage = function() {
-    var htmlBody = '';
-
-    var settingsPanel = PWM_MAIN.getObject('settingsPanel');
-    settingsPanel.innerHTML = PWM_MAIN.showString('Display_PleaseWait');
-
-    var templateSettingBody = '';
-    templateSettingBody += '<div><select id="select-template">';
-    for (var template in PWM_SETTINGS['templates']) {
-        var templateInfo = PWM_SETTINGS['templates'][template];
-        var selected = PWM_SETTINGS['var']['currentTemplate'] == templateInfo['key'];
-        if (selected || !templateInfo['hidden']) {
-            templateSettingBody += '<option value="' + templateInfo['key'] + '"';
-            if (selected) {
-                templateSettingBody += ' selected="selected"';
-            }
-            templateSettingBody += '>' + templateInfo['description'] + '</option>';
-        }
-    }
-    templateSettingBody += '</select></div>';
-
-    var notesSettingBody = '';
-    var configNotes = 'configurationNotes' in PWM_SETTINGS['var'] ? PWM_SETTINGS['var']['configurationNotes'] : ''  ;
-    notesSettingBody += '<div><textarea id="configurationNotesTextarea">' + configNotes + '</textarea></div>';
-
-    var templateSelectSetting = {};
-    templateSelectSetting['key'] = 'templateSelect';
-    templateSelectSetting['label'] = 'Configuration Template';
-    templateSelectSetting['description'] = PWM_CONFIG.showString('Display_AboutTemplates');
-    htmlBody += PWM_CFGEDIT.drawHtmlOutlineForSetting(templateSelectSetting);
-
-    var notesSettings = {};
-    notesSettings['key'] = 'configurationNotes';
-    notesSettings['label'] = 'Configuration Notes';
-    htmlBody += PWM_CFGEDIT.drawHtmlOutlineForSetting(notesSettings);
-
-    settingsPanel.innerHTML = htmlBody;
-
-    PWM_MAIN.getObject('table_setting_templateSelect').innerHTML = templateSettingBody;
-    PWM_MAIN.getObject('table_setting_configurationNotes').innerHTML = notesSettingBody;
-
-
-    PWM_MAIN.addEventHandler('select-template','change',function(){
-        PWM_CFGEDIT.selectTemplate(PWM_MAIN.getObject('select-template').options[PWM_MAIN.getObject('select-template').selectedIndex].value)
-    });
-    PWM_MAIN.addEventHandler('configurationNotesTextarea','input',function(){
-        var value = PWM_MAIN.getObject('configurationNotesTextarea').value;
-        PWM_SETTINGS['var']['configurationNotes'] = value;
-        var url = "ConfigEditor?processAction=setOption&updateNotesText=true";
-        PWM_MAIN.ajaxRequest(url,function(){console.log('saved config notes')},{content:value});
-    });
-
-    PWM_MAIN.setStyle('outline_' + templateSelectSetting['key'],'display','inherit');
-    PWM_MAIN.setStyle('outline_' + notesSettings['key'],'display','inherit');
-};
-
 
 PWM_CFGEDIT.initConfigSettingsDefinition=function(nextFunction) {
-    var clientConfigUrl = PWM_GLOBAL['url-context'] + "/private/config/ConfigEditor?processAction=settingData";
+    var clientConfigUrl = PWM_GLOBAL['url-context'] + "/private/config/editor?processAction=settingData";
     var loadFunction = function(data) {
         if (data['error'] == true) {
             console.error('unable to load ' + clientConfigUrl + ', error: ' + data['errorDetail'])
@@ -1289,7 +1224,7 @@ PWM_CFGEDIT.showSettingFilter = function() {
     var updateVars = function() {
         PWM_VAR['settingFilter_modifiedSettingsOnly'] = PWM_MAIN.getObject('input-modifiedSettingsOnly-modified').checked;
         PWM_VAR['settingFilter_level'] = parseInt(PWM_MAIN.getObject('input-settingLevel').value);
-        PWM_VAR['settingFilter_text'] = PWM_MAIN.getObject('input-settingFilterText').value;
+        //PWM_VAR['settingFilter_text'] = PWM_MAIN.getObject('input-settingFilterText').value;
         updateSettingLevelDescription();
     };
 

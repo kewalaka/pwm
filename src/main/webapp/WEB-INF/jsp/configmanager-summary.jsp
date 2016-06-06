@@ -1,16 +1,17 @@
 <%@ page import="password.pwm.config.Configuration" %>
 <%@ page import="password.pwm.error.PwmException" %>
 <%@ page import="password.pwm.http.JspUtility" %>
+<%@ page import="password.pwm.i18n.Config" %>
 <%@ page import="password.pwm.i18n.PwmLocaleBundle" %>
 <%@ page import="password.pwm.util.LocaleHelper" %>
 <%@ page import="password.pwm.util.StringUtil" %>
 <%@ page import="java.util.*" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -32,7 +33,7 @@
   final Map<String,Object> outputData = new HashMap<String,Object>();
   try {
     final PwmRequest pwmRequest = PwmRequest.forRequest(request,response);
-    outputData.putAll((Map)pwmRequest.getAttribute(PwmConstants.REQUEST_ATTR.ConfigurationSummaryOutput));
+    outputData.putAll((Map)pwmRequest.getAttribute(PwmRequest.Attribute.ConfigurationSummaryOutput));
 
     settingData.addAll((List<Map<String,String>>)outputData.get("settings"));
   } catch (PwmException e) {
@@ -42,28 +43,28 @@
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_HEADER_WARNINGS); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_THEME); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.NO_REQ_COUNTER); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_HEADER_BUTTONS); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_FOOTER_TEXT); %>
-<html dir="<pwm:LocaleOrientation/>">
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_HEADER_WARNINGS); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.NO_REQ_COUNTER); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_HEADER_BUTTONS); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_FOOTER_TEXT); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.NO_IDLE_TIMEOUT); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.INCLUDE_CONFIG_CSS);%>
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
-  <jsp:include page="fragment/header-body.jsp">
-    <jsp:param name="pwm.PageName" value="Configuration Summary"/>
-  </jsp:include>
-  <div id="centerbody wide">
+  <div style="padding:10px">
     <br/>
     <div style="text-align: center; width: 100%">
+      <h1>
+      <pwm:display key="Title_ConfigurationSummary" bundle="Config"/>
+      </h1>
       <div>
-        <%=PwmConstants.PWM_APP_NAME%>  <%=PwmConstants.SERVLET_VERSION%>
+        <%=PwmConstants.PWM_APP_NAME%> &nbsp; <%=PwmConstants.SERVLET_VERSION%>
       </div>
       <div>
         Current Time: <span class="timestamp"><%=PwmConstants.DEFAULT_DATETIME_FORMAT.format(new Date())%></span>
         <br/>
-        Configuration Template: <%=outputData.get("template")%>
         <br/>
         <br/>
         <span class="footnote">Only settings modified from their default value are shown.</span>
@@ -76,10 +77,10 @@
         <col style="max-width: 700px; overflow: auto">
         <tr>
           <td>
-            Title
+            Setting
           </td>
           <td>
-            <%=record.get("label")%>
+            <b><%=record.get("label")%></b>
           </td>
         </tr>
         <% if (record.containsKey("profile")) { %>

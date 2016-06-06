@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -24,6 +24,8 @@
 <%@ page import="password.pwm.config.profile.LdapProfile" %>
 <%@ page import="password.pwm.error.PwmException" %>
 <%@ page import="password.pwm.health.HealthRecord" %>
+<%@ page import="password.pwm.http.PwmSession" %>
+<%@ page import="password.pwm.i18n.Admin" %>
 <%@ page import="password.pwm.i18n.Display" %>
 <%@ page import="password.pwm.svc.PwmService" %>
 <%@ page import="password.pwm.svc.sessiontrack.SessionTrackService" %>
@@ -31,6 +33,7 @@
 <%@ page import="password.pwm.util.FileSystemUtility" %>
 <%@ page import="password.pwm.util.Helper" %>
 <%@ page import="password.pwm.util.StringUtil" %>
+<%@ page import="password.pwm.util.TimeDuration" %>
 <%@ page import="password.pwm.util.localdb.LocalDB" %>
 <%@ page import="java.text.DateFormat" %>
 <%@ page import="java.text.NumberFormat" %>
@@ -58,30 +61,32 @@
         JspUtility.logError(pageContext, "error during page setup: " + e.getMessage());
     }
 %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="/WEB-INF/jsp/fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
+    <% String PageName = JspUtility.localizedString(pageContext,"Title_Dashboard",Admin.class);%>
     <jsp:include page="/WEB-INF/jsp/fragment/header-body.jsp">
-        <jsp:param name="pwm.PageName" value="Dashboard"/>
+        <jsp:param name="pwm.PageName" value="<%=PageName%>"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_Dashboard" bundle="Admin" displayIfMissing="true"/></div>
         <%@ include file="fragment/admin-nav.jsp" %>
-        <div data-dojo-type="dijit.layout.TabContainer" style="width: 100%; height: 100%;" data-dojo-props="doLayout: false, persist: true">
-            <div data-dojo-type="dijit.layout.ContentPane" title="Status" class="tabContent">
+        <div id="DashboardTabContainer" data-dojo-type="dijit.layout.TabContainer" style="width: 100%; height: 100%;" data-dojo-props="doLayout: false, persist: true">
+            <div id="StatusTab" data-dojo-type="dijit.layout.ContentPane" title="Status" class="tabContent">
                 <table class="nomargin">
                     <tr>
                         <td class="key">
                             <pwm:display key="Title_Sessions" bundle="Admin"/>
                         </td>
-                        <td>
+                        <td id="SessionCount">
                             <%= sessionTrackService.sessionCount() %>
                         </td>
                         <td class="key">
                             <pwm:display key="Title_LDAPConnections" bundle="Admin"/>
 
                         </td>
-                        <td>
+                        <td id="LDAPConnectionCount">
                             <%= sessionTrackService.ldapConnectionCount() %>
                         </td>
                     </tr>
@@ -119,12 +124,11 @@
                     <% } %>
                     <% } %>
                 </table>
-                <br/>
-                <div data-dojo-type="dijit.layout.TabContainer" style="width: 100%; height: 100%;" data-dojo-props="doLayout: false, persist: true">
+                <div data-dojo-type="dijit.layout.TabContainer" style="margin-top: 15px; width: 100%; height: 100%;" data-dojo-props="doLayout: false, persist: true">
                     <div data-dojo-type="dijit.layout.ContentPane" title="Last Minute" class="tabContent">
-                        <table class="nomargin">
+                        <table class="nomargin" style="border: 0px;">
                             <tr>
-                                <td colspan="10" style="margin:0; padding:0">
+                                <td colspan="10" style="margin:0; padding:0; border: 0px;">
                                     <div style="max-width: 600px; text-align: center">
                                         <div id="EPS-GAUGE-AUTHENTICATION_MINUTE" style="float: left; width: 33%">Authentications</div>
                                         <div id="EPS-GAUGE-PASSWORD_CHANGES_MINUTE" style="float: left; width: 33%">Password Changes</div>
@@ -135,9 +139,9 @@
                         </table>
                     </div>
                     <div data-dojo-type="dijit.layout.ContentPane" title="Last Hour" class="tabContent">
-                        <table class="nomargin">
+                        <table class="nomargin" style="border: 0px;">
                             <tr>
-                                <td colspan="10" style="margin:0; padding:0">
+                                <td colspan="10" style="margin:0; padding:0; border: 0px;">
                                     <div style="max-width: 600px; text-align: center">
                                         <div id="EPS-GAUGE-AUTHENTICATION_HOUR" style="float: left; width: 33%">Authentications</div>
                                         <div id="EPS-GAUGE-PASSWORD_CHANGES_HOUR" style="float: left; width: 33%">Password Changes</div>
@@ -148,9 +152,9 @@
                         </table>
                     </div>
                     <div data-dojo-type="dijit.layout.ContentPane" title="Last Day" class="tabContent">
-                        <table class="nomargin">
+                        <table class="nomargin" style="border: 0px;">
                             <tr>
-                                <td colspan="10" style="margin:0; padding:0">
+                                <td colspan="10" style="margin:0; padding:0; border: 0px;">
                                     <div style="max-width: 600px; text-align: center">
                                         <div id="EPS-GAUGE-AUTHENTICATION_DAY" style="float: left; width: 33%">Authentications</div>
                                         <div id="EPS-GAUGE-PASSWORD_CHANGES_DAY" style="float: left; width: 33%">Password Changes</div>
@@ -163,7 +167,7 @@
                     <div class="noticebar">Events rates are per minute.  <pwm:display key="Notice_DynamicRefresh" bundle="Admin"/></div>
                 </div>
             </div>
-            <div data-dojo-type="dijit.layout.ContentPane" title="Health" class="tabContent">
+            <div id="HealthTab" data-dojo-type="dijit.layout.ContentPane" title="Health" class="tabContent">
                 <div id="healthBody">
                     <div class="WaitDialogBlank"></div>
                 </div>
@@ -173,7 +177,7 @@
                     <a href="<pwm:context/>/public/health.jsp"><pwm:context/>/public/health.jsp</a>
                 </div>
             </div>
-            <div data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Title_About" bundle="Admin"/>" class="tabContent">
+            <div id="AboutTab" data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Title_About" bundle="Admin"/>" class="tabContent">
                 <div style="max-height: 400px; overflow: auto;">
                     <table class="nomargin">
                         <tr>
@@ -316,7 +320,7 @@
                     </table>
                 </div>
             </div>
-            <div data-dojo-type="dijit.layout.ContentPane" title="Services" class="tabContent">
+            <div id="ServicesTab" data-dojo-type="dijit.layout.ContentPane" title="Services" class="tabContent">
                 <table class="nomargin">
                     <tr>
                         <th style="font-weight:bold;">
@@ -364,12 +368,12 @@
                     <% } %>
                 </table>
             </div>
-            <div data-dojo-type="dijit.layout.ContentPane" title="LocalDB" class="tabContent">
+            <div id="LocalDBTab" data-dojo-type="dijit.layout.ContentPane" title="LocalDB" class="tabContent">
                 <div style="max-height: 400px; overflow: auto;">
                     <table class="nomargin">
                         <tr>
                             <td class="key">
-                                Wordlist Dictionary Size
+                                Word List Dictionary Size
                             </td>
                             <td>
                                 <%= numberFormat.format(dashboard_pwmApplication.getWordlistManager().size()) %>
@@ -377,7 +381,7 @@
                         </tr>
                         <tr>
                             <td class="key">
-                                Seedlist Size
+                                Seed List Size
                             </td>
                             <td>
                                 <%= numberFormat.format(dashboard_pwmApplication.getSeedlistManager().size()) %>
@@ -425,31 +429,10 @@
                         </tr>
                         <tr>
                             <td class="key">
-                                Log Events in Write Queue
-                            </td>
-                            <td>
-                                <%= dashboard_pwmApplication.getLocalDBLogger() != null
-                                        ? numberFormat.format(dashboard_pwmApplication.getLocalDBLogger().getPendingEventCount())
-                                        : JspUtility.getMessage(pageContext, Display.Value_NotApplicable) %>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="key">
                                 Log Events in LocalDB
                             </td>
                             <td>
                                 <%= dashboard_pwmApplication.getLocalDBLogger().sizeToDebugString() %>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="key">
-                                Oldest Log Event in Write Queue
-                            </td>
-                            <td>
-                                <%= dashboard_pwmApplication.getLocalDBLogger() != null
-                                        ? dashboard_pwmApplication.getLocalDBLogger().getDirtyQueueTime().asCompactString()
-                                        : JspUtility.getMessage(pageContext, Display.Value_NotApplicable)
-                                %>
                             </td>
                         </tr>
                         <tr>
@@ -523,7 +506,7 @@
                     </table>
                 </div>
             </div>
-            <div data-dojo-type="dijit.layout.ContentPane" title="LocalDB Sizes" class="tabContent">
+            <div id="LocalDBSizesTab" data-dojo-type="dijit.layout.ContentPane" title="LocalDB Sizes" class="tabContent">
                 <% if (dashboard_pwmApplication.getLocalDB() != null && dashboard_pwmRequest.readParameterAsBoolean("showLocalDBCounts")) { %>
                 <table class="nomargin">
                     <tr>
@@ -551,7 +534,7 @@
                 </div>
                 <% } %>
             </div>
-            <div data-dojo-type="dijit.layout.ContentPane" title="Java" class="tabContent">
+            <div id="JavaTab" data-dojo-type="dijit.layout.ContentPane" title="Java" class="tabContent">
                 <table class="nomargin">
                     <tr>
                         <td class="key">
@@ -679,7 +662,7 @@
                     </tr>
                 </table>
             </div>
-            <div data-dojo-type="dijit.layout.ContentPane" title="Threads" class="tabContent">
+            <div id="ThreadsTab" data-dojo-type="dijit.layout.ContentPane" title="Threads" class="tabContent">
                 <div style="max-height: 400px; overflow: auto;">
                     <table class="nomargin">
                         <tr>
@@ -771,5 +754,3 @@
 <pwm:script-ref url="/public/resources/js/admin.js"/>
 </body>
 </html>
-
-

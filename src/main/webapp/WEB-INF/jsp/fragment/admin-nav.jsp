@@ -1,12 +1,13 @@
 <%@ page import="password.pwm.http.servlet.AdminServlet" %>
 <%@ page import="password.pwm.http.servlet.PwmServletDefinition" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%@ page import="password.pwm.http.JspUtility" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -35,31 +36,30 @@
         });
     </script>
 </pwm:script>
-<div style="text-align: center">
+<div style="text-align: center; margin-bottom: 10px;">
     <% boolean selected = currentPage == AdminServlet.Page.dashboard; %>
     <form action="<%=AdminServlet.Page.dashboard%>" method="get" id="dashboard" name="dashboard">
         <button type="submit" class="navbutton<%=selected?" selected":""%>">
-            <pwm:if test="showIcons"><span class="btn-icon fa fa-dashboard"></span></pwm:if>
+            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-dashboard"></span></pwm:if>
             Dashboard
         </button>
     </form>
     <% selected = currentPage == AdminServlet.Page.activity; %>
     <form action="<%=AdminServlet.Page.activity%>" method="get" id="activity" name="activity">
         <button type="submit" class="navbutton<%=selected?" selected":""%>">
-            <pwm:if test="showIcons"><span class="btn-icon fa fa-users"></span></pwm:if>
+            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-users"></span></pwm:if>
             User Activity
         </button>
     </form>
     <% selected = currentPage == AdminServlet.Page.analysis; %>
     <form action="<%=AdminServlet.Page.analysis%>" method="get" id="analysis" name="analysis">
         <button type="submit" class="navbutton<%=selected?" selected":""%>">
-            <pwm:if test="showIcons"><span class="btn-icon fa fa-bar-chart-o"></span></pwm:if>
+            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-bar-chart-o"></span></pwm:if>
             Data Analysis
         </button>
     </form>
     <div style="display: inline" id="admin-nav-menu-container">
     </div>
 </div>
-<br/>
 
 

@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,9 @@
 package password.pwm.svc.sessiontrack;
 
 import password.pwm.PwmApplication;
-import password.pwm.bean.SessionStateBean;
-import password.pwm.bean.SessionStateInfoBean;
+import password.pwm.bean.LocalSessionStateBean;
+import password.pwm.bean.LoginInfoBean;
+import password.pwm.bean.pub.SessionStateInfoBean;
 import password.pwm.bean.UserInfoBean;
 import password.pwm.error.PwmException;
 import password.pwm.health.HealthRecord;
@@ -137,21 +138,34 @@ public class SessionTrackService implements PwmService {
         return returnSet;
     }
 
-    public Collection<SessionStateInfoBean> getSessionList(final int maximumResults) {
-        final List<SessionStateInfoBean> returnList = new ArrayList<>();
+    public Iterator<SessionStateInfoBean> getSessionInfoIterator() {
+        final Iterator<PwmSession> sessionIterator = new HashSet<>(currentValidSessionSet()).iterator();
+        return new Iterator<SessionStateInfoBean>() {
+            @Override
+            public boolean hasNext() {
+                return sessionIterator.hasNext();
+            }
 
-        final Iterator<PwmSession> sessionIterator = currentValidSessionSet().iterator();
-        while (sessionIterator.hasNext() && (maximumResults > 0 && returnList.size() < maximumResults)) {
-            final PwmSession pwmSession = sessionIterator.next();
-            returnList.add(infoBeanFromPwmSession(pwmSession));
-        }
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
 
-        return Collections.unmodifiableList(returnList);
+            @Override
+            public SessionStateInfoBean next() {
+                final PwmSession pwmSession = sessionIterator.next();
+                if (pwmSession != null) {
+                    return infoBeanFromPwmSession(pwmSession);
+                }
+                return null;
+            }
+        };
     }
 
+
     private static SessionStateInfoBean infoBeanFromPwmSession(final PwmSession loopSession) {
-        final SessionStateBean loopSsBean = loopSession.getSessionStateBean();
-        final UserInfoBean loopUiBean =loopSession.getUserInfoBean();
+        final LocalSessionStateBean loopSsBean = loopSession.getSessionStateBean();
+        final LoginInfoBean loginInfoBean = loopSession.getLoginInfoBean();
 
         final SessionStateInfoBean sessionStateInfoBean = new SessionStateInfoBean();
 
@@ -160,13 +174,17 @@ public class SessionTrackService implements PwmService {
         sessionStateInfoBean.setLastTime(loopSession.getSessionStateBean().getSessionLastAccessedTime());
         sessionStateInfoBean.setIdle(loopSession.getIdleTime().asCompactString());
         sessionStateInfoBean.setLocale(loopSsBean.getLocale() == null ? null : loopSsBean.getLocale());
-        sessionStateInfoBean.setLdapProfile(loopSsBean.isAuthenticated() ? loopUiBean.getUserIdentity().getLdapProfileID() : "");
-        sessionStateInfoBean.setUserDN(loopSsBean.isAuthenticated() ? loopUiBean.getUserIdentity().getUserDN() : "");
-        sessionStateInfoBean.setUserID(loopSsBean.isAuthenticated() ? loopUiBean.getUsername() : "");
         sessionStateInfoBean.setSrcAddress(loopSsBean.getSrcAddress());
         sessionStateInfoBean.setSrcHost(loopSsBean.getSrcHostname());
         sessionStateInfoBean.setLastUrl(loopSsBean.getLastRequestURL());
         sessionStateInfoBean.setIntruderAttempts(loopSsBean.getIntruderAttempts());
+
+        if (loopSession.isAuthenticated()) {
+            final UserInfoBean loopUiBean = loopSession.getUserInfoBean();
+            sessionStateInfoBean.setLdapProfile(loginInfoBean.isAuthenticated() ? loopUiBean.getUserIdentity().getLdapProfileID() : "");
+            sessionStateInfoBean.setUserDN(loginInfoBean.isAuthenticated() ? loopUiBean.getUserIdentity().getUserDN() : "");
+            sessionStateInfoBean.setUserID(loginInfoBean.isAuthenticated() ? loopUiBean.getUsername() : "");
+        }
 
         return sessionStateInfoBean;
     }

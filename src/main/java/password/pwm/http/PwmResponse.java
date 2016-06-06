@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@ package password.pwm.http;
 
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
-import password.pwm.bean.SessionStateBean;
 import password.pwm.config.Configuration;
 import password.pwm.config.PwmSetting;
 import password.pwm.error.ErrorInformation;
@@ -42,25 +41,38 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Arrays;
 
 public class PwmResponse extends PwmHttpResponseWrapper {
     private static final PwmLogger LOGGER = PwmLogger.forClass(PwmResponse.class);
 
     final private PwmRequest pwmRequest;
 
+    public enum Flag {
+        AlwaysShowMessage,
+        ForceLogout,
+    }
+
     public PwmResponse(
             HttpServletResponse response,
             PwmRequest pwmRequest,
             Configuration configuration
     ) {
-        super(response, configuration);
+        super(pwmRequest.getHttpServletRequest(), response, configuration);
         this.pwmRequest = pwmRequest;
     }
 
     public void forwardToJsp(
             final PwmConstants.JSP_URL jspURL
     )
-            throws ServletException, IOException, PwmUnrecoverableException {
+            throws ServletException, IOException, PwmUnrecoverableException
+    {
+        if (!pwmRequest.isFlag(PwmRequestFlag.NO_REQ_COUNTER)) {
+            pwmRequest.getPwmSession().getSessionManager().incrementRequestCounterKey();
+        }
+
+        preCommitActions();
+
         final HttpServletRequest httpServletRequest = pwmRequest.getHttpServletRequest();
         final ServletContext servletContext = httpServletRequest.getSession().getServletContext();
         final String url = jspURL.getPath();
@@ -72,37 +84,35 @@ public class PwmResponse extends PwmHttpResponseWrapper {
         servletContext.getRequestDispatcher(url).forward(httpServletRequest, this.getHttpServletResponse());
     }
 
-    public void forwardToSuccessPage(Message message, final String field)
-            throws ServletException, PwmUnrecoverableException, IOException {
-        pwmRequest.getPwmSession().getSessionStateBean().setSessionSuccess(message, field);
-        forwardToSuccessPage();
+    public void forwardToSuccessPage(Message message, final String... field)
+            throws ServletException, PwmUnrecoverableException, IOException
+
+    {
+        final String messageStr = Message.getLocalizedMessage(pwmRequest.getLocale(), message, pwmRequest.getConfig(), field);
+        forwardToSuccessPage(messageStr);
     }
 
-    public void forwardToSuccessPage(
-    )
-            throws IOException, ServletException, PwmUnrecoverableException {
+    public void forwardToSuccessPage(final String message, final Flag... flags)
+            throws ServletException, PwmUnrecoverableException, IOException
+
+    {
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         final PwmSession pwmSession = pwmRequest.getPwmSession();
-        final SessionStateBean ssBean = pwmSession.getSessionStateBean();
+        this.pwmRequest.setAttribute(PwmRequest.Attribute.SuccessMessage, message);
 
-        if (!pwmApplication.getConfig().readSettingAsBoolean(PwmSetting.DISPLAY_SUCCESS_PAGES)) {
-            ssBean.setSessionSuccess(null, null);
+        final boolean showMessage = !pwmApplication.getConfig().readSettingAsBoolean(PwmSetting.DISPLAY_SUCCESS_PAGES)
+                && !Arrays.asList(flags).contains(Flag.AlwaysShowMessage);
+
+        if (showMessage) {
             LOGGER.trace(pwmSession, "skipping success page due to configuration setting.");
-            final StringBuilder redirectURL = new StringBuilder();
-            redirectURL.append(pwmRequest.getContextPath());
-            redirectURL.append(PwmServletDefinition.Command.servletUrl());
-            redirectURL.append("?processAction=continue");
-            redirectURL.append("&pwmFormID=");
-            redirectURL.append(Helper.buildPwmFormID(pwmSession.getSessionStateBean()));
-            sendRedirect(redirectURL.toString());
+            final String redirectUrl = pwmRequest.getContextPath()
+                    +  PwmServletDefinition.Command.servletUrl()
+                    + "?processAction=continue";
+            sendRedirect(redirectUrl);
             return;
         }
 
         try {
-            if (ssBean.getSessionSuccess() == null) {
-                ssBean.setSessionSuccess(Message.Success_Unknown, null);
-            }
-
             forwardToJsp(PwmConstants.JSP_URL.SUCCESS);
         } catch (PwmUnrecoverableException e) {
             LOGGER.error("unexpected error sending user to success page: " + e.toString());
@@ -111,7 +121,7 @@ public class PwmResponse extends PwmHttpResponseWrapper {
 
     public void respondWithError(
             final ErrorInformation errorInformation,
-            final boolean forceLogout
+            final Flag... flags
     )
             throws IOException, ServletException
     {
@@ -119,12 +129,9 @@ public class PwmResponse extends PwmHttpResponseWrapper {
 
         pwmRequest.setResponseError(errorInformation);
 
-        {
-            boolean showDetail = Helper.determineIfDetailErrorMsgShown(pwmRequest.getPwmApplication());
-            final String errorStatusText = showDetail
-                    ? errorInformation.toDebugStr()
-                    : errorInformation.toUserStr(pwmRequest.getPwmSession(),pwmRequest.getPwmApplication());
-            getHttpServletResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errorStatusText);
+        if (Helper.enumArrayContainsValue(flags, Flag.ForceLogout)) {
+            LOGGER.debug(pwmRequest, "forcing logout due to error " + errorInformation.toDebugStr());
+            pwmRequest.getPwmSession().unauthenticateUser(pwmRequest);
         }
 
         if (pwmRequest.isJsonRequest()) {
@@ -135,10 +142,12 @@ public class PwmResponse extends PwmHttpResponseWrapper {
             } catch (PwmUnrecoverableException e) {
                 LOGGER.error("unexpected error sending user to error page: " + e.toString());
             }
-        }
-
-        if (forceLogout) {
-            pwmRequest.getPwmSession().unauthenticateUser(pwmRequest);
+        } else {
+            boolean showDetail = Helper.determineIfDetailErrorMsgShown(pwmRequest.getPwmApplication());
+            final String errorStatusText = showDetail
+                    ? errorInformation.toDebugStr()
+                    : errorInformation.toUserStr(pwmRequest.getPwmSession(),pwmRequest.getPwmApplication());
+            getHttpServletResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errorStatusText);
         }
     }
 
@@ -147,6 +156,7 @@ public class PwmResponse extends PwmHttpResponseWrapper {
             final RestResultBean restResultBean
     )
             throws IOException {
+        preCommitActions();
         final HttpServletResponse resp = this.getHttpServletResponse();
         final String outputString = restResultBean.toJson();
         resp.setContentType(PwmConstants.ContentTypeValue.json.getHeaderValue());
@@ -155,22 +165,38 @@ public class PwmResponse extends PwmHttpResponseWrapper {
     }
 
 
-    public void writeEncryptedCookie(final String cookieName, final Serializable cookieValue, final String path)
+    public void writeEncryptedCookie(final String cookieName, final Serializable cookieValue, final CookiePath path)
             throws PwmUnrecoverableException
     {
-        pwmRequest.getPwmResponse().writeEncryptedCookie(cookieName, cookieValue, -1, path);
+        writeEncryptedCookie(cookieName, cookieValue, -1, path);
     }
 
-    public void writeEncryptedCookie(final String cookieName, final Serializable cookieValue, final int seconds, final String path)
+    public void writeEncryptedCookie(final String cookieName, final Serializable cookieValue, final int seconds, final CookiePath path)
             throws PwmUnrecoverableException
     {
         final String jsonValue = JsonUtil.serialize(cookieValue);
         final String encryptedValue = pwmRequest.getPwmApplication().getSecureService().encryptToString(jsonValue);
-        writeCookie(cookieName, encryptedValue, seconds, path);
+        writeCookie(cookieName, encryptedValue, seconds, path, PwmHttpResponseWrapper.Flag.BypassSanitation);
     }
 
     public void markAsDownload(final PwmConstants.ContentTypeValue contentType, final String filename) {
         this.setHeader(PwmConstants.HttpHeader.ContentDisposition,"attachment; fileName=" + filename);
         this.setContentType(contentType);
+    }
+
+    public void sendRedirect(final String url)
+            throws IOException
+    {
+        preCommitActions();
+        super.sendRedirect(url);
+    }
+
+    private void preCommitActions() {
+        if (pwmRequest.getPwmResponse().isCommitted()) {
+            return;
+        }
+
+        pwmRequest.getPwmApplication().getSessionStateService().saveLoginSessionState(pwmRequest);
+        pwmRequest.getPwmApplication().getSessionStateService().saveSessionBeans(pwmRequest);
     }
 }

@@ -1,5 +1,4 @@
 <%@ page import="password.pwm.PwmApplication" %>
-<%@ page import="password.pwm.PwmConstants" %>
 <%@ page import="password.pwm.config.FormConfiguration" %>
 <%@ page import="password.pwm.config.FormUtility" %>
 <%@ page import="password.pwm.config.PwmSetting" %>
@@ -12,13 +11,14 @@
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Locale" %>
 <%@ page import="java.util.Map" %>
+<%@ page import="password.pwm.http.tag.value.PwmValue" %>
 
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@
 <%@ taglib uri="pwm" prefix="pwm" %>
 <%
     final PwmRequest formPwmRequest = PwmRequest.forRequest(request,response);
-    final List<FormConfiguration> formConfigurationList = (List<FormConfiguration>)JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.FormConfiguration);
+    final List<FormConfiguration> formConfigurationList = (List<FormConfiguration>)JspUtility.getAttribute(pageContext, PwmRequest.Attribute.FormConfiguration);
 %>
 <% if (formConfigurationList == null) { %>
 [ form definition is not available ]
@@ -46,9 +46,9 @@
 <!-- form contains no items ] -->
 <% } else { %>
 <%
-    final boolean forceReadOnly = (Boolean)JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.FormReadOnly);
-    final boolean showPasswordFields = (Boolean)JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.FormShowPasswordFields);
-    final Map<FormConfiguration,String> formDataMap = (Map<FormConfiguration,String>)JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.FormData);
+    final boolean forceReadOnly = (Boolean)JspUtility.getAttribute(pageContext, PwmRequest.Attribute.FormReadOnly);
+    final boolean showPasswordFields = (Boolean)JspUtility.getAttribute(pageContext, PwmRequest.Attribute.FormShowPasswordFields);
+    final Map<FormConfiguration,String> formDataMap = (Map<FormConfiguration,String>)JspUtility.getAttribute(pageContext, PwmRequest.Attribute.FormData);
 
     final PwmApplication pwmApplication = formPwmRequest.getPwmApplication();
     final Locale formLocale = formPwmRequest.getLocale();
@@ -83,7 +83,7 @@
     <% boolean readonly = loopConfiguration.isReadonly() || forceReadOnly; %>
     <% if (readonly) { %>
         <span id="<%=loopConfiguration.getName()%>">
-        <span class="fa fa-chevron-circle-right"></span>
+        <span class="pwm-icon pwm-icon-chevron-circle-right"></span>
         <%= currentValue %>
         </span>
     <% } else if (loopConfiguration.getType() == FormConfiguration.Type.select) { %>
@@ -196,7 +196,7 @@
     </tr>
     <tr style="border:0; margin: 0; padding: 0">
         <td style="border:0; margin: 0; padding: 0">
-            <input type="<pwm:value name="passwordFieldType"/>" name="password2" id="password2" class="changepasswordfield passwordfield" style="margin-left:5px"/>
+            <input type="<pwm:value name="<%=PwmValue.passwordFieldType%>"/>" name="password2" id="password2" class="changepasswordfield passwordfield" style="margin-left:5px"/>
         </td>
         <td style="border:0">
             <%-- confirmation mark [not shown initially, enabled by javascript; see also changepassword.js:markConfirmationMark() --%>

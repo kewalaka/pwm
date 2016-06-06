@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
 import password.pwm.bean.EmailItemBean;
 import password.pwm.bean.PasswordStatus;
-import password.pwm.bean.SessionStateBean;
+import password.pwm.bean.LocalSessionStateBean;
 import password.pwm.bean.UserInfoBean;
 import password.pwm.config.Configuration;
 import password.pwm.config.FormConfiguration;
@@ -45,7 +45,7 @@ import password.pwm.http.HttpMethod;
 import password.pwm.http.PwmRequest;
 import password.pwm.http.PwmSession;
 import password.pwm.http.bean.ChangePasswordBean;
-import password.pwm.http.bean.LoginInfoBean;
+import password.pwm.bean.LoginInfoBean;
 import password.pwm.i18n.Message;
 import password.pwm.ldap.PasswordChangeProgressChecker;
 import password.pwm.ldap.auth.AuthenticationType;
@@ -123,14 +123,14 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
     {
         final PwmSession pwmSession = pwmRequest.getPwmSession();
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
-        final SessionStateBean ssBean = pwmSession.getSessionStateBean();
-        final ChangePasswordBean changePasswordBean = pwmSession.getChangePasswordBean();
+        final LocalSessionStateBean ssBean = pwmSession.getSessionStateBean();
+        final ChangePasswordBean changePasswordBean = pwmApplication.getSessionStateService().getBean(pwmRequest, ChangePasswordBean.class);
 
-        if (pwmSession.getLoginInfoBean().getAuthenticationType() == AuthenticationType.AUTH_WITHOUT_PASSWORD) {
+        if (pwmSession.getLoginInfoBean().getType() == AuthenticationType.AUTH_WITHOUT_PASSWORD) {
             throw new PwmUnrecoverableException(PwmError.ERROR_PASSWORD_REQUIRED);
         }
 
-        if (!ssBean.isAuthenticated()) {
+        if (!pwmRequest.isAuthenticated()) {
             pwmRequest.respondWithError(PwmError.ERROR_AUTHENTICATION_REQUIRED.toInfo());
             return;
         }
@@ -196,7 +196,7 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
         if (pwmRequest.getPwmSession().getUserInfoBean().getPasswordState().isWarnPeriod()) {
             final String warnResponse = pwmRequest.readParameterAsString("warnResponse");
             if ("skip".equalsIgnoreCase(warnResponse)) {
-                pwmRequest.getPwmSession().getSessionStateBean().setSkippedRequirePassword(true);
+                pwmRequest.getPwmSession().getLoginInfoBean().setFlag(LoginInfoBean.LoginFlag.skipNewPw);
                 pwmRequest.sendRedirectToContinue();
             } else if ("change".equalsIgnoreCase(warnResponse)) {
                 changePasswordBean.setWarnPassed(true);
@@ -243,7 +243,7 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
         }
 
         try {
-            executeChangePassword(pwmRequest.getPwmApplication(), pwmRequest.getPwmSession(), password1);
+            executeChangePassword(pwmRequest, password1);
             pwmRequest.forwardToJsp(PwmConstants.JSP_URL.PASSWORD_CHANGE_WAIT);
         } catch (PwmOperationalException e) {
             LOGGER.debug(e.getErrorInformation().toDebugStr());
@@ -277,7 +277,7 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
     )
             throws ServletException, IOException, PwmUnrecoverableException, ChaiUnavailableException
     {
-        final SessionStateBean ssBean = pwmRequest.getPwmSession().getSessionStateBean();
+        final LocalSessionStateBean ssBean = pwmRequest.getPwmSession().getSessionStateBean();
         final UserInfoBean uiBean = pwmRequest.getPwmSession().getUserInfoBean();
         final LoginInfoBean loginBean = pwmRequest.getPwmSession().getLoginInfoBean();
 
@@ -335,14 +335,15 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
     }
 
     private void executeChangePassword(
-            final PwmApplication pwmApplication,
-            final PwmSession pwmSession,
+            final PwmRequest pwmRequest,
             final PasswordData newPassword
     )
             throws ChaiUnavailableException, PwmUnrecoverableException, PwmOperationalException
     {
+        final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
+        final PwmSession pwmSession = pwmRequest.getPwmSession();
         // password accepted, setup change password
-        final ChangePasswordBean cpb = pwmSession.getChangePasswordBean();
+        final ChangePasswordBean cpb = pwmApplication.getSessionStateService().getBean(pwmRequest, ChangePasswordBean.class);
 
         // change password
         PasswordUtility.setActorPassword(pwmSession, pwmApplication, newPassword);
@@ -392,7 +393,7 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
         if (agreementMsg != null && agreementMsg.length() > 0 && !changePasswordBean.isAgreementPassed()) {
             final MacroMachine macroMachine = pwmSession.getSessionManager().getMacroMachine(pwmApplication);
             final String expandedText = macroMachine.expandMacros(agreementMsg);
-            pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.AgreementText,expandedText);
+            pwmRequest.setAttribute(PwmRequest.Attribute.AgreementText,expandedText);
             pwmRequest.forwardToJsp(PwmConstants.JSP_URL.PASSWORD_AGREEMENT);
             return;
         }
@@ -423,7 +424,7 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
             return false;
         }
 
-        if (pwmSession.getLoginInfoBean().getAuthenticationType() == AuthenticationType.AUTH_FROM_PUBLIC_MODULE) {
+        if (pwmSession.getLoginInfoBean().getType() == AuthenticationType.AUTH_FROM_PUBLIC_MODULE) {
             LOGGER.debug(pwmSession, "skipping user current password requirement, authentication type is " + AuthenticationType.AUTH_FROM_PUBLIC_MODULE);
             return false;
         }
@@ -631,14 +632,15 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
             cpb.setChangeProgressTracker(null);
             final Locale locale = pwmRequest.getLocale();
             final String completeMessage = pwmRequest.getConfig().readSettingAsLocalizedString(PwmSetting.PASSWORD_COMPLETE_MESSAGE,locale);
+
+            pwmRequest.getPwmApplication().getSessionStateService().clearBean(pwmRequest, ChangePasswordBean.class);
             if (completeMessage != null && !completeMessage.isEmpty()) {
                 final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine(pwmRequest.getPwmApplication());
                 final String expandedText = macroMachine.expandMacros(completeMessage);
-                pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.CompleteText, expandedText);
+                pwmRequest.setAttribute(PwmRequest.Attribute.CompleteText, expandedText);
                 pwmRequest.forwardToJsp(PwmConstants.JSP_URL.PASSWORD_COMPLETE);
             } else {
-                pwmRequest.getPwmSession().clearSessionBean(ChangePasswordBean.class);
-                pwmRequest.forwardToSuccessPage(Message.Success_PasswordChange);
+                pwmRequest.getPwmResponse().forwardToSuccessPage(Message.Success_PasswordChange);
             }
         } else {
             pwmRequest.forwardToJsp(PwmConstants.JSP_URL.PASSWORD_CHANGE_WAIT);
@@ -652,7 +654,7 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
             return false;
         }
 
-        if (pwmRequest.getPwmSession().getSessionStateBean().isSkippedRequireNewPassword()) {
+        if (pwmRequest.getPwmSession().getLoginInfoBean().isLoginFlag(LoginInfoBean.LoginFlag.skipNewPw)) {
             return false;
         }
 
@@ -660,11 +662,11 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
             return false;
         }
 
-        if (pwmRequest.getPwmSession().getLoginInfoBean().getAuthenticationFlags().contains(AuthenticationType.AUTH_FROM_PUBLIC_MODULE)) {
+        if (pwmRequest.getPwmSession().getLoginInfoBean().getAuthFlags().contains(AuthenticationType.AUTH_FROM_PUBLIC_MODULE)) {
             return false;
         }
 
-        if (pwmRequest.getPwmSession().getLoginInfoBean().getAuthenticationType() == AuthenticationType.AUTH_FROM_PUBLIC_MODULE) {
+        if (pwmRequest.getPwmSession().getLoginInfoBean().getType() == AuthenticationType.AUTH_FROM_PUBLIC_MODULE) {
             return false;
         }
 
@@ -676,6 +678,5 @@ public class ChangePasswordServlet extends AbstractPwmServlet {
     {
         pwmRequest.addFormInfoToRequestAttr(PwmSetting.PASSWORD_REQUIRE_FORM,false,false);
         pwmRequest.forwardToJsp(PwmConstants.JSP_URL.PASSWORD_FORM);
-
     }
 }

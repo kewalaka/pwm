@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,12 +26,14 @@ import password.pwm.bean.UserIdentity;
 import password.pwm.http.servlet.GuestRegistrationServlet;
 import password.pwm.util.FormMap;
 
+import java.util.Collections;
 import java.util.Date;
+import java.util.Set;
 
 /**
  * @author Jason D. Rivard, Menno Pieters
  */
-public class GuestRegistrationBean implements PwmSessionBean {
+public class GuestRegistrationBean extends PwmSessionBean {
 // ------------------------------ FIELDS ------------------------------
 
     private UserIdentity updateUserIdentity;
@@ -73,6 +75,14 @@ public class GuestRegistrationBean implements PwmSessionBean {
     public void setFormValues(FormMap formValues)
     {
         this.formValues = formValues;
+    }
+
+    public Type getType() {
+        return Type.AUTHENTICATED;
+    }
+
+    public Set<Flag> getFlags() {
+        return Collections.emptySet();
     }
 }
 

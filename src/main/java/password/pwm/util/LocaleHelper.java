@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@ import password.pwm.i18n.Display;
 import password.pwm.i18n.PwmDisplayBundle;
 import password.pwm.i18n.PwmLocaleBundle;
 import password.pwm.util.logging.PwmLogger;
+import password.pwm.util.macro.MacroMachine;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -99,13 +100,13 @@ public class LocaleHelper {
                 LOGGER.warn(errorMsg);
                 return errorMsg;
             }
-            final String rawValue = bundle.getString(key);
-            if (rawValue == null) {
+            try {
+                returnValue = bundle.getString(key);
+            } catch (MissingResourceException e) {
                 final String errorMsg = "missing key '" + key + "' for " + bundleClass.getName();
                 LOGGER.warn(errorMsg);
-                return errorMsg;
+                returnValue = key;
             }
-            returnValue = rawValue;
         }
 
         if (values != null) {
@@ -116,7 +117,9 @@ public class LocaleHelper {
                 }
             }
         }
-        return returnValue;
+
+        final MacroMachine macroMachine = MacroMachine.forStatic();
+        return macroMachine.expandMacros(returnValue);
     }
 
     private static ResourceBundle getMessageBundle(final Locale locale, final Class bundleClass) {
@@ -364,7 +367,7 @@ public class LocaleHelper {
 
         final ConfigLocaleStats configLocaleStats = new ConfigLocaleStats();
         {
-            final StoredValue storedValue = PwmSetting.CHALLENGE_RANDOM_CHALLENGES.getDefaultValue(PwmSettingTemplate.DEFAULT);
+            final StoredValue storedValue = PwmSetting.CHALLENGE_RANDOM_CHALLENGES.getDefaultValue(PwmSettingTemplateSet.getDefault());
             Map<String, List<ChallengeItemConfiguration>> value = ((ChallengeValue) storedValue).toNativeObject();
 
             for (String localeStr : value.keySet()) {
@@ -511,7 +514,7 @@ public class LocaleHelper {
         private static List<Locale> knownLocales() {
             final List<Locale> knownLocales = new ArrayList<>();
             try {
-                final StringArrayValue stringArrayValue = (StringArrayValue) PwmSetting.KNOWN_LOCALES.getDefaultValue(PwmSettingTemplate.DEFAULT);
+                final StringArrayValue stringArrayValue = (StringArrayValue) PwmSetting.KNOWN_LOCALES.getDefaultValue(PwmSettingTemplateSet.getDefault());
                 final List<String> rawValues = stringArrayValue.toNativeObject();
                 final Map<String,String> localeFlagMap = StringUtil.convertStringListToNameValuePair(rawValues, "::");
                 for (final String rawValue : localeFlagMap.keySet()) {

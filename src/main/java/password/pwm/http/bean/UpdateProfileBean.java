@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,18 +22,24 @@
 
 package password.pwm.http.bean;
 
-import password.pwm.config.FormConfiguration;
+import password.pwm.bean.TokenVerificationProgress;
 
-import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
-public class UpdateProfileBean implements PwmSessionBean {
+public class UpdateProfileBean extends PwmSessionBean {
 
     private boolean agreementPassed;
     private boolean confirmationPassed;
     private boolean formSubmitted;
 
-    private final Map<FormConfiguration,String> formData = new LinkedHashMap<>();
+    private Map<String,String> formData;
+    private final TokenVerificationProgress tokenVerificationProgress = new TokenVerificationProgress();
+
+    public Type getType() {
+        return Type.AUTHENTICATED;
+    }
 
     public boolean isAgreementPassed() {
         return agreementPassed;
@@ -43,8 +49,12 @@ public class UpdateProfileBean implements PwmSessionBean {
         this.agreementPassed = agreementPassed;
     }
 
-    public Map<FormConfiguration, String> getFormData() {
+    public Map<String, String> getFormData() {
         return formData;
+    }
+
+    public void setFormData(Map<String, String> formData) {
+        this.formData = formData;
     }
 
     public boolean isConfirmationPassed() {
@@ -61,5 +71,13 @@ public class UpdateProfileBean implements PwmSessionBean {
 
     public void setFormSubmitted(boolean formSubmitted) {
         this.formSubmitted = formSubmitted;
+    }
+
+    public Set<Flag> getFlags() {
+        return Collections.emptySet();
+    }
+
+    public TokenVerificationProgress getTokenVerificationProgress() {
+        return tokenVerificationProgress;
     }
 }

@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,10 +30,7 @@ import com.novell.ldapchai.exception.ImpossiblePasswordPolicyException;
 import com.novell.ldapchai.provider.ChaiProvider;
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
-import password.pwm.bean.SessionLabel;
-import password.pwm.bean.SessionStateBean;
-import password.pwm.bean.UserIdentity;
-import password.pwm.bean.UserInfoBean;
+import password.pwm.bean.*;
 import password.pwm.config.PwmSetting;
 import password.pwm.error.PwmOperationalException;
 import password.pwm.error.PwmUnrecoverableException;
@@ -243,15 +240,20 @@ public class SessionAuthenticator {
     )
             throws PwmUnrecoverableException
     {
-        final IntruderManager intruderManager = pwmApplication.getIntruderManager();
-        intruderManager.convenience().markAddressAndSession(pwmSession);
-        if (username != null) {
-            pwmApplication.getIntruderManager().mark(RecordType.USERNAME, username, pwmSession.getLabel());
-        }
-        if (userIdentity != null) {
-            intruderManager.convenience().markUserIdentity(userIdentity, sessionLabel);
-        }
+        LOGGER.error(sessionLabel, "ldap error during search: " + exception.getMessage());
 
+        final IntruderManager intruderManager = pwmApplication.getIntruderManager();
+        if (intruderManager != null) {
+            intruderManager.convenience().markAddressAndSession(pwmSession);
+
+            if (username != null) {
+                intruderManager.mark(RecordType.USERNAME, username, pwmSession.getLabel());
+            }
+
+            if (userIdentity != null) {
+                intruderManager.convenience().markUserIdentity(userIdentity, sessionLabel);
+            }
+        }
     }
 
     private void postAuthenticationSequence(
@@ -261,10 +263,12 @@ public class SessionAuthenticator {
             throws PwmUnrecoverableException, ChaiUnavailableException
     {
         final IntruderManager intruderManager = pwmApplication.getIntruderManager();
-        final SessionStateBean ssBean = pwmSession.getSessionStateBean();
+        final LocalSessionStateBean ssBean = pwmSession.getSessionStateBean();
+        final LoginInfoBean loginInfoBean = pwmSession.getLoginInfoBean();
 
         // auth succeed
-        ssBean.setAuthenticated(true);
+        loginInfoBean.setAuthenticated(true);
+        loginInfoBean.setUserIdentity(userIdentity);
 
         //update the session connection
         pwmSession.getSessionManager().setChaiProvider(authenticationResult.getUserProvider());
@@ -290,12 +294,12 @@ public class SessionAuthenticator {
         }
 
         //mark the auth time
-        pwmSession.getLoginInfoBean().setLocalAuthTime(new Date());
+        pwmSession.getLoginInfoBean().setAuthTime(new Date());
 
         //update the resulting authType
-        pwmSession.getLoginInfoBean().setAuthenticationType(authenticationResult.getAuthenticationType());
+        pwmSession.getLoginInfoBean().setType(authenticationResult.getAuthenticationType());
 
-        pwmSession.getLoginInfoBean().setAuthenticationSource(authenticationSource);
+        pwmSession.getLoginInfoBean().setAuthSource(authenticationSource);
 
         // save the password in the login bean
         final PasswordData userPassword = authenticationResult.getUserPassword();

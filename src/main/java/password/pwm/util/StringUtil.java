@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,9 @@
 package password.pwm.util;
 
 import org.apache.commons.codec.binary.Base32;
+import net.iharder.Base64;
 import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.lang3.StringUtils;
 import password.pwm.PwmConstants;
 import password.pwm.util.logging.PwmLogger;
 
@@ -117,7 +119,7 @@ public abstract class StringUtil {
     }
 
     public static Map<String, String> convertStringListToNameValuePair(final Collection<String> input, final String separator) {
-        if (input == null) {
+        if (input == null || input.isEmpty()) {
             return Collections.emptyMap();
         }
 
@@ -126,14 +128,26 @@ public abstract class StringUtil {
             if (loopStr != null && separator != null && loopStr.contains(separator)) {
                 final int separatorLocation = loopStr.indexOf(separator);
                 final String key = loopStr.substring(0, separatorLocation);
-                final String value = loopStr.substring(separatorLocation + separator.length(), loopStr.length());
-                returnMap.put(key, value);
+                if (!key.trim().isEmpty()) {
+                    final String value = loopStr.substring(separatorLocation + separator.length(), loopStr.length());
+                    returnMap.put(key, value);
+                }
             } else {
-                returnMap.put(loopStr, "");
+                if (loopStr != null && !loopStr.trim().isEmpty()) {
+                    returnMap.put(loopStr, "");
+                }
             }
         }
 
         return returnMap;
+    }
+
+    public static String join(Object[] inputs, String separator) {
+        return StringUtils.join(inputs, separator);
+    }
+
+    public static String join(Collection inputs, String separator) {
+        return StringUtils.join(inputs == null ? new String[]{} : inputs.toArray(), separator);
     }
 
     public enum Base64Options {
@@ -141,16 +155,14 @@ public abstract class StringUtil {
         URL_SAFE,
         ;
 
-        private static int asBase64UtilOptions(Base64Options[] options) {
+        private static int asBase64UtilOptions(final Base64Options... options) {
             int b64UtilOptions = 0;
-            Set<Base64Options> optionsEnum = EnumSet.noneOf(Base64Options.class);
-            optionsEnum.addAll(Arrays.asList(options));
 
-            if (optionsEnum.contains(Base64Options.GZIP)) {
-                b64UtilOptions = b64UtilOptions | Base64Util.GZIP;
+            if (Helper.enumArrayContainsValue(options, Base64Options.GZIP)) {
+                b64UtilOptions = b64UtilOptions | Base64.GZIP;
             }
-            if (optionsEnum.contains(Base64Options.URL_SAFE)) {
-                b64UtilOptions = b64UtilOptions | Base64Util.URL_SAFE;
+            if (Helper.enumArrayContainsValue(options, Base64Options.URL_SAFE)) {
+                b64UtilOptions = b64UtilOptions | Base64.URL_SAFE;
             }
             return b64UtilOptions;
         }
@@ -201,7 +213,7 @@ public abstract class StringUtil {
     public static byte[] base64Decode(final String input)
             throws IOException
     {
-        return Base64Util.decode(input);
+        return Base64.decode(input);
     }
 
     public static String base32Encode(final byte[] input)
@@ -216,12 +228,12 @@ public abstract class StringUtil {
     {
         final int b64UtilOptions = Base64Options.asBase64UtilOptions(options);
 
-        return Base64Util.decode(input, b64UtilOptions);
+        return Base64.decode(input, b64UtilOptions);
     }
 
     public static String base64Encode(final byte[] input)
     {
-        return Base64Util.encodeBytes(input);
+        return Base64.encodeBytes(input);
     }
 
     public static String base64Encode(final byte[] input, final StringUtil.Base64Options... options)
@@ -230,9 +242,9 @@ public abstract class StringUtil {
         final int b64UtilOptions = Base64Options.asBase64UtilOptions(options);
 
         if (b64UtilOptions > 0) {
-            return Base64Util.encodeBytes(input, b64UtilOptions);
+            return Base64.encodeBytes(input, b64UtilOptions);
         } else {
-            return Base64Util.encodeBytes(input);
+            return Base64.encodeBytes(input);
         }
     }
 
@@ -260,5 +272,52 @@ public abstract class StringUtil {
 
         final String[] splitValues = input.trim().split("\\s+");
         return Arrays.asList(splitValues);
+    }
+
+    public static String[] createStringChunks(String str, int size) {
+        if (size <= 0 || str == null || str.length() <= size) {
+            return new String[] { str };
+        }
+
+        int numOfChunks = str.length() - size + 1;
+        Set<String> chunks = new HashSet<>(numOfChunks);
+
+        for (int i=0; i<numOfChunks; i++) {
+            chunks.add(StringUtils.substring(str, i, i+size));
+        }
+
+        return chunks.toArray(new String[numOfChunks]);
+    }
+
+    public static String mapToString(final Map map, final String keyValueSeparator, final String recordSeparator) {
+        final StringBuilder sb = new StringBuilder();
+        for (final Iterator iterator = map.keySet().iterator(); iterator.hasNext(); ) {
+            final String key = iterator.next().toString();
+            final String value = map.get(key) == null ? "" : map.get(key).toString();
+            if (key != null && value != null && !key.trim().isEmpty() && !value.trim().isEmpty()) {
+                sb.append(key.trim());
+                sb.append(keyValueSeparator);
+                sb.append(value.trim());
+                if (iterator.hasNext()) {
+                    sb.append(recordSeparator);
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    public static int[] toCodePointArray(String str) {
+        if (str != null) {
+            int len = str.length();
+            int[] acp = new int[str.codePointCount(0, len)];
+
+            for (int i = 0, j = 0; i < len; i = str.offsetByCodePoints(i, 1)) {
+                acp[j++] = str.codePointAt(i);
+            }
+
+            return acp;
+        }
+
+        return new int[0];
     }
 }

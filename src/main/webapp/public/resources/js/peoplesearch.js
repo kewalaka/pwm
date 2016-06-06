@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -101,12 +101,17 @@ PWM_PS.convertDetailResultToHtml = function(data) {
         })(iter);
     }
     htmlBody += '</div>'; //3
-    if (data['hasOrgChart']) {
-        htmlBody += '<div class="icon-peoplesearch-orgChart" id="icon-peoplesearch-orgChart" title="' + PWM_MAIN.showString('Title_OrgChart') + '"></div>';
-    }
     htmlBody += '</div>';
 
     htmlBody += '<div id="peopleSearch-userDetailWrapper">';
+
+    if (data['hasOrgChart']) {
+        htmlBody += '<div style="text-align: center"><button class="btn" id="button-peoplesearch-orgChart">'
+            + '<span class="btn-icon pwm-icon pwm-icon-sitemap"></span>'
+            + PWM_MAIN.showString('Title_OrgChart')
+            + '</div>';
+    }
+
     htmlBody += '<table class="peopleSearch-userDetails">';
     for (var iter in data['detail']) {
         (function(iterCount){
@@ -130,20 +135,28 @@ PWM_PS.convertDetailResultToHtml = function(data) {
                     })(refIter);
                 }
                 htmlBody += '</div>';
-            } else if (type == 'email') {
-                var value = attributeData['value'];
-                htmlBody += '<a href="mailto:' + value + '">' + value + '</a>';
             } else {
-                htmlBody += attributeData['value'];
-            }
-            if (attributeData['searchable'] == true) {
-                var likeSearchID = 'link-' + attributeData['name'] + '-' + '-likeUserSearch';
-                htmlBody += '<span id="' + likeSearchID + '" class="icon-likeUserSearch btn-icon fa fa-search" title="' + PWM_MAIN.showString('Button_Search') + '"></span>';
+                var values = attributeData['values'];
+                for (var i in values) {
+                    if (i > 0) {
+                        htmlBody += '</br>'
+                    }
+                    if (type == 'email') {
+                        htmlBody += '<a href="mailto:' + values[i] + '">' + values[i] + '</a>';
+                    } else {
+                        htmlBody += values[i];
+                    }
+                    if (attributeData['searchable'] == true) {
+                        var likeSearchID = 'link-' + attributeData['name'] + '-' + values[i] + '-likeUserSearch';
+                        htmlBody += '<span id="' + likeSearchID + '" class="icon-likeUserSearch btn-icon pwm-icon pwm-icon-search" title="' + PWM_MAIN.showString('Button_Search') + ' &quot;' + values[i] + '&quot;"></span>';
+                    }
+                }
             }
             htmlBody += '</div></td>'
         })(iter);
     }
     htmlBody += '</table></div>';
+    
     return htmlBody;
 };
 
@@ -155,7 +168,7 @@ PWM_PS.applyEventHandlersToDetailView = function(data) {
     }
 
     if (data['hasOrgChart']) {
-        PWM_MAIN.addEventHandler('icon-peoplesearch-orgChart', 'click', function () {
+        PWM_MAIN.addEventHandler('button-peoplesearch-orgChart', 'click', function () {
             PWM_PS.showOrgChartView(data['userKey']);
         });
     }
@@ -165,10 +178,13 @@ PWM_PS.applyEventHandlersToDetailView = function(data) {
         (function(iterCount){
             var attributeData = data['detail'][iterCount];
             if (attributeData['searchable'] == true) {
-                var likeSearchID = 'link-' + attributeData['name'] + '-' + '-likeUserSearch';
-                PWM_MAIN.addEventHandler(likeSearchID,'click',function(){
-                    PWM_PS.submitLikeUserSearch(attributeData['value']);
-                });
+                var values = attributeData['values'];
+                for (var i in values) {
+                    var likeSearchID = 'link-' + attributeData['name'] + '-' + values[i] + '-likeUserSearch';
+                    PWM_MAIN.addEventHandler(likeSearchID,'click',function(){
+                        PWM_PS.submitLikeUserSearch(values[i]);
+                    });
+                }
             }
             var type = attributeData['type'];
             if (type == 'userDN') {
@@ -236,7 +252,7 @@ PWM_PS.convertOrgChartDataToOrgChartHtml = function(data) {
         output += '<div class="panel-orgChart-' + type + '">';  //1
         output += '<div class="panel-orgChart-person" id="panel-orgChart-person-' + userKey + '">'; //2
         if (userReference['hasMoreNodes']) {
-            output += '<a id="link-' + userKey + '"><span class="icon-orgChart-' + direction + ' fa fa-arrow-' + direction + '"/> </a>';
+            output += '<a id="link-' + userKey + '"><span class="icon-orgChart-' + direction + ' pwm-icon pwm-icon-arrow-' + direction + '"/> </a>';
         }
         if (PWM_VAR['peoplesearch_enablePhoto']) {
             var blankSrc = PWM_MAIN.addPwmFormIDtoURL(PWM_GLOBAL['url-resources'] + '/UserPhoto.png');
@@ -402,7 +418,8 @@ PWM_PS.initPeopleSearchPage = function() {
     var applicationData = PWM_MAIN.getObject("application-info");
     var jspName = applicationData ? applicationData.getAttribute("data-jsp-name") : "";
     if ("peoplesearch.jsp" == jspName) {
-        PWM_MAIN.ajaxRequest("PeopleSearch?processAction=clientData",function(data){
+        var url = PWM_MAIN.addParamToUrl(window.location.href,'processAction','clientData');
+        PWM_MAIN.ajaxRequest(url,function(data){
             if (data['error']) {
                 PWM_MAIN.showErrorDialog(data);
                 return;
@@ -412,7 +429,22 @@ PWM_PS.initPeopleSearchPage = function() {
             }
             console.log('loaded peoplesearch jsClientData');
             PWM_PS.makeSearchGrid(function () {
+
+                try {
+                    var fieldUsername = PWM_MAIN.Preferences.readSessionStorage("peoplesearch_field_username","");
+                    PWM_MAIN.getObject('username').value = fieldUsername;
+                } catch (e) {
+                    console.log('error reading username field from sessionStorage: ' + e);
+                }
+
                 PWM_MAIN.addEventHandler('username', "keyup, input", function () {
+                    try {
+                        var fieldUsername = PWM_MAIN.getObject('username').value;
+                        PWM_MAIN.Preferences.writeSessionStorage("peoplesearch_field_username", fieldUsername);
+                    } catch (e) {
+                        console.log('error writing username field from sessionStorage: ' + e);
+                    }
+
                     PWM_PS.processPeopleSearch();
                 });
                 if (PWM_MAIN.getObject('username').value && PWM_MAIN.getObject('username').value.length > 0) {
@@ -424,3 +456,5 @@ PWM_PS.initPeopleSearchPage = function() {
 };
 
 PWM_PS.initPeopleSearchPage();
+
+

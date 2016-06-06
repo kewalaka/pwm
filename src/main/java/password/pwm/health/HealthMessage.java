@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,11 +28,13 @@ import password.pwm.util.LocaleHelper;
 import java.util.Locale;
 
 public enum HealthMessage {
+
+    NoData                                  (HealthStatus.CAUTION,  HealthTopic.Application),
     LDAP_No_Connection                      (HealthStatus.WARN,     HealthTopic.LDAP),
     LDAP_Ad_History_Asn_Missing             (HealthStatus.WARN,     HealthTopic.LDAP),
     LDAP_AD_Unsecure                        (HealthStatus.WARN,     HealthTopic.LDAP),
     LDAP_AD_StaticIP                        (HealthStatus.WARN,     HealthTopic.LDAP),
-    LDAP_ProxyTestSameUser                  (HealthStatus.CAUTION,  HealthTopic.Configuration),
+    LDAP_ProxyTestSameUser                  (HealthStatus.WARN,     HealthTopic.Configuration),
     LDAP_TestUserUnavailable                (HealthStatus.CAUTION,  HealthTopic.LDAP),
     LDAP_TestUserUnexpected                 (HealthStatus.WARN,     HealthTopic.LDAP),
     LDAP_TestUserError                      (HealthStatus.WARN,     HealthTopic.LDAP),
@@ -54,7 +56,7 @@ public enum HealthMessage {
     Config_UsingLocalDBResponseStorage      (HealthStatus.CAUTION,  HealthTopic.Configuration),
     Config_WeakPassword                     (HealthStatus.CONFIG,   HealthTopic.Configuration),
     Config_LDAPUnsecure                     (HealthStatus.CAUTION,  HealthTopic.Configuration),
-    Config_ConfigMode                       (HealthStatus.CAUTION,  HealthTopic.Configuration),
+    Config_ConfigMode                       (HealthStatus.WARN,     HealthTopic.Configuration),
     Config_MissingDB                        (HealthStatus.CAUTION,  HealthTopic.Configuration),
     Config_MissingLDAPResponseAttr          (HealthStatus.CAUTION,  HealthTopic.Configuration),
     Config_URLNotSecure                     (HealthStatus.CAUTION,  HealthTopic.Configuration),
@@ -74,9 +76,13 @@ public enum HealthMessage {
     LocalDB_BAD                             (HealthStatus.WARN,     HealthTopic.LocalDB),
     LocalDB_NEW                             (HealthStatus.WARN,     HealthTopic.LocalDB),
     LocalDB_CLOSED                          (HealthStatus.WARN,     HealthTopic.LocalDB),
+    LocalDBLogger_NOTOPEN                   (HealthStatus.CAUTION,  HealthTopic.LocalDB),
+    LocalDBLogger_HighRecordCount           (HealthStatus.CAUTION,  HealthTopic.LocalDB),
+    LocalDBLogger_OldRecordPresent          (HealthStatus.CAUTION,  HealthTopic.LocalDB),
     ServiceClosed_LocalDBUnavail            (HealthStatus.CAUTION,  HealthTopic.Application),
     ServiceClosed_AppReadOnly               (HealthStatus.CAUTION,  HealthTopic.Application),
     SMS_SendFailure                         (HealthStatus.WARN,     HealthTopic.SMS),
+    Wordlist_AutoImportFailure              (HealthStatus.WARN,     HealthTopic.Configuration),
 
     ;
 

@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -216,9 +216,9 @@ public class RestRandomPasswordServer extends AbstractRestServer {
             randomConfig.setSeedlistPhrases(charValues);
         }
 
-        if (!jsonInput.noUser && restRequestBean.getPwmSession().getSessionStateBean().isAuthenticated()) {
-            final UserIdentity userIdentity = UserIdentity.fromKey(jsonInput.username,restRequestBean.getPwmApplication());
-            if (userIdentity != null) {
+        if (!jsonInput.noUser && restRequestBean.getPwmSession().isAuthenticated()) {
+            if (jsonInput.username != null && !jsonInput.username.isEmpty()) {
+                final UserIdentity userIdentity = UserIdentity.fromKey(jsonInput.username, restRequestBean.getPwmApplication());
                 final HelpdeskProfile helpdeskProfile = restRequestBean.getPwmSession().getSessionManager().getHelpdeskProfile(restRequestBean.getPwmApplication());
                 final boolean useProxy = helpdeskProfile.readSettingAsBoolean(PwmSetting.HELPDESK_USE_PROXY);
 

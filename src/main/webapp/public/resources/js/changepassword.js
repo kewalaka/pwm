@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -258,8 +258,8 @@ PWM_CHANGEPW.doRandomGeneration=function(randomConfig) {
     dialogBody += "</table><br/><br/>";
 
     dialogBody += '<table style="border: 0">';
-    dialogBody += '<tr style="border: 0"><td style="border: 0"><button class="btn" id="moreRandomsButton" disabled="true"><span class="btn-icon fa fa-refresh"></span>' + PWM_MAIN.showString('Button_More') + '</button></td>';
-    dialogBody += '<td style="border: 0; text-align:right;"><button class="btn" id="cancelRandomsButton"><span class="btn-icon fa fa-times"></span>' + PWM_MAIN.showString('Button_Cancel') + '</button></td></tr>';
+    dialogBody += '<tr style="border: 0"><td style="border: 0"><button class="btn" id="moreRandomsButton" disabled="true"><span class="btn-icon pwm-icon pwm-icon-refresh"></span>' + PWM_MAIN.showString('Button_More') + '</button></td>';
+    dialogBody += '<td style="border: 0; text-align:right;"><button class="btn" id="cancelRandomsButton"><span class="btn-icon pwm-icon pwm-icon-times"></span>' + PWM_MAIN.showString('Button_Cancel') + '</button></td></tr>';
     dialogBody += "</table>";
 
     randomConfig['dialogBody'] = dialogBody;
@@ -429,8 +429,8 @@ PWM_CHANGEPW.setInputFocus=function() {
 
 PWM_CHANGEPW.refreshCreateStatus=function(refreshInterval) {
     require(["dojo","dijit/registry"],function(dojo,registry){
-        var displayStringsUrl = "ChangePassword?processAction=checkProgress";
-        var completedUrl = "ChangePassword?processAction=complete&pwmFormID=" + PWM_GLOBAL['pwmFormID'];
+        var displayStringsUrl = PWM_MAIN.addParamToUrl(window.location.href, "processAction", "checkProgress");
+        var completedUrl = PWM_MAIN.addPwmFormIDtoURL(PWM_MAIN.addParamToUrl(window.location.href,  "processAction", "complete"));
         var loadFunction = function(data) {
             var supportsProgress = (document.createElement('progress').max !== undefined);
             if (supportsProgress) {
@@ -449,9 +449,9 @@ PWM_CHANGEPW.refreshCreateStatus=function(refreshInterval) {
                     for (var msgItem in data['data']['messages']) {
                         (function(message){
                             if (message['show']) {
-                                tableBody += '<tr><td>' + message['label'] + '</td><td>'
-                                tableBody += message['complete'] ? "Completed" : "In Progress"
-                                tableBody += '</td></tr>'
+                                tableBody += '<tr><td>' + message['label'] + '</td><td>';
+                                tableBody += message['complete'] ? PWM_MAIN.showString('Value_ProgressComplete') : PWM_MAIN.showString('Value_ProgressInProgress');
+                                tableBody += '</td></tr>';
                             }
                         }(data['data']['messages'][msgItem]));
                     }

@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -22,27 +22,28 @@
 
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
-<%@ page import="password.pwm.RecoveryVerificationMethod" %>
-<%@ page import="password.pwm.http.servlet.PwmServletDefinition" %>
+<%@ page import="password.pwm.VerificationMethodSystem" %>
 <%@ page import="java.util.List" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
 <%@ include file="fragment/header.jsp" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <body class="nihilo">
 <div id="wrapper">
     <jsp:include page="fragment/header-body.jsp">
         <jsp:param name="pwm.PageName" value="Title_ForgottenPassword"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_ForgottenPassword" displayIfMissing="true"/></div>
         <%
-            final List<RecoveryVerificationMethod.UserPrompt> prompts = (List<RecoveryVerificationMethod.UserPrompt>)JspUtility.getAttribute(pageContext,PwmConstants.REQUEST_ATTR.ForgottenPasswordPrompts);
-            final String instructions = (String)JspUtility.getAttribute(pageContext,PwmConstants.REQUEST_ATTR.ForgottenPasswordInstructions);
+            final List<VerificationMethodSystem.UserPrompt> prompts = (List<VerificationMethodSystem.UserPrompt>)JspUtility.getAttribute(pageContext, PwmRequest.Attribute.ForgottenPasswordPrompts);
+            final String instructions = (String)JspUtility.getAttribute(pageContext, PwmRequest.Attribute.ForgottenPasswordInstructions);
         %>
         <p><%=instructions%></p>
         <form action="<pwm:current-url/>" method="post" enctype="application/x-www-form-urlencoded" name="search" class="pwm-form" autocomplete="off">
             <%@ include file="/WEB-INF/jsp/fragment/message.jsp" %>
             <br/>
-            <% for (final RecoveryVerificationMethod.UserPrompt userPrompt : prompts) { %>
+            <% for (final VerificationMethodSystem.UserPrompt userPrompt : prompts) { %>
             <div class="formFieldLabel">
                 <%= userPrompt.getDisplayPrompt() %>
             </div>
@@ -51,12 +52,12 @@
             <% } %>
             <div class="buttonbar">
                 <button type="submit" class="btn" name="submitBtn" id="submitBtn">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-forward"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-forward"></span></pwm:if>
                     <pwm:display key="Button_Continue"/>
                 </button>
-                <% if ("true".equals(JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.ForgottenPasswordOptionalPageView))) { %>
+                <% if ("true".equals(JspUtility.getAttribute(pageContext, PwmRequest.Attribute.ForgottenPasswordOptionalPageView))) { %>
                 <button type="button" id="button-goBack" name="button-goBack" class="btn" >
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-backward"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-backward"></span></pwm:if>
                     <pwm:display key="Button_GoBack"/>
                 </button>
                 <% } %>

@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 <%@ page language="java" session="true" isThreadSafe="true"
          contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
@@ -32,6 +32,7 @@
         <jsp:param name="pwm.PageName" value="Title_UpdateProfile"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_UpdateProfile" displayIfMissing="true"/></div>
         <p><pwm:display key="Display_UpdateProfile"/></p>
         <%@ include file="fragment/message.jsp" %>
         <br/>
@@ -39,17 +40,17 @@
               class="pwm-form" id="updateProfileForm">
 
             <jsp:include page="fragment/form.jsp"/>
-
-            <div class="buttonbar">
-                <button id="submitBtn" type="submit" class="btn" name="button">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-forward"></span></pwm:if>
-                    <pwm:display key="Button_Update"/>
-                </button>
-                <input type="hidden" name="processAction" value="updateProfile"/>
-                <%@ include file="/WEB-INF/jsp/fragment/cancel-button.jsp" %>
-                <input type="hidden" name="pwmFormID" value="<pwm:FormID/>"/>
-            </div>
+            <input type="hidden" name="processAction" value="updateProfile"/>
+            <input type="hidden" name="pwmFormID" value="<pwm:FormID/>"/>
         </form>
+
+        <div class="buttonbar">
+            <button id="submitBtn" type="submit" class="btn" name="button" form="updateProfileForm">
+                <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-forward"></span></pwm:if>
+                <pwm:display key="Button_Update"/>
+            </button>
+            <%@ include file="/WEB-INF/jsp/fragment/cancel-button.jsp" %>
+        </div>
     </div>
     <div class="push"></div>
 </div>

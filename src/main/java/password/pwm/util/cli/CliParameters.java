@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,6 +61,40 @@ public class CliParameters {
         public String getName()
         {
             return "outputFile";
+        }
+    };
+
+    public static final CliParameters.Option REQUIRED_EXISTING_INPUT_FILE = new CliParameters.Option() {
+        public boolean isOptional()
+        {
+            return false;
+        }
+
+        public type getType()
+        {
+            return type.EXISTING_FILE;
+        }
+
+        public String getName()
+        {
+            return "inputFile";
+        }
+    };
+
+    public static final CliParameters.Option OPTIONAL_PASSWORD = new CliParameters.Option() {
+        public boolean isOptional()
+        {
+            return true;
+        }
+
+        public type getType()
+        {
+            return type.STRING;
+        }
+
+        public String getName()
+        {
+            return "password";
         }
     };
 }

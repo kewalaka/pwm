@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,8 +30,10 @@ import password.pwm.config.PwmSettingSyntax;
 import password.pwm.config.StoredValue;
 import password.pwm.error.PwmOperationalException;
 import password.pwm.util.JsonUtil;
+import password.pwm.util.X509Utils;
 import password.pwm.util.secure.PwmSecurityKey;
 
+import java.security.cert.X509Certificate;
 import java.util.*;
 
 public class ActionValue extends AbstractValue implements StoredValue {
@@ -168,6 +170,33 @@ public class ActionValue extends AbstractValue implements StoredValue {
             }
         }
         return sb.toString();
+    }
+
+
+    public List<Map<String,Object>> toInfoMap() {
+        final String originalJson = JsonUtil.serializeCollection(values);
+        final List<Map<String,Object>> tempObj = JsonUtil.deserialize(originalJson, new TypeToken<List<Map<String,Object>>>() {
+        });
+        for (final Map<String,Object> mapObj : tempObj) {
+            ActionConfiguration actionConfiguration = forName((String)mapObj.get("name"));
+            if (actionConfiguration != null && actionConfiguration.getCertificates() != null) {
+                final List<Map<String,String>> certificateInfos = new ArrayList<>();
+                for (final X509Certificate certificate : actionConfiguration.getCertificates()) {
+                    certificateInfos.add(X509Utils.makeDebugInfoMap(certificate, X509Utils.DebugInfoFlag.IncludeCertificateDetail));
+                }
+                mapObj.put("certificateInfos", certificateInfos);
+            }
+        }
+        return tempObj;
+    }
+
+    public ActionConfiguration forName(final String name) {
+        for (final ActionConfiguration actionConfiguration : values) {
+            if (name.equals(actionConfiguration.getName())) {
+                return actionConfiguration;
+            }
+        }
+        return null;
     }
 
 }

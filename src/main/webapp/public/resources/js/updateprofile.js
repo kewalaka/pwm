@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2014 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ var PWM_UPDATE = PWM_UPDATE || {};
 
 PWM_UPDATE.validateForm = function() {
     var validationProps = new Array();
-    validationProps['serviceURL'] = PWM_MAIN.addPwmFormIDtoURL("UpdateProfile" + "?processAction=validate");
+    validationProps['serviceURL'] = PWM_MAIN.addParamToUrl(window.location.href,"processAction","validate");
     validationProps['readDataFunction'] = function(){
         var paramData = { };
         for (var j = 0; j < document.forms.length; j++) {

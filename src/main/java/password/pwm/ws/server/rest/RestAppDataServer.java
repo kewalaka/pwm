@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ import password.pwm.AppProperty;
 import password.pwm.Permission;
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
-import password.pwm.bean.SessionStateInfoBean;
+import password.pwm.bean.pub.SessionStateInfoBean;
 import password.pwm.config.ActionConfiguration;
 import password.pwm.config.Configuration;
 import password.pwm.config.FormConfiguration;
@@ -37,8 +37,10 @@ import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
 import password.pwm.error.PwmOperationalException;
 import password.pwm.error.PwmUnrecoverableException;
+import password.pwm.http.IdleTimeoutCalculator;
 import password.pwm.http.PwmRequest;
 import password.pwm.http.PwmSession;
+import password.pwm.http.PwmURL;
 import password.pwm.http.servlet.PwmServletDefinition;
 import password.pwm.i18n.Display;
 import password.pwm.svc.event.AuditRecord;
@@ -48,6 +50,7 @@ import password.pwm.svc.event.UserAuditRecord;
 import password.pwm.svc.intruder.RecordType;
 import password.pwm.svc.stats.Statistic;
 import password.pwm.util.LocaleHelper;
+import password.pwm.util.TimeDuration;
 import password.pwm.util.logging.PwmLogger;
 import password.pwm.util.macro.MacroMachine;
 import password.pwm.util.secure.PwmHashAlgorithm;
@@ -65,6 +68,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 
@@ -90,8 +94,8 @@ public class RestAppDataServer extends AbstractRestServer {
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     public Response doGetAppAuditData(
             @QueryParam("maximum") int maximum
-    ) 
-            throws ChaiUnavailableException, PwmUnrecoverableException 
+    )
+            throws ChaiUnavailableException, PwmUnrecoverableException
     {
         maximum = maximum > 0 ? maximum : 10 * 1000;
 
@@ -105,7 +109,7 @@ public class RestAppDataServer extends AbstractRestServer {
         } catch (PwmUnrecoverableException e) {
             return RestResultBean.fromError(e.getErrorInformation()).asJsonResponse();
         }
-        
+
         final ArrayList<UserAuditRecord> userRecords = new ArrayList<>();
         final ArrayList<HelpdeskAuditRecord> helpdeskRecords = new ArrayList<>();
         final ArrayList<SystemAuditRecord> systemRecords = new ArrayList<>();
@@ -158,7 +162,12 @@ public class RestAppDataServer extends AbstractRestServer {
         }
 
         final ArrayList<SessionStateInfoBean> gridData = new ArrayList<>();
-        gridData.addAll(restRequestBean.getPwmApplication().getSessionTrackService().getSessionList(maximum));
+        int counter = 0;
+        final Iterator<SessionStateInfoBean> infos = restRequestBean.getPwmApplication().getSessionTrackService().getSessionInfoIterator();
+        while (counter < maximum && infos.hasNext()) {
+            gridData.add(infos.next());
+            counter++;
+        }
         final RestResultBean restResultBean = new RestResultBean();
         restResultBean.setData(gridData);
         return restResultBean.asJsonResponse();
@@ -208,6 +217,7 @@ public class RestAppDataServer extends AbstractRestServer {
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/client")
     public Response doGetAppClientData(
+            @QueryParam("pageUrl") String pageUrl,
             @PathParam(value = "eTagUri") final String eTagUri,
             @Context HttpServletRequest request,
             @Context HttpServletResponse response
@@ -235,7 +245,7 @@ public class RestAppDataServer extends AbstractRestServer {
         response.setDateHeader("Expires", System.currentTimeMillis() + (maxCacheAgeSeconds * 1000));
         response.setHeader("Cache-Control", "public, max-age=" + maxCacheAgeSeconds);
 
-        final AppData appData = makeAppData(restRequestBean.getPwmApplication(), restRequestBean.getPwmSession(), request, response);
+        final AppData appData = makeAppData(restRequestBean.getPwmApplication(), restRequestBean.getPwmSession(), request, response, pageUrl);
         final RestResultBean restResultBean = new RestResultBean();
         restResultBean.setData(appData);
         return restResultBean.asJsonResponse();
@@ -279,12 +289,13 @@ public class RestAppDataServer extends AbstractRestServer {
             final PwmApplication pwmApplication,
             final PwmSession pwmSession,
             final HttpServletRequest request,
-            final HttpServletResponse response
+            final HttpServletResponse response,
+            final String pageUrl
     )
             throws ChaiUnavailableException, PwmUnrecoverableException
     {
         final AppData appData = new AppData();
-        appData.PWM_GLOBAL = makeClientData(pwmApplication, pwmSession, request, response);
+        appData.PWM_GLOBAL = makeClientData(pwmApplication, pwmSession, request, response, pageUrl);
         return appData;
     }
 
@@ -318,7 +329,8 @@ public class RestAppDataServer extends AbstractRestServer {
             final PwmApplication pwmApplication,
             final PwmSession pwmSession,
             final HttpServletRequest request,
-            final HttpServletResponse response
+            final HttpServletResponse response,
+            final String pageUrl
     )
             throws ChaiUnavailableException, PwmUnrecoverableException
     {
@@ -335,7 +347,21 @@ public class RestAppDataServer extends AbstractRestServer {
         settingMap.put("setting-displayEula",PwmConstants.ENABLE_EULA_DISPLAY);
         settingMap.put("setting-showStrengthMeter",config.readSettingAsBoolean(PwmSetting.PASSWORD_SHOW_STRENGTH_METER));
 
-        settingMap.put("MaxInactiveInterval",request.getSession().getMaxInactiveInterval());
+        {
+            long idleSeconds = config.readSettingAsLong(PwmSetting.IDLE_TIMEOUT_SECONDS);
+            if (pageUrl == null || pageUrl.isEmpty()) {
+                LOGGER.warn(pwmSession, "request to /client data did not incliude pageUrl");
+            } else {
+                try {
+                    final PwmURL pwmURL = new PwmURL(new URI(pageUrl), request.getContextPath());
+                    final TimeDuration maxIdleTime = IdleTimeoutCalculator.idleTimeoutForRequest(pwmURL, pwmApplication, pwmSession);
+                    idleSeconds = maxIdleTime.getTotalSeconds();
+                } catch (Exception e) {
+                    LOGGER.error(pwmSession, "error determining idle timeout time for request: " + e.getMessage());
+                }
+            }
+            settingMap.put("MaxInactiveInterval", idleSeconds);
+        }
         settingMap.put("paramName.locale", config.readAppProperty(AppProperty.HTTP_PARAM_NAME_LOCALE));
         settingMap.put("startupTime",pwmApplication.getStartupTime());
         settingMap.put("applicationMode",pwmApplication.getApplicationMode());
@@ -346,7 +372,6 @@ public class RestAppDataServer extends AbstractRestServer {
         settingMap.put("url-command", contextPath + PwmServletDefinition.Command.servletUrl());
         settingMap.put("url-resources", contextPath + "/public/resources" + pwmApplication.getResourceServletService().getResourceNonce());
         settingMap.put("url-restservice", contextPath + "/public/rest");
-        settingMap.put("url-setupresponses",contextPath + PwmServletDefinition.SetupResponses.servletUrl());
 
         {
             String passwordGuideText = pwmApplication.getConfig().readSettingAsLocalizedString(PwmSetting.DISPLAY_PASSWORD_GUIDE_TEXT,pwmSession.getSessionStateBean().getLocale());
@@ -426,7 +451,7 @@ public class RestAppDataServer extends AbstractRestServer {
     }
 
     public static String makeClientEtag(
-            final PwmApplication pwmApplication, 
+            final PwmApplication pwmApplication,
             final PwmSession pwmSession,
             final HttpServletRequest httpServletRequest
     )
@@ -443,9 +468,9 @@ public class RestAppDataServer extends AbstractRestServer {
         }
 
         inputString.append(pwmSession.getSessionStateBean().getSessionID());
-        if (pwmSession.getSessionStateBean().isAuthenticated()) {
+        if (pwmSession.isAuthenticated()) {
             inputString.append(pwmSession.getUserInfoBean().getUserGuid());
-            inputString.append(pwmSession.getLoginInfoBean().getLocalAuthTime());
+            inputString.append(pwmSession.getLoginInfoBean().getAuthTime());
         }
 
         return SecureEngine.hash(inputString.toString(), PwmHashAlgorithm.SHA1).toLowerCase();

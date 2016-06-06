@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,8 @@
 
 package password.pwm.http.filter;
 
-import password.pwm.bean.SessionStateBean;
+import password.pwm.PwmApplicationMode;
+import password.pwm.bean.LocalSessionStateBean;
 import password.pwm.config.Configuration;
 import password.pwm.config.PwmSetting;
 import password.pwm.config.option.ApplicationPage;
@@ -41,7 +42,13 @@ public class CaptchaFilter extends AbstractPwmFilter {
 
     private static final PwmLogger LOGGER = PwmLogger.forClass(CaptchaFilter.class);
 
+    @Override
+    boolean isInterested(PwmApplicationMode mode, PwmURL pwmURL) {
+        return true;
+    }
+
     public void processFilter(
+            final PwmApplicationMode mode,
             final PwmRequest pwmRequest,
             final PwmFilterChain chain
     )
@@ -117,7 +124,7 @@ public class CaptchaFilter extends AbstractPwmFilter {
     )
             throws IOException, PwmUnrecoverableException
     {
-        final SessionStateBean sessionStateBean = pwmRequest.getPwmSession().getSessionStateBean();
+        final LocalSessionStateBean sessionStateBean = pwmRequest.getPwmSession().getSessionStateBean();
 
         // store the original requested url
         if (sessionStateBean.getPreCaptchaRequestURL() == null) {

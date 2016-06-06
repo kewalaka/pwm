@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ package password.pwm.util;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.util.logging.PwmLogger;
 
 import java.io.ByteArrayInputStream;
@@ -51,25 +52,17 @@ public class JsonUtil {
             .create();
 
     private static Gson getGson(final Flag... flags) {
-        if (flags == null) {
-            return getGson(Collections.<Flag>emptySet());
-        } else {
-            return getGson(new HashSet(Arrays.asList(flags)));
-        }
-    }
-
-    private static Gson getGson(final Set<Flag> flags) {
-        if (flags == null || flags.isEmpty()) {
+        if (flags == null || flags.length == 0) {
             return GENERIC_GSON;
         }
 
         final GsonBuilder gsonBuilder = registerTypeAdapters(new GsonBuilder());
 
-        if (!flags.contains(Flag.HtmlEscape)) {
+        if (!Helper.enumArrayContainsValue(flags, Flag.HtmlEscape)) {
             gsonBuilder.disableHtmlEscaping();
         }
 
-        if (flags.contains(Flag.PrettyPrint)) {
+        if (Helper.enumArrayContainsValue(flags, Flag.PrettyPrint)) {
             gsonBuilder.setPrettyPrinting();
         }
 
@@ -87,6 +80,11 @@ public class JsonUtil {
 
     public static Map<String, String> deserializeStringMap(final String jsonString) {
         return JsonUtil.getGson().fromJson(jsonString, new TypeToken<Map<String, String>>() {
+        }.getType());
+    }
+
+    public static Map<String, Object> deserializeStringObjectMap(final String jsonString) {
+        return JsonUtil.getGson().fromJson(jsonString, new TypeToken<Map<String, Object>>() {
         }.getType());
     }
 
@@ -199,10 +197,34 @@ public class JsonUtil {
         }
     }
 
+    private static class PasswordDataTypeAdapter implements JsonSerializer<PasswordData>, JsonDeserializer<PasswordData> {
+        public PasswordData deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+            try {
+                return new PasswordData(json.getAsString());
+            } catch (PwmUnrecoverableException e) {
+                final String errorMsg = "error while deserializing password data: " + e.getMessage();
+                LOGGER.error(errorMsg);
+                throw new JsonParseException(errorMsg, e);
+            }
+        }
+
+        public JsonElement serialize(PasswordData src, Type typeOfSrc, JsonSerializationContext context) {
+            try {
+                return new JsonPrimitive(src.getStringValue());
+            } catch (PwmUnrecoverableException e) {
+                final String errorMsg = "error while serializing password data: " + e.getMessage();
+                LOGGER.error(errorMsg);
+                throw new JsonParseException(errorMsg, e);
+            }
+        }
+
+    }
+
     private static GsonBuilder registerTypeAdapters(final GsonBuilder gsonBuilder) {
         gsonBuilder.registerTypeAdapter(Date.class, new DateTypeAdapter());
         gsonBuilder.registerTypeAdapter(X509Certificate.class, new X509CertificateAdapter());
         gsonBuilder.registerTypeAdapter(byte[].class, new ByteArrayToBase64TypeAdapter());
+        gsonBuilder.registerTypeAdapter(PasswordData.class, new PasswordDataTypeAdapter());
         return gsonBuilder;
     }
 

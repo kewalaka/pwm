@@ -1,15 +1,16 @@
 <%@ page import="com.novell.ldapchai.cr.Challenge" %>
 <%@ page import="password.pwm.http.bean.SetupResponsesBean" %>
+<%@ page import="password.pwm.http.tag.value.PwmValue" %>
 <%@ page import="password.pwm.util.JsonUtil" %>
 <%@ page import="password.pwm.util.StringUtil" %>
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.List" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -49,8 +50,8 @@
           <pwm:autofocus/> class="inputfield"></textarea>
 <% } %>
 <p>
-    <span class="fa fa-chevron-circle-right"></span>
-    <input type="<pwm:value name="responseFieldType"/>" name="PwmResponse_R_<%=indexKey%>" class="inputfield passwordfield" maxlength="255"
+    <span class="pwm-icon pwm-icon-chevron-circle-right"></span>
+    <input type="<pwm:value name="<%=PwmValue.responseFieldType%>"/>" name="PwmResponse_R_<%=indexKey%>" class="inputfield passwordfield response" maxlength="255"
            <pwm:autofocus/> id="PwmResponse_R_<%=indexKey%>" required="required"/>
 </p>
 <% } %>
@@ -81,8 +82,8 @@
     </select>
 </h2>
 <p>
-    <span class="fa fa-chevron-circle-right"></span>
-    <input type="<pwm:value name="responseFieldType"/>" name="PwmResponse_R_Random_<%=index%>" class="inputfield passwordfield" maxlength="255" type="text"
+    <span class="pwm-icon pwm-icon-chevron-circle-right"></span>
+    <input type="<pwm:value name="<%=PwmValue.responseFieldType%>"/>" name="PwmResponse_R_Random_<%=index%>" class="inputfield passwordfield response" maxlength="255" type="text"
             <pwm:autofocus/> id="PwmResponse_R_Random_<%=index%>" required="required"/>
 </p>
 <% } %>
@@ -112,8 +113,8 @@
           class="inputfield"></textarea>
 <% } %>
 <p>
-    <span class="fa fa-chevron-circle-right"></span>
-    <input type="<pwm:value name="responseFieldType"/>" name="PwmResponse_R_<%=indexKey%>" class="inputfield passwordfield" maxlength="255" id="PwmResponse_R_<%=indexKey%>"/>
+    <span class="pwm-icon pwm-icon-chevron-circle-right"></span>
+    <input type="<pwm:value name="<%=PwmValue.responseFieldType%>"/>" name="PwmResponse_R_<%=indexKey%>" class="inputfield passwordfield response" maxlength="255" id="PwmResponse_R_<%=indexKey%>"/>
 </p>
 <% } %>
 <% } %>

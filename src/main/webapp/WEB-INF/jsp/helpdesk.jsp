@@ -1,9 +1,10 @@
+<%@ page import="password.pwm.http.JspUtility" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -23,40 +24,42 @@
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="/WEB-INF/jsp/fragment/header.jsp" %>
 <body class="nihilo">
-<div id="wrapper">
+<div id="wrapper" class="helpdesk-wrapper">
     <jsp:include page="/WEB-INF/jsp/fragment/header-body.jsp">
         <jsp:param name="pwm.PageName" value="Title_Helpdesk"/>
     </jsp:include>
     <div id="centerbody" class="wide tall">
+        <div id="page-content-title"><pwm:display key="Title_Helpdesk" displayIfMissing="true"/></div>
         <div id="panel-searchbar" class="searchbar">
-            <table class="noborder" style="margin-left: auto; margin-right: auto; width:100px; table-layout: fixed" >
-                <tr>
-                    <td style="width:15px">
-                        <span class="fa fa-search"></span>
-                    </td>
-                    <td style="width:400px">
-                        <input type="search" id="username" name="username" class="helpdesk-input-username" style="width: 400px" <pwm:autofocus/> autocomplete="off"/>
-                    </td>
-                    <td style="width:20px">
-                        <div id="searchIndicator" style="display:none">
-                            <span class="fa fa-lg fa-spin fa-spinner"></span>
-                        </div>
-                        <div id="maxResultsIndicator" style="display:none">
-                            <span style="color: #ffcd59;" class="fa fa-lg fa-exclamation-circle"></span>
-                        </div>
-                    </td>
-                </tr>
-            </table>
+            <input id="username" name="username" placeholder="<pwm:display key="Placeholder_Search"/>" class="helpdesk-input-username" <pwm:autofocus/> autocomplete="off"/>
+            <div class="searchbar-extras">
+                <div id="searchIndicator" style="display: none;">
+                    <span style="" class="pwm-icon pwm-icon-lg pwm-icon-spin pwm-icon-spinner"></span>
+                </div>
+
+                <div id="maxResultsIndicator" style="display: none;">
+                    <span style="color: #ffcd59;" class="pwm-icon pwm-icon-lg pwm-icon-exclamation-circle"></span>
+                </div>
+
+                <% if ((Boolean)JspUtility.getPwmRequest(pageContext).getAttribute(PwmRequest.Attribute.HelpdeskVerificationEnabled)) { %>
+                <div id="verifications-btn">
+                    <button class="btn" id="button-show-current-verifications">
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-check"></span></pwm:if>
+                        <pwm:display key="Button_Verificiations"/>
+                    </button>
+                </div>
+                <% } %>
+            </div>
+
             <noscript>
                 <span><pwm:display key="Display_JavascriptRequired"/></span>
                 <a href="<pwm:context/>"><pwm:display key="Title_MainPage"/></a>
             </noscript>
-            <br/>
         </div>
-        <div id="helpdesk-searchResultsGrid" class="grid tall">
+        <div id="helpdesk-searchResultsGrid" class="searchResultsGrid grid tall">
         </div>
     </div>
     <div class="push"></div>

@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
+<%@ page import="password.pwm.i18n.Admin" %>
 <%@ page import="password.pwm.util.JsonUtil" %>
 <%@ page import="password.pwm.util.StringUtil" %>
 <%@ page import="password.pwm.util.logging.LocalDBLogger" %>
@@ -32,17 +33,19 @@
 <%@ page language="java" session="true" isThreadSafe="true"
          contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="/WEB-INF/jsp/fragment/header.jsp" %>
 <% final PwmRequest pwmRequest = PwmRequest.forRequest(request,response); %>
 <% final NumberFormat numberFormat = NumberFormat.getInstance(pwmRequest.getLocale()); %>
 <% final LocalDBLogger localDBLogger = pwmRequest.getPwmApplication().getLocalDBLogger(); %>
 <body class="nihilo">
 <div id="wrapper">
+    <% String PageName = JspUtility.localizedString(pageContext,"Title_LogViewer",Admin.class);%>
     <jsp:include page="/WEB-INF/jsp/fragment/header-body.jsp">
-        <jsp:param name="pwm.PageName" value="Log Viewer"/>
+        <jsp:param name="pwm.PageName" value="<%=PageName%>"/>
     </jsp:include>
     <div id="centerbody" style="width: 96%; margin-left: 2%; margin-right: 2%; background: white">
+        <div id="page-content-title"><pwm:display key="Title_LogViewer" bundle="Admin" displayIfMissing="true"/></div>
         <%@ include file="fragment/admin-nav.jsp" %>
         <form action="<pwm:current-url/>" method="post" enctype="application/x-www-form-urlencoded"
               name="searchForm" id="searchForm" class="pwm-form">
@@ -146,7 +149,7 @@
                     </td>
                     <td class="key" style="border: 0; vertical-align: middle">
                         <button type="submit" name="submit_button" id="submit_button" class="btn">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-search"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-search"></span></pwm:if>
                             Search
                         </button>
                     </td>
@@ -251,7 +254,7 @@
                 };
             </script>
         </pwm:script>
-        <style nonce="<pwm:value name="cspNonce"/>" scoped="scoped">
+        <style nonce="<pwm:value name="<%=PwmValue.cspNonce%>"/>" scoped="scoped">
             .dgrid { height: auto; }
             .dgrid .dgrid-scroller { position: relative;  overflow: visible; }
             .dgrid-column-timestamp {width: 80px;}

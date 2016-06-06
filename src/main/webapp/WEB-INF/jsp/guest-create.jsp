@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -25,10 +25,10 @@
 <%@ page language="java" session="true" isThreadSafe="true"
          contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<% final String maxValidDate = (String)JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.GuestMaximumExpirationDate); %>
-<% final String selectedDate = (String)JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.GuestCurrentExpirationDate); %>
-<% final String maxValidDays = (String)JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.GuestMaximumValidDays); %>
-<html dir="<pwm:LocaleOrientation/>">
+<% final String maxValidDate = (String)JspUtility.getAttribute(pageContext, PwmRequest.Attribute.GuestMaximumExpirationDate); %>
+<% final String selectedDate = (String)JspUtility.getAttribute(pageContext, PwmRequest.Attribute.GuestCurrentExpirationDate); %>
+<% final String maxValidDays = (String)JspUtility.getAttribute(pageContext, PwmRequest.Attribute.GuestMaximumValidDays); %>
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
@@ -36,6 +36,7 @@
         <jsp:param name="pwm.PageName" value="Title_GuestRegistration"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_GuestRegistration" displayIfMissing="true"/></div>
         <%@ include file="/WEB-INF/jsp/fragment/guest-nav.jsp" %>
         <p><pwm:display key="Display_GuestRegistration"/></p>
 
@@ -55,7 +56,7 @@
             <div class="buttonbar">
                 <input type="hidden" name="processAction" value="create"/>
                 <button type="submit" name="Create" class="btn" id="submitBtn">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-user-plus"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-user-plus"></span></pwm:if>
                     <pwm:display key="Button_Create"/>
                 </button>
                 <%@ include file="/WEB-INF/jsp/fragment/cancel-button.jsp" %>

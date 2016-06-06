@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -21,17 +21,18 @@
   --%>
 
 <%@page import="password.pwm.http.bean.SetupOtpBean"%>
-<%@page import="password.pwm.util.otp.OTPUserRecord"%>
+<%@page import="password.pwm.http.tag.conditional.PwmIfTest"%>
+<%@ page import="password.pwm.util.otp.OTPUserRecord" %>
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true"
          contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<% final SetupOtpBean otpBean = JspUtility.getPwmSession(pageContext).getSetupOtpBean();%>
+<% final SetupOtpBean otpBean = JspUtility.getSessionBean(pageContext,SetupOtpBean.class); %>
 <%
     final OTPUserRecord otpUserRecord = otpBean.getOtpUserRecord();
     final String ident = otpUserRecord.getIdentifier();
 %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
 <pwm:script-ref url="/public/resources/js/responses.js"/>
@@ -40,6 +41,7 @@
         <jsp:param name="pwm.PageName" value="Title_SetupOtpSecret"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_SetupOtpSecret" displayIfMissing="true"/></div>
         <p><pwm:display key="Success_OtpSetup" bundle="Message"/></p>
         <%@ include file="fragment/message.jsp" %>
         <br/>
@@ -64,11 +66,10 @@
         </table>
         <div class="buttonbar">
             <form action="<pwm:current-url/>" method="post" enctype="application/x-www-form-urlencoded" class="pwm-form">
-                <% try { JspUtility.getPwmSession(pageContext).getSessionStateBean().setSessionSuccess(null,null); } catch (Exception e) {} %>
                 <div class="buttonbar">
                     <input type="hidden" name="processAction" value="complete"/>
                     <button type="submit" name="button" class="btn" id="submitBtn">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-forward"></span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-forward"></span></pwm:if>
                         <pwm:display key="Button_Continue"/>
                     </button>
                     <input type="hidden" name="pwmFormID" value="<pwm:FormID/>"/>

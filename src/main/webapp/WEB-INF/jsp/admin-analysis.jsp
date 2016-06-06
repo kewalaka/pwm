@@ -1,16 +1,18 @@
 <%@ page import="password.pwm.error.PwmError" %>
 <%@ page import="password.pwm.error.PwmException" %>
+<%@ page import="password.pwm.i18n.Admin" %>
 <%@ page import="password.pwm.svc.stats.Statistic" %>
 <%@ page import="password.pwm.svc.stats.StatisticsBundle" %>
 <%@ page import="password.pwm.svc.stats.StatisticsManager" %>
 <%@ page import="java.text.DateFormat" %>
+<%@ page import="java.util.Locale" %>
 <%@ page import="java.util.Map" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -49,14 +51,16 @@
         JspUtility.logError(pageContext, "error during page setup: " + e.getMessage());
     }
 %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="/WEB-INF/jsp/fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
+    <% String PageName = JspUtility.localizedString(pageContext,"Title_DataAnalysis",Admin.class);%>
     <jsp:include page="/WEB-INF/jsp/fragment/header-body.jsp">
-        <jsp:param name="pwm.PageName" value="Data Analysis"/>
+        <jsp:param name="pwm.PageName" value="<%=PageName%>"/>
     </jsp:include>
     <div id="centerbody" class="wide">
+        <div id="page-content-title"><pwm:display key="Title_DataAnalysis" bundle="Admin" displayIfMissing="true"/></div>
         <%@ include file="fragment/admin-nav.jsp" %>
         <div data-dojo-type="dijit.layout.TabContainer" style="width: 100%; height: 100%;"  data-dojo-props="doLayout: false, persist: true" id="analysis-topLevelTab">
             <div data-dojo-type="dijit.layout.TabContainer" style="width: 100%; height: 100%;" data-dojo-props="doLayout: false, persist: true" title="<pwm:display key="Title_DirectoryReporting" bundle="Admin"/>">
@@ -76,7 +80,7 @@
                     <div style="text-align: center">
                         <form action="<pwm:current-url/>" method="post">
                             <button type="submit" class="btn" id="button-downloadUserSummaryCsv">
-                                <pwm:if test="showIcons"><span class="btn-icon fa fa-download">&nbsp;</span></pwm:if>
+                                <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-download">&nbsp;</span></pwm:if>
                                 <pwm:display key="Button_DownloadCSV" bundle="Admin"/>
                             </button>
                             <input type="hidden" name="processAction" value="downloadUserSummaryCsv"/>
@@ -92,12 +96,12 @@
                                data-dojo-props="constraints:{min:10,max:50000,pattern:'#'},smallDelta:100"/>
                         Rows
                         <button class="btn" type="button" id="button-refreshReportDataGrid">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-refresh">&nbsp;</span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-refresh">&nbsp;</span></pwm:if>
                             <pwm:display key="Button_Refresh" bundle="Admin"/>
                         </button>
                         <form action="<pwm:current-url/>" method="post">
                             <button type="submit" class="btn" id="button-downloadUserReportCsv">
-                                <pwm:if test="showIcons"><span class="btn-icon fa fa-download">&nbsp;</span></pwm:if>
+                                <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-download">&nbsp;</span></pwm:if>
                                 <pwm:display key="Button_DownloadCSV" bundle="Admin"/>
                             </button>
                             <pwm:script>
@@ -130,17 +134,17 @@
                     <table style="width:450px;">
                         <tr><td style="text-align: center; cursor: pointer">
                             <button id="reportStartButton" class="btn">
-                                <pwm:if test="showIcons"><span class="btn-icon fa fa-play">&nbsp;</span></pwm:if>
+                                <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-play">&nbsp;</span></pwm:if>
                                 <pwm:display key="Button_Report_Start" bundle="Admin"/>
                             </button>
                             &nbsp;&nbsp;
                             <button id="reportStopButton" class="btn">
-                                <pwm:if test="showIcons"><span class="btn-icon fa fa-stop">&nbsp;</span></pwm:if>
+                                <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-stop">&nbsp;</span></pwm:if>
                                 <pwm:display key="Button_Report_Stop" bundle="Admin"/>
                             </button>
                             &nbsp;&nbsp;
                             <button id="reportClearButton" class="btn">
-                                <pwm:if test="showIcons"><span class="btn-icon fa fa-trash-o">&nbsp;</span></pwm:if>
+                                <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-trash-o">&nbsp;</span></pwm:if>
                                 <pwm:display key="Button_Report_Clear" bundle="Admin"/>
                             </button>
                         </td></tr>
@@ -162,7 +166,7 @@
                                     <form action="<pwm:current-url/>" method="GET" enctype="application/x-www-form-urlencoded"
                                           name="statsUpdateForm" id="statsUpdateForm">
                                         <select name="statsPeriodSelect"
-                                                style="width: 500px;" data-dojo-props="maxHeight: -1">
+                                                style="width: 350px;" data-dojo-props="maxHeight: -1">
                                             <option value="<%=StatisticsManager.KEY_CUMULATIVE%>" <%= StatisticsManager.KEY_CUMULATIVE.equals(statsPeriodSelect) ? "selected=\"selected\"" : "" %>>
                                                 since installation - <%= dateFormat.format(analysis_pwmRequest.getPwmApplication().getInstallTime()) %>
                                             </option>
@@ -177,7 +181,7 @@
                                             <% } %>
                                         </select>
                                         <button class="btn" type="submit">
-                                            <pwm:if test="showIcons"><span class="btn-icon fa fa-refresh">&nbsp;</span></pwm:if>
+                                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-refresh">&nbsp;</span></pwm:if>
                                             <pwm:display key="Button_Refresh" bundle="Admin"/>
                                         </button>
                                     </form>
@@ -201,7 +205,7 @@
                     <div style="text-align: center">
                         <form action="<pwm:current-url/>" method="post" enctype="application/x-www-form-urlencoded">
                             <button type="submit" class="btn" id="button-downloadStatisticsLogCsv">
-                                <pwm:if test="showIcons"><span class="btn-icon fa fa-download"></span></pwm:if>
+                                <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-download"></span></pwm:if>
                                 <pwm:display key="Button_DownloadCSV" bundle="Admin"/>
                             </button>
                             <input type="hidden" name="processAction" value="downloadStatisticsLogCsv"/>
@@ -271,7 +275,7 @@
         });
     </script>
 </pwm:script>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_LOCALE); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_LOCALE); %>
 <%@ include file="/WEB-INF/jsp/fragment/footer.jsp" %>
 </body>
 </html>

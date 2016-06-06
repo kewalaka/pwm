@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,6 +78,7 @@ PWM_MAIN.pageLoadHandler = function() {
 PWM_MAIN.loadClientData=function(completeFunction) {
     PWM_GLOBAL['app-data-client-retry-count'] = PWM_GLOBAL['app-data-client-retry-count'] + 1;
     var url = PWM_GLOBAL['url-context'] + "/public/rest/app-data/client?etag=" + PWM_GLOBAL['clientEtag'];
+    url = PWM_MAIN.addParamToUrl(url,'pageUrl',window.location.href);
     var loadFunction = function(data) {
         for (var globalProp in data['data']['PWM_GLOBAL']) {
             PWM_GLOBAL[globalProp] = data['data']['PWM_GLOBAL'][globalProp];
@@ -160,16 +161,17 @@ PWM_MAIN.initPage = function() {
         });
     }
 
-    PWM_MAIN.showTooltip({
-        id: ['header-warning-message'],
-        position: ['below', 'above'],
-        text: '<pwm:display key="HealthMessage_Config_ConfigMode" bundle="Health"/>',
-        width: 500
+    PWM_MAIN.addEventHandler('icon-configModeHelp','click',function(){
+        PWM_MAIN.showDialog({title:'Notice - Configuration Mode',text:PWM_MAIN.showString('Display_ConfigOpenInfo',{bundle:'Config'})});
     });
 
-    PWM_MAIN.addEventHandler('icon-configModeHelp','click',function(){
-        PWM_MAIN.showDialog({title:'Notice - Configuration Status: Open',text:PWM_CONFIG.showString('Display_ConfigOpenInfo')});
-    });
+    if (PWM_GLOBAL['applicationMode'] == 'CONFIGURATION') {
+        var configModeNoticeSeen = PWM_MAIN.Preferences.readSessionStorage('configModeNoticeSeen');
+        if (!configModeNoticeSeen) {
+            PWM_MAIN.Preferences.writeSessionStorage('configModeNoticeSeen',true);
+            PWM_MAIN.showDialog({title:'Notice - Configuration Mode',text:PWM_MAIN.showString('Display_ConfigOpenInfo',{bundle:'Config'})});
+        }
+    }
 
     if (PWM_GLOBAL['pageLeaveNotice'] > 0) {
         require(["dojo","dojo/on"], function(dojo,on){
@@ -244,6 +246,11 @@ PWM_MAIN.applyFormAttributes = function() {
         });
 
         PWM_MAIN.doQuery('a:not([target])',function(linkElement) {
+            try {
+                if (linkElement.classList.contains('pwm-basic-link')) {
+                    return;
+                }
+            } catch (e) { /* ignore for browsers that don't support classList */ }
             var hrefValue = linkElement.getAttribute('href');
             if (hrefValue && hrefValue.charAt(0) != '#') {
                 on(linkElement, "click", function (event) {
@@ -262,6 +269,7 @@ PWM_MAIN.applyFormAttributes = function() {
         console.log('added event handler for submit button with form attribute ' + element.id);
         PWM_MAIN.addEventHandler(element,'click',function(e){
             PWM_MAIN.stopEvent(e);
+            PWM_VAR['dirtyPageLeaveFlag'] = false;
             var formID = element.getAttribute('form');
             PWM_MAIN.handleFormSubmit(PWM_MAIN.getObject(formID));
         });
@@ -711,13 +719,14 @@ PWM_MAIN.showErrorDialog = function(error, options) {
     console.log('displaying error message: ' + logMsg);
     options['title'] = titleMsg;
     options['text'] = body;
-    options['okAction'] = 'okAction' in options
-        ? options['okAction']
-        : function() {
+    var previousOkAction = 'okAction' in options ? options['okAction'] : function() {};
+    options['okAction'] =  function() {
         if (forceReload) { // incorrect page sequence;
             var newURL = window.location.pathname;
             PWM_MAIN.goto(newURL);
             PWM_MAIN.showWaitDialog();
+        } else {
+            previousOkAction();
         }
     };
     PWM_MAIN.showDialog(options);
@@ -807,12 +816,12 @@ PWM_MAIN.showDialog = function(options) {
         bodyText += '<div class="buttonbar">';
         if (showOk) {
             bodyText += '<button class="btn" id="dialog_ok_button">'
-                + '<span class="btn-icon fa fa-check-square-o"></span>'
+                + '<span class="btn-icon pwm-icon pwm-icon-check-square-o"></span>'
                 + okLabel + '</button>  ';
         }
         if (showCancel) {
             bodyText += '<button class="btn" id="dialog_cancel_button">'
-                + '<span class="btn-icon fa fa-times"></span>'
+                + '<span class="btn-icon pwm-icon pwm-icon-times"></span>'
                 + PWM_MAIN.showString('Button_Cancel') + '</button>  ';
         }
         bodyText += buttonHtml;
@@ -832,7 +841,7 @@ PWM_MAIN.showDialog = function(options) {
         //dialogElement.setAttribute("draggable","true");
         var html5DialogHtml = '<div class="titleBar">' + title;
         if (showClose) {
-            html5DialogHtml += '<div id="icon-closeDialog" class="closeIcon fa fa-times"></div>'
+            html5DialogHtml += '<div id="icon-closeDialog" class="closeIcon pwm-icon pwm-icon-times"></div>'
         }
         html5DialogHtml += '</div><div class="body">' + bodyText + '</div>';
         dialogElement.innerHTML = html5DialogHtml;
@@ -1301,6 +1310,14 @@ PWM_MAIN.JSLibrary.itemCount = function(o) {
     return i;
 };
 
+PWM_MAIN.JSLibrary.arrayContains = function(array,element) {
+    if (!array) {
+        return false;
+    }
+
+    return array.indexOf(element) > -1;
+};
+
 PWM_MAIN.toggleFullscreen = function(iconObj,divName) {
     var obj = PWM_MAIN.getObject(divName);
 
@@ -1401,7 +1418,7 @@ ShowHidePasswordHandler.init = function(nodeName) {
         divElement.onclick = function(){ShowHidePasswordHandler.toggle(nodeName)};
         divElement.style.cursor = 'pointer';
         divElement.style.visibility = 'hidden';
-        divElement.setAttribute('class','fa icon-showhidepassword');
+        divElement.setAttribute('class','pwm-icon icon-showhidepassword');
         domConstruct.place(divElement,node,'after');
 
         ShowHidePasswordHandler.state[nodeName] = (defaultType == "password");
@@ -1436,6 +1453,8 @@ ShowHidePasswordHandler.hide = function(nodeName) {
     ShowHidePasswordHandler.changeInputTypeField(PWM_MAIN.getObject(nodeName),'password');
     ShowHidePasswordHandler.setupTooltip(nodeName);
     ShowHidePasswordHandler.renderIcon(nodeName);
+    var node = PWM_MAIN.getObject(nodeName);
+    node.focus();
 };
 
 ShowHidePasswordHandler.show = function(nodeName) {
@@ -1445,6 +1464,7 @@ ShowHidePasswordHandler.show = function(nodeName) {
     ShowHidePasswordHandler.renderIcon(nodeName);
 
     var node = PWM_MAIN.getObject(nodeName);
+    node.focus();
     require(["dojo/dom-construct", "dojo/on", "dojo/dom-attr"], function(domConstruct, on, attr) {
         var defaultType = attr.get(nodeName, "data-originalType");
         if (defaultType == 'password') {
@@ -1481,7 +1501,7 @@ ShowHidePasswordHandler.changeInputTypeField = function(object, type) {
             if (object.readonly) newObject.readonly = object.readonly;
             if (object.data) newObject.data = object.data;
         } else {
-            newObject = lang.clone(object);
+            newObject = object;
             attr.set(newObject, "type", type);
         }
 
@@ -1498,14 +1518,14 @@ ShowHidePasswordHandler.setupTooltip = function(nodeName) {
 
     if (state) {
         PWM_MAIN.showTooltip({id:eyeNodeId,text:PWM_MAIN.showString('Button_Show')});
-        PWM_MAIN.removeCssClass(eyeNodeId,"fa-eye-slash");
-        PWM_MAIN.addCssClass(eyeNodeId,"fa-eye");
-        if (ShowHidePasswordHandler.debugOutput) console.log('set class to fa-eye');
+        PWM_MAIN.removeCssClass(eyeNodeId,"pwm-icon-eye-slash");
+        PWM_MAIN.addCssClass(eyeNodeId,"pwm-icon-eye");
+        if (ShowHidePasswordHandler.debugOutput) console.log('set class to pwm-icon-eye');
     } else {
         PWM_MAIN.showTooltip({id:eyeNodeId,text:PWM_MAIN.showString('Button_Hide')});
-        PWM_MAIN.removeCssClass(eyeNodeId,"fa-eye");
-        PWM_MAIN.addCssClass(eyeNodeId,"fa-eye-slash");
-        if (ShowHidePasswordHandler.debugOutput) console.log('set class to fa-slash');
+        PWM_MAIN.removeCssClass(eyeNodeId,"pwm-icon-eye");
+        PWM_MAIN.addCssClass(eyeNodeId,"pwm-icon-eye-slash");
+        if (ShowHidePasswordHandler.debugOutput) console.log('set class to pwm-icon-slash');
     }
 };
 

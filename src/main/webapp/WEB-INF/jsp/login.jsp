@@ -1,10 +1,11 @@
-<%@ page import="password.pwm.http.tag.PwmIfTag" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTag" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -24,7 +25,7 @@
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper" class="login-wrapper">
@@ -32,93 +33,93 @@
         <jsp:param name="pwm.PageName" value="Title_Login"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_Login" displayIfMissing="true"/></div>
         <p>
             <span class="panel-login-display-message"><pwm:display key="Display_Login"/></span>
         </p>
-
         <form action="<pwm:current-url/>" method="post" name="login" enctype="application/x-www-form-urlencoded" id="login" autocomplete="off">
             <%@ include file="/WEB-INF/jsp/fragment/message.jsp" %>
             <%@ include file="/WEB-INF/jsp/fragment/ldap-selector.jsp" %>
-            <h2><label for="username"><pwm:display key="Field_Username"/></label></h2>
-            <input type="text" name="username" id="username" class="inputfield" <pwm:autofocus/> required="required"/>
-
-            <h2><label for="password"><pwm:display key="Field_Password"/></label></h2>
-            <input type="<pwm:value name="passwordFieldType"/>" name="password" id="password" required="required" class="inputfield passwordfield"/>
-            <input type="hidden" id="<%=PwmConstants.PARAM_POST_LOGIN_URL%>" name="<%=PwmConstants.PARAM_POST_LOGIN_URL%>"
-                   value="<%=StringUtil.escapeHtml(JspUtility.getPwmRequest(pageContext).readParameterAsString(PwmConstants.PARAM_POST_LOGIN_URL))%>"/>
-            <div class="buttonbar">
-                <button type="submit" class="btn" name="button" id="submitBtn">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-sign-in"></span></pwm:if>
-                    <pwm:display key="Button_Login"/>
-                </button>
-                <input type="hidden" name="processAction" value="login">
-                <pwm:if test="<%=PwmIfTag.TESTS.forwardUrlDefined.toString()%>">
-                    <%@ include file="/WEB-INF/jsp/fragment/cancel-button.jsp" %>
-                </pwm:if>
-                <input type="hidden" id="pwmFormID" name="pwmFormID" value="<pwm:FormID/>"/>
+            <div class="sign-in">
+                <div style="margin-top: 15px;"><input type="text" name="username" id="username" placeholder="<pwm:display key="Field_Username"/>" class="inputfield" <pwm:autofocus/> required="required"></div>
+                <div style="margin-top: 15px;"><input type="<pwm:value name="<%=PwmValue.passwordFieldType%>"/>" name="password" id="password" placeholder="<pwm:display key="Field_Password"/>" required="required" class="inputfield passwordfield"/></div>
+                <input type="hidden" id="<%=PwmConstants.PARAM_POST_LOGIN_URL%>" name="<%=PwmConstants.PARAM_POST_LOGIN_URL%>"
+                       value="<%=StringUtil.escapeHtml(JspUtility.getPwmRequest(pageContext).readParameterAsString(PwmConstants.PARAM_POST_LOGIN_URL))%>"/>
+                <div class="buttonbar">
+                    <button type="submit" class="btn" <pwm:autofocus/> name="button" id="submitBtn">
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-sign-in"></span></pwm:if>
+                        <pwm:display key="Button_Login"/>
+                    </button>
+                    <input type="hidden" name="processAction" value="login">
+                    <pwm:if test="<%=PwmIfTest.forwardUrlDefined%>">
+                        <%@ include file="/WEB-INF/jsp/fragment/cancel-button.jsp" %>
+                    </pwm:if>
+                    <input type="hidden" id="pwmFormID" name="pwmFormID" value="<pwm:FormID/>"/>
+                </div>
             </div>
         </form>
-        <br/>
-        <pwm:if test="showLoginOptions">
-            <table style="border:0">
-                <pwm:if test="forgottenPasswordEnabled">
-                    <tr style="border:0">
-                        <td style="border:0" class="menubutton_key">
-                            <a class="menubutton" id="Title_ForgottenPassword" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.ForgottenPassword.servletUrl()%>'/>">
-                                <pwm:if test="showIcons"><span class="btn-icon fa fa-unlock"></span></pwm:if>
-                                <pwm:display key="Title_ForgottenPassword"/>
-                            </a>
-                        </td>
-                        <td style="border: 0">
-                            <p><pwm:display key="Long_Title_ForgottenPassword"/></p>
-                        </td>
-                    </tr>
-                </pwm:if>
-                <pwm:if test="forgottenUsernameEnabled">
-                    <tr style="border:0">
-                        <td style="border:0" class="menubutton_key">
-                            <a class="menubutton" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.ForgottenUsername.servletUrl()%>'/>">
-                                <pwm:if test="showIcons"><span class="btn-icon fa fa-unlock"></span></pwm:if>
-                                <pwm:display key="Title_ForgottenUsername"/>
-                            </a>
-                        </td>
-                        <td style="border: 0">
-                            <p><pwm:display key="Long_Title_ForgottenUsername"/></p>
-                        </td>
-                    </tr>
-                </pwm:if>
-                <pwm:if test="activateUserEnabled">
-                    <tr style="border:0">
-                        <td style="border:0" class="menubutton_key">
-                            <a class="menubutton" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.ActivateUser.servletUrl()%>'/>">
-                                <pwm:if test="showIcons"><span class="btn-icon fa fa-graduation-cap"></span></pwm:if>
-                                <pwm:display key="Title_ActivateUser"/>
-                            </a>
-                        </td>
-                        <td style="border: 0">
-                            <p><pwm:display key="Long_Title_ActivateUser"/></p>
-                        </td>
-                    </tr>
-                </pwm:if>
-                <pwm:if test="newUserRegistrationEnabled">
-                    <tr style="border:0">
-                        <td style="border:0" class="menubutton_key">
-                            <a class="menubutton" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.NewUser.servletUrl()%>'/>">
-                                <pwm:if test="showIcons"><span class="btn-icon fa fa-file-text-o"></span></pwm:if>
-                                <pwm:display key="Title_NewUser"/>
-                            </a>
-                        </td>
-                        <td style="border: 0">
-                            <p><pwm:display key="Long_Title_NewUser"/></p>
-                        </td>
-                    </tr>
-                </pwm:if>
-            </table>
+        <pwm:if test="<%=PwmIfTest.endUserFunctionalityAvaiable%>">
+            <pwm:if test="<%=PwmIfTest.showLoginOptions%>">
+                <table class="noborder">
+                    <pwm:if test="<%=PwmIfTest.forgottenPasswordEnabled%>">
+                        <tr>
+                            <td class="menubutton_key">
+                                <a class="menubutton" id="Title_ForgottenPassword" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.ForgottenPassword.servletUrl()%>'/>">
+                                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-unlock"></span></pwm:if>
+                                    <pwm:display key="Title_ForgottenPassword"/>
+                                </a>
+                            </td>
+                            <td class="menubutton-description">
+                                <p><pwm:display key="Long_Title_ForgottenPassword"/></p>
+                            </td>
+                        </tr>
+                    </pwm:if>
+                    <pwm:if test="<%=PwmIfTest.forgottenUsernameEnabled%>">
+                        <tr>
+                            <td class="menubutton_key">
+                                <a class="menubutton" id="forgotten-username" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.ForgottenUsername.servletUrl()%>'/>">
+                                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-unlock"></span></pwm:if>
+                                    <pwm:display key="Title_ForgottenUsername"/>
+                                </a>
+                            </td>
+                            <td class="menubutton-description">
+                                <p><pwm:display key="Long_Title_ForgottenUsername"/></p>
+                            </td>
+                        </tr>
+                    </pwm:if>
+                    <pwm:if test="<%=PwmIfTest.activateUserEnabled%>">
+                        <tr>
+                            <td class="menubutton_key">
+                                <a class="menubutton" id="activate-user" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.ActivateUser.servletUrl()%>'/>">
+                                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-graduation-cap"></span></pwm:if>
+                                    <pwm:display key="Title_ActivateUser"/>
+                                </a>
+                            </td>
+                            <td class="menubutton-description">
+                                <p><pwm:display key="Long_Title_ActivateUser"/></p>
+                            </td>
+                        </tr>
+                    </pwm:if>
+                    <pwm:if test="<%=PwmIfTest.newUserRegistrationEnabled%>">
+                        <tr>
+                            <td class="menubutton_key">
+                                <a class="menubutton" id="new-user" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.NewUser.servletUrl()%>'/>">
+                                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-file-text-o"></span></pwm:if>
+                                    <pwm:display key="Title_NewUser"/>
+                                </a>
+                            </td>
+                            <td class="menubutton-description">
+                                <p><pwm:display key="Long_Title_NewUser"/></p>
+                            </td>
+                        </tr>
+                    </pwm:if>
+                </table>
+            </pwm:if>
         </pwm:if>
     </div>
     <div class="push"></div>
 </div>
-<pwm:if test="forwardUrlDefined">
+<pwm:if test="<%=PwmIfTest.forwardUrlDefined%>">
     <%@ include file="/WEB-INF/jsp/fragment/cancel-form.jsp" %>
 </pwm:if>
 <pwm:script>

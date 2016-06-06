@@ -1,12 +1,13 @@
-<%@ page import="password.pwm.config.option.RecoveryVerificationMethods" %>
+<%@ page import="password.pwm.config.option.IdentityVerificationMethod" %>
 <%@ page import="java.util.HashSet" %>
 <%@ page import="java.util.Set" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -28,9 +29,9 @@
 <%@ taglib uri="pwm" prefix="pwm" %>
 <%
     final PwmRequest pwmRequest = PwmRequest.forRequest(request, response);
-    final Set<RecoveryVerificationMethods> methods = new HashSet<RecoveryVerificationMethods>((Set<RecoveryVerificationMethods>) JspUtility.getAttribute(pageContext,PwmConstants.REQUEST_ATTR.AvailableAuthMethods));
+    final Set<IdentityVerificationMethod> methods = new HashSet<IdentityVerificationMethod>((Set<IdentityVerificationMethod>) JspUtility.getAttribute(pageContext, PwmRequest.Attribute.AvailableAuthMethods));
 %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
@@ -38,6 +39,7 @@
         <jsp:param name="pwm.PageName" value="Title_ForgottenPassword"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_ForgottenPassword" displayIfMissing="true"/></div>
         <%@ include file="/WEB-INF/jsp/fragment/message.jsp" %>
         <p>
             <pwm:display key="Display_RecoverVerificationChoice"/>
@@ -46,13 +48,13 @@
             <colgroup>
 
             </colgroup>
-            <% for (RecoveryVerificationMethods method : methods) { %>
+            <% for (IdentityVerificationMethod method : methods) { %>
             <% if (method.isUserSelectable()) { %>
             <tr>
                 <td>
                     <form action="<pwm:current-url/>" method="post" enctype="application/x-www-form-urlencoded" class="pwm-form" id="form-<%=method.toString()%>">
                         <button class="btn" type="submit" name="submitBtn">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-forward"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-forward"></span></pwm:if>
                             <%=method.getLabel(pwmRequest.getConfig(),pwmRequest.getLocale())%>
                         </button>
                         <input type="hidden" name="choice" value="<%=method.toString()%>"/>

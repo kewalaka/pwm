@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,7 +88,7 @@ public class GZIPFilter implements Filter {
             pwmApplication = ContextManager.getPwmApplication((HttpServletRequest) servletRequest);
             return Boolean.parseBoolean(pwmApplication.getConfig().readAppProperty(AppProperty.HTTP_ENABLE_GZIP));
         } catch (PwmUnrecoverableException e) {
-            LOGGER.trace("unable to read http-gzip app-property, defaulting to non-gzip: " + e.getMessage());
+            //LOGGER.trace("unable to read http-gzip app-property, defaulting to non-gzip: " + e.getMessage());
         }
         return false;
     }

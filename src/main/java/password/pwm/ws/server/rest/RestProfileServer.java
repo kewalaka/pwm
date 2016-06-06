@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -181,10 +181,10 @@ public class RestProfileServer extends AbstractRestServer {
         final PwmRequest pwmRequest = PwmRequest.forRequest(request, response);
         if (restRequestBean.getUserIdentity() != null) {
             final ChaiUser theUser = restRequestBean.getPwmSession().getSessionManager().getActor(restRequestBean.getPwmApplication(),restRequestBean.getUserIdentity());
-            UpdateProfileServlet.doProfileUpdate(pwmRequest, profileFormData, theUser);
+            UpdateProfileServlet.doProfileUpdate(pwmRequest, FormUtility.asStringMap(profileFormData), theUser);
         } else {
             final ChaiUser theUser = restRequestBean.getPwmSession().getSessionManager().getActor(restRequestBean.getPwmApplication());
-            UpdateProfileServlet.doProfileUpdate(pwmRequest, profileFormData, theUser);
+            UpdateProfileServlet.doProfileUpdate(pwmRequest, FormUtility.asStringMap(profileFormData), theUser);
         }
         final RestResultBean restResultBean = new RestResultBean();
         restResultBean.setSuccessMessage(Message.getLocalizedMessage(

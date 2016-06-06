@@ -1,11 +1,11 @@
 <%@ page import="password.pwm.http.servlet.configguide.ConfigGuideForm" %>
-<%@ page import="java.util.Map" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -22,17 +22,15 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_LOCALE); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_THEME); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_LOCALE); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.INCLUDE_CONFIG_CSS); %>
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
-<% ConfigGuideBean configGuideBean = JspUtility.getPwmSession(pageContext).getSessionBean(ConfigGuideBean.class);%>
-<% Map<ConfigGuideForm.FormParameter,String> PLACEHOLDER_FORM = ConfigGuideForm.placeholderForm(configGuideBean.getStoredConfiguration().getTemplate()); %>
+<% ConfigGuideBean configGuideBean = JspUtility.getSessionBean(pageContext, ConfigGuideBean.class);%>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
-<link href="<pwm:context/><pwm:url url='/public/resources/configStyle.css'/>" rel="stylesheet" type="text/css"/>
 <div id="wrapper">
     <%@ include file="fragment/configguide-header.jsp"%>
     <div id="centerbody">
@@ -44,8 +42,9 @@
                 </div>
                 <div class="setting_body">
                     <pwm:display key="ldap_server_description" bundle="ConfigGuide"/>
-                    <br/>
-                    <br/>
+                    <br/><br/>
+                    Example: <code><%=ConfigGuideForm.figureLdapHostnameExample(configGuideBean)%></code>
+                    <br/><br/>
                     <table class="noborder" style="border-spacing: 0; padding: 0; margin: 0">
                         <tr>
                             <td colspan="2">
@@ -56,7 +55,7 @@
                         </tr>
                         <tr>
                             <td colspan="2">
-                                <input class="configStringInput" id="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_HOST%>" name="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_HOST%>" value="<%=configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_LDAP_HOST)%>" placeholder="<%=PLACEHOLDER_FORM.get(ConfigGuideForm.FormParameter.PARAM_LDAP_HOST)%>" <pwm:autofocus/> />
+                                <input class="configStringInput" id="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_HOST%>" name="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_HOST%>" value="<%=configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_LDAP_HOST)%>" <pwm:autofocus/> />
                             </td>
                         </tr>
                         <tr><td>&nbsp;</td></tr>
@@ -92,7 +91,7 @@
         <div id="healthBody" style="border:0; margin:0; padding:0; cursor: pointer">
             <div style="text-align: center">
                 <button class="menubutton" style="margin-left: auto; margin-right: auto">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-check"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-check"></span></pwm:if>
                     <pwm:display key="Button_CheckSettings" bundle="Config"/>
                 </button>
             </div>
@@ -163,9 +162,6 @@
         }
     </script>
 </pwm:script>
-<pwm:script-ref url="/public/resources/js/configguide.js"/>
-<pwm:script-ref url="/public/resources/js/configmanager.js"/>
-<pwm:script-ref url="/public/resources/js/admin.js"/>
 <%@ include file="fragment/footer.jsp" %>
 </body>
 </html>

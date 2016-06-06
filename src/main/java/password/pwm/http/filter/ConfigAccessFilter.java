@@ -1,9 +1,30 @@
+/*
+ * Password Management Servlets (PWM)
+ * http://www.pwm-project.org
+ *
+ * Copyright (c) 2006-2009 Novell, Inc.
+ * Copyright (c) 2009-2016 The PWM Project
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 package password.pwm.http.filter;
 
-import password.pwm.AppProperty;
-import password.pwm.Permission;
-import password.pwm.PwmApplication;
-import password.pwm.PwmConstants;
+import eu.bitwalker.useragentutils.Browser;
+import eu.bitwalker.useragentutils.UserAgent;
+import password.pwm.*;
 import password.pwm.bean.UserIdentity;
 import password.pwm.config.PwmSetting;
 import password.pwm.config.stored.ConfigurationProperty;
@@ -16,9 +37,8 @@ import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.ContextManager;
 import password.pwm.http.PwmRequest;
 import password.pwm.http.PwmSession;
-import password.pwm.http.ServletHelper;
+import password.pwm.http.PwmURL;
 import password.pwm.http.bean.ConfigManagerBean;
-import password.pwm.ldap.auth.AuthenticationType;
 import password.pwm.svc.intruder.RecordType;
 import password.pwm.util.JsonUtil;
 import password.pwm.util.TimeDuration;
@@ -28,7 +48,6 @@ import password.pwm.util.secure.PwmSecurityKey;
 import password.pwm.util.secure.SecureEngine;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -41,20 +60,32 @@ public class ConfigAccessFilter extends AbstractPwmFilter {
 
 
     @Override
-    void processFilter(PwmRequest pwmRequest, PwmFilterChain filterChain) throws PwmException, IOException, ServletException {
-        final PwmApplication.MODE appMode = pwmRequest.getPwmApplication().getApplicationMode();
-        if (appMode == PwmApplication.MODE.NEW) {
+    void processFilter(PwmApplicationMode mode, PwmRequest pwmRequest, PwmFilterChain filterChain) throws PwmException, IOException, ServletException {
+        final PwmApplicationMode appMode = pwmRequest.getPwmApplication().getApplicationMode();
+        if (appMode == PwmApplicationMode.NEW) {
             filterChain.doFilter();
             return;
         }
 
-        final ConfigManagerBean configManagerBean = pwmRequest.getPwmSession().getConfigManagerBean();
-        if (!checkAuthentication(pwmRequest, configManagerBean)) {
+        try {
+            checkUserAgent(pwmRequest);
+        } catch (PwmException e) {
+            pwmRequest.respondWithError(e.getErrorInformation());
+            return;
+        }
+
+        final ConfigManagerBean configManagerBean = pwmRequest.getPwmApplication().getSessionStateService().getBean(pwmRequest, ConfigManagerBean.class);
+        if (checkAuthentication(pwmRequest, configManagerBean) == ProcessStatus.Continue) {
             filterChain.doFilter();
         }
     }
 
-    static boolean checkAuthentication(
+    @Override
+    boolean isInterested(PwmApplicationMode mode, PwmURL pwmURL) {
+        return pwmURL.isConfigManagerURL();
+    }
+
+    static ProcessStatus checkAuthentication(
             final PwmRequest pwmRequest,
             final ConfigManagerBean configManagerBean
     )
@@ -70,40 +101,35 @@ public class ConfigAccessFilter extends AbstractPwmFilter {
             authRequired = true;
         }
 
-        if (PwmApplication.MODE.RUNNING == pwmRequest.getPwmApplication().getApplicationMode()) {
-            if (!pwmSession.getSessionStateBean().isAuthenticated()) {
+        if (PwmApplicationMode.RUNNING == pwmRequest.getPwmApplication().getApplicationMode()) {
+            if (!pwmRequest.isAuthenticated()) {
                 throw new PwmUnrecoverableException(PwmError.ERROR_AUTHENTICATION_REQUIRED);
             }
 
             if (!pwmRequest.getPwmSession().getSessionManager().checkPermission(pwmRequest.getPwmApplication(), Permission.PWMADMIN)) {
                 final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_UNAUTHORIZED);
                 pwmRequest.respondWithError(errorInformation);
-                return true;
-            }
-
-            if (pwmSession.getLoginInfoBean().getAuthenticationType() != AuthenticationType.AUTHENTICATED) {
-                throw new PwmUnrecoverableException(new ErrorInformation(PwmError.ERROR_AUTHENTICATION_REQUIRED,
-                        "Username/Password authentication is required to edit configuration.  This session has not been authenticated using a user password (SSO or other method used)."));
+                return ProcessStatus.Halt;
             }
         }
 
-        if (PwmApplication.MODE.CONFIGURATION != pwmRequest.getPwmApplication().getApplicationMode()) {
+        if (PwmApplicationMode.CONFIGURATION != pwmRequest.getPwmApplication().getApplicationMode()) {
             authRequired = true;
         }
 
         if (!authRequired) {
-            return false;
+            return ProcessStatus.Continue;
         }
 
         if (!storedConfig.hasPassword()) {
             final String errorMsg = "config file does not have a configuration password";
             final ErrorInformation errorInformation = new ErrorInformation(PwmError.CONFIG_FORMAT_ERROR,errorMsg,new String[]{errorMsg});
             pwmRequest.respondWithError(errorInformation, true);
-            return true;
+            return ProcessStatus.Halt;
         }
 
         if (configManagerBean.isPasswordVerified()) {
-            return false;
+            return ProcessStatus.Continue;
         }
 
         String persistentLoginValue = null;
@@ -115,7 +141,7 @@ public class ConfigAccessFilter extends AbstractPwmFilter {
             persistentLoginEnabled = true;
             final PwmSecurityKey securityKey = pwmRequest.getConfig().getSecurityKey();
 
-            if (PwmApplication.MODE.RUNNING == pwmRequest.getPwmApplication().getApplicationMode()) {
+            if (PwmApplicationMode.RUNNING == pwmRequest.getPwmApplication().getApplicationMode()) {
                 persistentLoginValue = SecureEngine.hash(
                         storedConfig.readConfigProperty(ConfigurationProperty.PASSWORD_HASH)
                                 + pwmSession.getUserInfoBean().getUserIdentity().toDelimitedKey(),
@@ -128,10 +154,7 @@ public class ConfigAccessFilter extends AbstractPwmFilter {
             }
 
             {
-                final String cookieStr = ServletHelper.readCookie(
-                        pwmRequest.getHttpServletRequest(),
-                        PwmConstants.COOKIE_PERSISTENT_CONFIG_LOGIN
-                );
+                final String cookieStr = pwmRequest.readCookie(PwmConstants.COOKIE_PERSISTENT_CONFIG_LOGIN);
                 if (securityKey != null && cookieStr != null && !cookieStr.isEmpty()) {
                     try {
                         final String jsonStr = pwmApplication.getSecureService().decryptStringValue(cookieStr);
@@ -151,9 +174,7 @@ public class ConfigAccessFilter extends AbstractPwmFilter {
                         LOGGER.error(pwmRequest, "error examining persistent config login cookie: " + e.getMessage());
                     }
                     if (!persistentLoginAccepted) {
-                        Cookie removalCookie = new Cookie(PwmConstants.COOKIE_PERSISTENT_CONFIG_LOGIN, null);
-                        removalCookie.setMaxAge(0);
-                        pwmRequest.getPwmResponse().addCookie(removalCookie);
+                        pwmRequest.getPwmResponse().removeCookie(PwmConstants.COOKIE_PERSISTENT_CONFIG_LOGIN, null);
                         LOGGER.debug(pwmRequest, "removing non-working persistent config login cookie");
                     }
                 }
@@ -207,9 +228,9 @@ public class ConfigAccessFilter extends AbstractPwmFilter {
                 final String originalUrl = configManagerBean.getPrePasswordEntryUrl();
                 configManagerBean.setPrePasswordEntryUrl(null);
                 pwmRequest.getPwmResponse().sendRedirect(originalUrl);
-                return true;
+                return ProcessStatus.Halt;
             }
-            return false;
+            return ProcessStatus.Continue;
         }
 
         if (configManagerBean.getPrePasswordEntryUrl() == null) {
@@ -217,7 +238,7 @@ public class ConfigAccessFilter extends AbstractPwmFilter {
         }
 
         forwardToJsp(pwmRequest);
-        return true;
+        return ProcessStatus.Halt;
     }
 
     private static void forwardToJsp(final PwmRequest pwmRequest)
@@ -228,8 +249,8 @@ public class ConfigAccessFilter extends AbstractPwmFilter {
 
         final ConfigLoginHistory configLoginHistory = readConfigLoginHistory(pwmRequest);
 
-        pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.ConfigLoginHistory, configLoginHistory);
-        pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.ConfigPasswordRememberTime,time);
+        pwmRequest.setAttribute(PwmRequest.Attribute.ConfigLoginHistory, configLoginHistory);
+        pwmRequest.setAttribute(PwmRequest.Attribute.ConfigPasswordRememberTime,time);
         pwmRequest.forwardToJsp(PwmConstants.JSP_URL.CONFIG_MANAGER_LOGIN);
 
     }
@@ -328,5 +349,36 @@ public class ConfigAccessFilter extends AbstractPwmFilter {
 
     static int figureMaxLoginSeconds(final PwmRequest pwmRequest) {
         return Integer.parseInt(pwmRequest.getConfig().readAppProperty(AppProperty.CONFIG_MAX_PERSISTENT_LOGIN_SECONDS));
+    }
+
+    private void checkUserAgent(final PwmRequest pwmRequest) throws PwmUnrecoverableException {
+        final String userAgentString = pwmRequest.readHeaderValueAsString(PwmConstants.HttpHeader.UserAgent);
+        if (userAgentString == null || userAgentString.isEmpty()) {
+            return;
+        }
+
+        boolean badBrowser = false;
+        try {
+            final UserAgent userAgent = new UserAgent(userAgentString);
+            final Browser browser = userAgent.getBrowser();
+            switch (browser) {
+                case IE5:
+                case IE5_5:
+                case IE6:
+                case IE7:
+                case IE8:
+                case IE9:
+                case IE10:
+                    badBrowser = true;
+
+            }
+        } catch (Exception e) {
+            LOGGER.error(pwmRequest, "error during browser user-agent detection: " + e.getMessage());
+        }
+
+        if (badBrowser) {
+            final String errorMsg = "Internet Explorer version is not supported for this function.  Please use Internet Explorer 11 or higher or another web browser.";
+            throw new PwmUnrecoverableException(new ErrorInformation(PwmError.ERROR_UNAUTHORIZED, errorMsg));
+        }
     }
 }

@@ -1,14 +1,15 @@
 <%@ page import="password.pwm.error.PwmError" %>
 <%@ page import="password.pwm.error.PwmException" %>
 <%@ page import="password.pwm.error.PwmOperationalException" %>
+<%@ page import="password.pwm.i18n.Admin" %>
 <%@ page import="password.pwm.svc.token.TokenPayload" %>
 <%@ page import="java.util.Iterator" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -37,14 +38,16 @@
         JspUtility.logError(pageContext, "error during page setup: " + e.getMessage());
     }
 %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="/WEB-INF/jsp/fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
+    <% String PageName = JspUtility.localizedString(pageContext,"Title_TokenLookup",Admin.class);%>
     <jsp:include page="/WEB-INF/jsp/fragment/header-body.jsp">
-        <jsp:param name="pwm.PageName" value="Token Lookup"/>
+        <jsp:param name="pwm.PageName" value="<%=PageName%>"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_TokenLookup" bundle="PageName" displayIfMissing="true"/></div>
         <%@ include file="fragment/admin-nav.jsp" %>
         <% final String tokenKey = tokenlookup_pwmRequest.readParameterAsString("token");%>
         <% if (tokenKey != null && tokenKey.length() > 0) { %>
@@ -101,9 +104,7 @@
                     Issue Date
                 </td>
                 <td>
-                    System: <%= PwmConstants.DEFAULT_DATETIME_FORMAT.format(tokenPayload.getDate()) %>
-                    <br/>
-                    Local: <%= SimpleDateFormat.getDateTimeInstance().format(tokenPayload.getDate()) %>
+                    <span class="timestamp"><%= PwmConstants.DEFAULT_DATETIME_FORMAT.format(tokenPayload.getDate()) %></span>
                 </td>
             </tr>
             <tr>
@@ -163,7 +164,7 @@
             <textarea name="token" id="token" style="width: 580px; height: 150px"></textarea>
             <div class="buttonbar">
                 <button type="submit" name="submitBtn" class="btn" type="submit">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-search"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-search"></span></pwm:if>
                     Lookup Token
                 </button>
             </div>

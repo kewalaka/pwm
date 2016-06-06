@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +22,14 @@
 
 package password.pwm.ws.client.rest;
 
-import com.novell.ldapchai.exception.ChaiUnavailableException;
+import java.io.Serializable;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
-import password.pwm.bean.PublicUserInfoBean;
+import password.pwm.bean.pub.PublicUserInfoBean;
 import password.pwm.bean.SessionLabel;
 import password.pwm.bean.UserIdentity;
 import password.pwm.bean.UserInfoBean;
@@ -37,11 +41,9 @@ import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.ldap.UserStatusReader;
 import password.pwm.util.JsonUtil;
 import password.pwm.util.logging.PwmLogger;
+import password.pwm.util.macro.MacroMachine;
 
-import java.io.Serializable;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
+import com.novell.ldapchai.exception.ChaiUnavailableException;
 
 public class RestTokenDataClient implements RestClient {
 
@@ -108,7 +110,8 @@ public class RestTokenDataClient implements RestClient {
                     userIdentity
             );
 
-            final PublicUserInfoBean publicUserInfoBean = PublicUserInfoBean.fromUserInfoBean(userInfoBean, pwmApplication.getConfig(), PwmConstants.DEFAULT_LOCALE);
+            MacroMachine macroMachine = MacroMachine.forUser(pwmApplication, PwmConstants.DEFAULT_LOCALE, SessionLabel.SYSTEM_LABEL, userInfoBean.getUserIdentity());
+            final PublicUserInfoBean publicUserInfoBean = PublicUserInfoBean.fromUserInfoBean(userInfoBean, pwmApplication.getConfig(), PwmConstants.DEFAULT_LOCALE, macroMachine);
             sendData.put(RestClient.DATA_KEY_USERINFO, publicUserInfoBean);
         }
 

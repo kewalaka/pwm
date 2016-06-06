@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ import password.pwm.Permission;
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
 import password.pwm.bean.EmailItemBean;
-import password.pwm.bean.SessionStateBean;
+import password.pwm.bean.LocalSessionStateBean;
 import password.pwm.bean.UserIdentity;
 import password.pwm.bean.UserInfoBean;
 import password.pwm.config.*;
@@ -120,7 +120,7 @@ public class GuestRegistrationServlet extends AbstractPwmServlet {
         //Fetch the session state bean.
         final PwmSession pwmSession = pwmRequest.getPwmSession();
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
-        final GuestRegistrationBean guestRegistrationBean = pwmSession.getGuestRegistrationBean();
+        final GuestRegistrationBean guestRegistrationBean = pwmApplication.getSessionStateService().getBean(pwmRequest, GuestRegistrationBean.class);
 
         final Configuration config = pwmApplication.getConfig();
 
@@ -186,7 +186,7 @@ public class GuestRegistrationServlet extends AbstractPwmServlet {
     {
         //Fetch the session state bean.
         final PwmSession pwmSession = pwmRequest.getPwmSession();
-        final SessionStateBean ssBean = pwmSession.getSessionStateBean();
+        final LocalSessionStateBean ssBean = pwmSession.getSessionStateBean();
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         final Configuration config = pwmApplication.getConfig();
 
@@ -237,7 +237,7 @@ public class GuestRegistrationServlet extends AbstractPwmServlet {
             pwmApplication.getStatisticsManager().incrementValue(Statistic.UPDATED_GUESTS);
 
             //everything good so forward to confirmation page.
-            pwmRequest.forwardToSuccessPage(Message.Success_UpdateGuest);
+            pwmRequest.getPwmResponse().forwardToSuccessPage(Message.Success_UpdateGuest);
             return;
         } catch (PwmOperationalException e) {
             LOGGER.error(pwmSession, e.getErrorInformation().toDebugStr());
@@ -284,7 +284,7 @@ public class GuestRegistrationServlet extends AbstractPwmServlet {
         final Boolean origAdminOnly = config.readSettingAsBoolean(PwmSetting.GUEST_EDIT_ORIG_ADMIN_ONLY);
 
         final String usernameParam = pwmRequest.readParameterAsString("username");
-        final GuestRegistrationBean guBean = pwmSession.getGuestRegistrationBean();
+        final GuestRegistrationBean guBean = pwmApplication.getSessionStateService().getBean(pwmRequest, GuestRegistrationBean.class);
 
         final UserSearchEngine.SearchConfiguration searchConfiguration = new UserSearchEngine.SearchConfiguration();
         searchConfiguration.setChaiProvider(chaiProvider);
@@ -359,7 +359,7 @@ public class GuestRegistrationServlet extends AbstractPwmServlet {
     {
         final PwmSession pwmSession = pwmRequest.getPwmSession();
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
-        final SessionStateBean ssBean = pwmSession.getSessionStateBean();
+        final LocalSessionStateBean ssBean = pwmSession.getSessionStateBean();
         final Configuration config = pwmApplication.getConfig();
         final Locale locale = ssBean.getLocale();
 
@@ -448,7 +448,7 @@ public class GuestRegistrationServlet extends AbstractPwmServlet {
 
             pwmApplication.getStatisticsManager().incrementValue(Statistic.NEW_USERS);
 
-            pwmRequest.forwardToSuccessPage(Message.Success_CreateGuest);
+            pwmRequest.getPwmResponse().forwardToSuccessPage(Message.Success_CreateGuest);
         } catch (ChaiOperationException e) {
             final ErrorInformation info = new ErrorInformation(PwmError.ERROR_NEW_USER_FAILURE, "error creating user: " + e.getMessage());
             pwmRequest.setResponseError(info);
@@ -601,7 +601,7 @@ public class GuestRegistrationServlet extends AbstractPwmServlet {
         final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
         final long maxValidDays = pwmRequest.getConfig().readSettingAsLong(PwmSetting.GUEST_MAX_VALID_DAYS);
-        pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.GuestMaximumValidDays, String.valueOf(maxValidDays));
+        pwmRequest.setAttribute(PwmRequest.Attribute.GuestMaximumValidDays, String.valueOf(maxValidDays));
 
 
         final String maxExpirationDate;
@@ -631,8 +631,8 @@ public class GuestRegistrationServlet extends AbstractPwmServlet {
             }
         }
 
-        pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.GuestCurrentExpirationDate, currentExpirationDate);
-        pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.GuestMaximumExpirationDate, maxExpirationDate);
+        pwmRequest.setAttribute(PwmRequest.Attribute.GuestCurrentExpirationDate, currentExpirationDate);
+        pwmRequest.setAttribute(PwmRequest.Attribute.GuestMaximumExpirationDate, maxExpirationDate);
     }
 }
 

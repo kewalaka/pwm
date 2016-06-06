@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
   --%>
 
 <%@ page import="password.pwm.http.JspUtility" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%@ page import="password.pwm.util.StringUtil" %>
 <%@ page import="password.pwm.util.logging.LocalDBLogger" %>
 <%@ page import="password.pwm.util.logging.PwmLogEvent" %>
@@ -29,12 +30,12 @@
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_FOOTER_TEXT); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.NO_REQ_COUNTER); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.NO_IDLE_TIMEOUT); %>
-<html dir="<pwm:LocaleOrientation/>">
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_FOOTER_TEXT); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.NO_REQ_COUNTER); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.NO_IDLE_TIMEOUT); %>
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="/WEB-INF/jsp/fragment/header.jsp" %>
-<% final PwmRequest pwmRequest = PwmRequest.forRequest(request,response); %>
+<% final PwmRequest pwmRequest = JspUtility.getPwmRequest(pageContext); %>
 <% final LocalDBLogger localDBLogger = pwmRequest.getPwmApplication().getLocalDBLogger(); %>
 <% final String selectedLevel = pwmRequest.readParameterAsString("level", 255);%>
 <% final PwmLogLevel configuredLevel = pwmRequest.getConfig().readSettingAsEnum(PwmSetting.EVENTS_LOCALDB_LOG_LEVEL,PwmLogLevel.class); %>
@@ -42,13 +43,13 @@
 <% if ("".equals(selectedLevel)) { %>
 <div style="text-align: center;"><pwm:display key="Display_PleaseWait"/></div>
 <pwm:script>
-<script type="text/javascript">
-    PWM_GLOBAL['startupFunctions'].push(function(){
-        PWM_MAIN.showWaitDialog({loadFunction:function() {
-            PWM_CONFIG.openLogViewer('INFO');
-        }});
-    });
-</script>
+    <script type="text/javascript">
+        PWM_GLOBAL['startupFunctions'].push(function(){
+            PWM_MAIN.showWaitDialog({loadFunction:function() {
+                PWM_CONFIG.openLogViewer('INFO');
+            }});
+        });
+    </script>
 </pwm:script>
 <% } else { %>
 <div style="width: 100%; text-align:center; background-color: #eeeeee" id="headerDiv">
@@ -63,7 +64,7 @@
     </select>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <button class="btn" id="button-refresh">
-        <pwm:if test="showIcons"><span class="btn-icon fa fa-refresh"></span></pwm:if>
+        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-refresh"></span></pwm:if>
         <pwm:display key="Button_Refresh" bundle="Admin"/>
     </button>
 </div>
@@ -83,19 +84,19 @@
 <%@ include file="/WEB-INF/jsp/fragment/footer.jsp" %>
 <pwm:script-ref url="/public/resources/js/configmanager.js"/>
 <pwm:script>
-<script type="text/javascript">
-    PWM_GLOBAL['startupFunctions'].push(function(){
-        var refreshFunction = function(){
-            var levelSelectElement = PWM_MAIN.getObject('select-level');
-            var level=levelSelectElement.options[levelSelectElement.selectedIndex].value;
-            PWM_MAIN.showWaitDialog({loadFunction:function(){PWM_CONFIG.openLogViewer(level)}});
-        };
-        PWM_MAIN.addEventHandler('button-refresh','click',function(){
-            refreshFunction();
+    <script type="text/javascript">
+        PWM_GLOBAL['startupFunctions'].push(function(){
+            var refreshFunction = function(){
+                var levelSelectElement = PWM_MAIN.getObject('select-level');
+                var level=levelSelectElement.options[levelSelectElement.selectedIndex].value;
+                PWM_MAIN.showWaitDialog({loadFunction:function(){PWM_CONFIG.openLogViewer(level)}});
+            };
+            PWM_MAIN.addEventHandler('button-refresh','click',function(){
+                refreshFunction();
+            });
+            document.title = "Log Viewer";
         });
-        document.title = "Log Viewer";
-    });
-</script>
+    </script>
 </pwm:script>
 </body>
 </html>

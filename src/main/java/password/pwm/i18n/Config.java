@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,6 @@ public enum Config implements PwmDisplayBundle {
     Display_ConfigManagerNew,
     Display_ConfigManagerRunning,
     Display_ConfigManagerRunningEditor,
-    Display_ConfigOpenInfo,
     Display_EditorLDAPSizeExceeded,
     Display_SettingFilter_Level_0,
     Display_SettingFilter_Level_1,
@@ -57,6 +56,7 @@ public enum Config implements PwmDisplayBundle {
     Display_SettingNavigationSeparator,
     Display_SettingNavigationNullProfile,
     Field_VerificationMethod,
+    Label_ProfileListEditMenuItem,
     MenuDisplay_AlternateNewConfig,
     MenuDisplay_AlternateUnlockConfig,
     MenuDisplay_AlternateUpload,
@@ -90,7 +90,6 @@ public enum Config implements PwmDisplayBundle {
     MenuItem_UploadConfig,
     MenuItem_UnlockConfig,
     MenuItem_ViewLog,
-    MenuItem_Home,
     Setting_Permission_Profile,
     Setting_Permission_Filter,
     Setting_Permission_Base,

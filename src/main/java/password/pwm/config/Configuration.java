@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ import com.novell.ldapchai.util.StringHelper;
 import password.pwm.AppProperty;
 import password.pwm.PwmConstants;
 import password.pwm.bean.EmailItemBean;
+import password.pwm.bean.PrivateKeyCertificate;
 import password.pwm.config.option.ADPolicyComplexity;
 import password.pwm.config.option.DataStorageMethod;
 import password.pwm.config.option.MessageSendMethod;
@@ -44,6 +45,7 @@ import password.pwm.util.PasswordData;
 import password.pwm.util.StringUtil;
 import password.pwm.util.logging.PwmLogLevel;
 import password.pwm.util.logging.PwmLogger;
+import password.pwm.util.secure.PwmRandom;
 import password.pwm.util.secure.PwmSecurityKey;
 
 import java.io.Serializable;
@@ -376,7 +378,7 @@ public class Configuration implements Serializable, SettingReader {
     {
         final Map<String, String> passwordPolicySettings = new LinkedHashMap<>();
         for (final PwmPasswordRule rule : PwmPasswordRule.values()) {
-            if (rule.getPwmSetting() != null) {
+            if (rule.getPwmSetting() != null || rule.getAppProperty() != null) {
                 final String value;
                 final PwmSetting pwmSetting = rule.getPwmSetting();
                 switch (rule) {
@@ -401,6 +403,9 @@ public class Configuration implements Serializable, SettingReader {
                                 pwmSetting, storedConfiguration.readSetting(pwmSetting,profile),
                                 ADPolicyComplexity.class
                         ).toString();
+                        break;
+                    case AllowMacroInRegExSetting:
+                        value = readAppProperty(AppProperty.ALLOW_MACRO_IN_REGEX_SETTING);
                         break;
                     default:
                         value = String.valueOf(
@@ -483,16 +488,32 @@ public class Configuration implements Serializable, SettingReader {
         return (X509Certificate[])readStoredValue(setting).toNativeObject();
     }
 
+    public PrivateKeyCertificate readSettingAsPrivateKey(final PwmSetting setting) {
+        if (PwmSettingSyntax.PRIVATE_KEY != setting.getSyntax()) {
+            throw new IllegalArgumentException("may not read PRIVATE_KEY value for setting: " + setting.toString());
+        }
+        if (readStoredValue(setting) == null) {
+            return null;
+        }
+        return (PrivateKeyCertificate)readStoredValue(setting).toNativeObject();
+    }
+
     public String getNotes() {
         return storedConfiguration.readConfigProperty(ConfigurationProperty.NOTES);
     }
 
+    private PwmSecurityKey tempInstanceKey = null;
     public PwmSecurityKey getSecurityKey() throws PwmUnrecoverableException {
         final PasswordData configValue = readSettingAsPassword(PwmSetting.PWM_SECURITY_KEY);
-        if (configValue == null) {
-            final String errorMsg = "Security Key value is not configured";
+
+        if (configValue == null || configValue.getStringValue().isEmpty()) {
+            final String errorMsg = "Security Key value is not configured,will generate temp value for use by runtime instance";
             final ErrorInformation errorInfo = new ErrorInformation(PwmError.ERROR_INVALID_SECURITY_KEY, errorMsg);
-            throw new PwmUnrecoverableException(errorInfo);
+            LOGGER.warn(errorInfo.toDebugStr());
+            if (tempInstanceKey == null) {
+                tempInstanceKey = new PwmSecurityKey(PwmRandom.getInstance().alphaNumericString(256));
+            }
+            return tempInstanceKey;
         }
 
         final int minSecurityKeyLength = Integer.parseInt(readAppProperty(AppProperty.SECURITY_CONFIG_MIN_SECURITY_KEY_LENGTH));
@@ -604,8 +625,8 @@ public class Configuration implements Serializable, SettingReader {
         }
     }
 
-    public PwmSettingTemplate getTemplate() {
-        return storedConfiguration.getTemplate();
+    public PwmSettingTemplateSet getTemplate() {
+        return storedConfiguration.getTemplateSet();
     }
 
     public boolean hasDbConfigured() {
@@ -749,6 +770,15 @@ public class Configuration implements Serializable, SettingReader {
         return returnMap;
     }
 
+    public Map<String,UpdateAttributesProfile> getUpdateAttributesProfile() {
+        final Map<String,UpdateAttributesProfile> returnMap = new LinkedHashMap<>();
+        final Map<String,Profile> profileMap = profileMap(ProfileType.UpdateAttributes);
+        for (final String profileID : profileMap.keySet()) {
+            returnMap.put(profileID, (UpdateAttributesProfile)profileMap.get(profileID));
+        }
+        return returnMap;
+    }
+
     public Map<String,ForgottenPasswordProfile> getForgottenPasswordProfiles() {
         final Map<String,ForgottenPasswordProfile> returnMap = new LinkedHashMap<>();
         final Map<String,Profile> profileMap = profileMap(ProfileType.ForgottenPassword);
@@ -784,12 +814,21 @@ public class Configuration implements Serializable, SettingReader {
                 newProfile = NewUserProfile.makeFromStoredConfiguration(storedConfiguration, profileID);
                 break;
 
+            case UpdateAttributes:
+                newProfile = UpdateAttributesProfile.makeFromStoredConfiguration(storedConfiguration, profileID);
+                break;
+
             default: throw new IllegalArgumentException("unknown profile type: " + profileType.toString());
         }
 
         return newProfile;
     }
 
+    public StoredConfigurationImpl getStoredConfiguration() throws PwmUnrecoverableException {
+        final StoredConfigurationImpl copiedStoredConfiguration = StoredConfigurationImpl.copy(storedConfiguration);
+        copiedStoredConfiguration.lock();
+        return copiedStoredConfiguration;
+    }
 
     public boolean isDevDebugMode() {
         return Boolean.parseBoolean(readAppProperty(AppProperty.LOGGING_DEV_OUTPUT));
@@ -808,4 +847,6 @@ public class Configuration implements Serializable, SettingReader {
         }
         return returnSet;
     }
+
+
 }

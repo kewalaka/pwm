@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -328,7 +328,7 @@ public class
 
     public Iterator<String> descendingIterator() {
         try {
-            return new InnerIterator<String>(internalQueue, false);
+            return new InnerIterator(internalQueue, false);
         } catch (LocalDBException e) {
             throw new IllegalStateException(e);
         }
@@ -338,7 +338,7 @@ public class
 
     public Iterator<String> iterator() {
         try {
-            return new InnerIterator<String>(internalQueue, true);
+            return new InnerIterator(internalQueue, true);
         } catch (LocalDBException e) {
             throw new IllegalStateException(e);
         }
@@ -378,7 +378,7 @@ public class
 
 // -------------------------- INNER CLASSES --------------------------
 
-    private class InnerIterator<K> implements Iterator {
+    private class InnerIterator implements Iterator<String> {
         private Position position;
         private final InternalQueue internalQueue;
         private final boolean first;

@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,8 +29,9 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
-public class SetupResponsesBean implements PwmSessionBean {
+public class SetupResponsesBean extends PwmSessionBean {
     private boolean hasExistingResponses;
     private SetupData responseData;
     private SetupData helpdeskResponseData;
@@ -39,7 +40,8 @@ public class SetupResponsesBean implements PwmSessionBean {
     private boolean confirmed;
     private Locale userLocale;
 
-    public SetupResponsesBean() {
+    public Type getType() {
+        return Type.AUTHENTICATED;
     }
 
     public SetupData getResponseData() {
@@ -149,5 +151,9 @@ public class SetupResponsesBean implements PwmSessionBean {
         public void setResponseMap(Map<Challenge, String> responseMap) {
             this.responseMap = responseMap;
         }
+    }
+
+    public Set<Flag> getFlags() {
+        return Collections.singleton(Flag.ProhibitCookieSession);
     }
 }

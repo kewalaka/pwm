@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,12 +32,14 @@ PWM_ADMIN.initAdminNavMenu = function() {
                 var pMenu = new DropDownMenu({ style: "display: none;"});
                 pMenu.addChild(new MenuItem({
                     label: 'Event Log',
+                    id: 'eventLog_dropitem',
                     onClick: function() {
                         PWM_MAIN.goto(PWM_GLOBAL['url-context'] + '/private/admin/logs');
                     }
                 }));
                 pMenu.addChild(new MenuItem({
                     label: 'Token Lookup',
+                    id: 'tokenLookup_dropitem',
                     onClick: function() {
                         PWM_MAIN.goto(PWM_GLOBAL['url-context'] + '/private/admin/tokens');
                     }
@@ -45,6 +47,7 @@ PWM_ADMIN.initAdminNavMenu = function() {
 
                 pMenu.addChild(new MenuItem({
                     label: 'URL Reference',
+                    id: 'urlReference_dropitem',
                     onClick: function() {
                         PWM_MAIN.goto(PWM_GLOBAL['url-context'] + '/private/admin/urls');
                     }
@@ -52,20 +55,23 @@ PWM_ADMIN.initAdminNavMenu = function() {
                 pMenu.addChild(new MenuSeparator());
                 pMenu.addChild(new MenuItem({
                     label: 'Full Page Health Status',
+                    id: 'fullPageHealthStatus_dropitem',
                     onClick: function() {
                         PWM_MAIN.goto(PWM_GLOBAL['url-context'] + '/public/health.jsp');
                     }
                 }));
                 pMenu.addChild(new MenuSeparator());
                 pMenu.addChild(new MenuItem({
-                    label: '<span class="fa fa-external-link"></span> Application Reference',
+                    label: '<span class="pwm-icon pwm-icon-external-link"></span> Application Reference',
+                    id: 'applictionReference_dropitem',
                     onClick: function() {
-                        PWM_MAIN.newWindowOpen(PWM_GLOBAL['url-context'] + '/public/reference','referencedoc');
+                        PWM_MAIN.newWindowOpen(PWM_GLOBAL['url-context'] + '/public/reference/','referencedoc');
                     }
                 }));
                 if (PWM_GLOBAL['setting-displayEula'] == true) {
                     pMenu.addChild(new MenuItem({
                         label: 'View EULA',
+                        id: 'viewEULA_dropitem',
                         onClick: function() {
                             PWM_MAIN.showEula(false,null);
                         }
@@ -74,14 +80,16 @@ PWM_ADMIN.initAdminNavMenu = function() {
                 pMenu.addChild(new MenuSeparator());
                 pMenu.addChild(new MenuItem({
                     label: 'Configuration Manager',
+                    id: 'configurationManager_dropitem',
                     onClick: function() {
-                        PWM_MAIN.goto(PWM_GLOBAL['url-context'] + '/private/config/ConfigManager');
+                        PWM_MAIN.goto(PWM_GLOBAL['url-context'] + '/private/config/manager');
                     }
                 }));
                 pMenu.addChild(new MenuItem({
                     label: 'Configuration Editor',
+                    id: 'configurationEditor_dropitem',
                     onClick: function() {
-                        PWM_CONFIG.startConfigurationEditor();
+                        PWM_MAIN.goto(PWM_GLOBAL['url-context'] + '/private/config/editor');
                     }
                 }));
 
@@ -644,6 +652,7 @@ PWM_ADMIN.showAppHealth = function(parentDivID, options, refreshNow) {
                 PWM_GLOBAL['pwm-health'] = data['data']['overall'];
                 var htmlBody = PWM_ADMIN.makeHealthHtml(data['data'], showTimestamp, showRefresh);
                 parentDiv.innerHTML = htmlBody;
+                PWM_MAIN.TimestampHandler.initElement(PWM_MAIN.getObject('healthCheckTimestamp'));
 
                 PWM_MAIN.addEventHandler('button-refreshHealth','click',function(){
                     PWM_ADMIN.showAppHealth(parentDivID, options, true);
@@ -695,7 +704,8 @@ PWM_ADMIN.showAppHealth = function(parentDivID, options, refreshNow) {
 
 PWM_ADMIN.makeHealthHtml = function(healthData, showTimestamp, showRefresh) {
     var healthRecords = healthData['records'];
-    var htmlBody = '<table width="100%" style="width=100%; border=0">';
+    var htmlBody = '<div>';
+    htmlBody += '<div class="healthTable-wrapper"><table>';
     for (var i = 0; i < healthRecords.length; i++) {
         (function(iter){
             var loopRecord = healthRecords[iter];
@@ -708,20 +718,22 @@ PWM_ADMIN.makeHealthHtml = function(healthData, showTimestamp, showRefresh) {
             htmlBody += '</div></td></tr>';
         })(i)
     }
+    htmlBody += '</table></div>';
+
     if (showTimestamp || showRefresh) {
-        htmlBody += '<tr><td colspan="3" style="text-align:center;">';
+        htmlBody += '<div class="healthTable-footer">';
         if (showTimestamp) {
-            htmlBody += '<span id="healthCheckTimestamp" class="timestamp">';
+            htmlBody += 'Last Updated <span id="healthCheckTimestamp" class="timestamp">';
             htmlBody += (healthData['timestamp']);
-            htmlBody += '</span>&nbsp;&nbsp;&nbsp;&nbsp;';
+            htmlBody += '</span>';
         }
         if (showRefresh) {
-            htmlBody += '<span id="button-refreshHealth" class="fa btn-icon fa-refresh"></span>';
+           // htmlBody += '&nbsp;&nbsp;&nbsp;&nbsp;<span id="button-refreshHealth" class="pwm-icon btn-icon pwm-icon-refresh" title="Refresh"></span>';
         }
-        htmlBody += "</td></tr>";
+        htmlBody += "</div>";
     }
+    htmlBody += '</div>';
 
-    htmlBody += '</table>';
     return htmlBody;
 };
 

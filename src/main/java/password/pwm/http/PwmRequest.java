@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,12 +25,13 @@ package password.pwm.http;
 import org.apache.commons.fileupload.FileItemIterator;
 import org.apache.commons.fileupload.FileItemStream;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.io.IOUtils;
 import password.pwm.AppProperty;
 import password.pwm.PwmApplication;
+import password.pwm.PwmApplicationMode;
 import password.pwm.PwmConstants;
-import password.pwm.Validator;
+import password.pwm.bean.LocalSessionStateBean;
 import password.pwm.bean.SessionLabel;
-import password.pwm.bean.SessionStateBean;
 import password.pwm.bean.UserIdentity;
 import password.pwm.bean.UserInfoBean;
 import password.pwm.config.Configuration;
@@ -40,7 +41,8 @@ import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.servlet.PwmServletDefinition;
-import password.pwm.i18n.Message;
+import password.pwm.util.StringUtil;
+import password.pwm.util.Validator;
 import password.pwm.util.logging.PwmLogger;
 import password.pwm.util.secure.PwmRandom;
 import password.pwm.ws.server.RestResultBean;
@@ -69,22 +71,8 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
     private final PwmResponse pwmResponse;
     private transient PwmApplication pwmApplication;
     private transient PwmSession pwmSession;
-    private final String cspNonce;
 
-    private final Set<Flag> flags = new HashSet<>();
-
-    public enum Flag {
-        HIDE_LOCALE,
-        HIDE_IDLE,
-        HIDE_THEME,
-        HIDE_FOOTER_TEXT,
-        HIDE_HEADER_BUTTONS,
-        HIDE_HEADER_WARNINGS,
-        NO_REQ_COUNTER,
-        NO_IDLE_TIMEOUT,
-        NO_MOBILE_CSS,
-        ALWAYS_EXPAND_MESSAGE_TEXT,
-    }
+    private final Set<PwmRequestFlag> flags = new HashSet<>();
 
     public static PwmRequest forRequest(
             HttpServletRequest request,
@@ -92,12 +80,12 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
     )
             throws PwmUnrecoverableException
     {
-        PwmRequest pwmRequest = (PwmRequest) request.getAttribute(PwmConstants.REQUEST_ATTR.PwmRequest.toString());
+        PwmRequest pwmRequest = (PwmRequest) request.getAttribute(PwmRequest.Attribute.PwmRequest.toString());
         if (pwmRequest == null) {
             final PwmSession pwmSession = PwmSessionWrapper.readPwmSession(request);
             final PwmApplication pwmApplication = ContextManager.getPwmApplication(request);
             pwmRequest = new PwmRequest(request, response, pwmApplication, pwmSession);
-            request.setAttribute(PwmConstants.REQUEST_ATTR.PwmRequest.toString(), pwmRequest);
+            request.setAttribute(PwmRequest.Attribute.PwmRequest.toString(), pwmRequest);
         }
         return pwmRequest;
     }
@@ -114,8 +102,6 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
         this.pwmResponse = new PwmResponse(httpServletResponse, this, pwmApplication.getConfig());
         this.pwmSession = pwmSession;
         this.pwmApplication = pwmApplication;
-        this.cspNonce = PwmRandom.getInstance().alphaNumericString(10);
-        checkRequestInstanceNonce();
     }
 
     public PwmApplication getPwmApplication()
@@ -138,6 +124,9 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
     }
 
     public Locale getLocale() {
+        if (isFlag(PwmRequestFlag.INCLUDE_CONFIG_CSS)) {
+            return PwmConstants.DEFAULT_LOCALE;
+        }
         return pwmSession.getSessionStateBean().getLocale();
     }
 
@@ -163,21 +152,12 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
     )
             throws IOException, ServletException
     {
-        getPwmResponse().respondWithError(errorInformation, forceLogout);
+        if (forceLogout) {
+            getPwmResponse().respondWithError(errorInformation, PwmResponse.Flag.ForceLogout);
+        } else {
+            getPwmResponse().respondWithError(errorInformation);
+        }
     }
-
-    public void forwardToSuccessPage(Message message)
-            throws ServletException, PwmUnrecoverableException, IOException
-    {
-        forwardToSuccessPage(message, null);
-    }
-
-    public void forwardToSuccessPage(Message message, final String field)
-            throws ServletException, PwmUnrecoverableException, IOException
-    {
-        getPwmResponse().forwardToSuccessPage(message, field);
-    }
-
 
     public void sendRedirect(final String redirectURL)
             throws PwmUnrecoverableException, IOException
@@ -195,7 +175,7 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
             throws PwmUnrecoverableException, IOException
     {
         String redirectURL = this.getContextPath() + PwmServletDefinition.Command.servletUrl();
-        redirectURL = ServletHelper.appendAndEncodeUrlParameters(redirectURL,Collections.singletonMap(PwmConstants.PARAM_ACTION_REQUEST,"continue"));
+        redirectURL = PwmURL.appendAndEncodeUrlParameters(redirectURL, Collections.singletonMap(PwmConstants.PARAM_ACTION_REQUEST, "continue"));
         sendRedirect(redirectURL);
     }
 
@@ -212,6 +192,30 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
         return ContextManager.getContextManager(this);
     }
 
+    public InputStream readFileUploadStream(final String filePartName)
+            throws IOException, ServletException, PwmUnrecoverableException
+    {
+        try {
+            if (ServletFileUpload.isMultipartContent(this.getHttpServletRequest())) {
+
+                // Create a new file upload handler
+                final ServletFileUpload upload = new ServletFileUpload();
+
+                // Parse the request
+                for (final FileItemIterator iter = upload.getItemIterator(this.getHttpServletRequest()); iter.hasNext();) {
+                    final FileItemStream item = iter.next();
+
+                    if (filePartName.equals(item.getFieldName())) {
+                        return item.openStream();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("error reading file upload: " + e.getMessage());
+        }
+        return null;
+    }
+
     public Map<String,FileUploadItem> readFileUploads(
             final int maxFileSize,
             final int maxItems
@@ -221,26 +225,18 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
         final Map<String,FileUploadItem> returnObj = new LinkedHashMap<>();
         try {
             if (ServletFileUpload.isMultipartContent(this.getHttpServletRequest())) {
-                final byte[] buffer = new byte[1024 * 4];
-
                 final ServletFileUpload upload = new ServletFileUpload();
                 final FileItemIterator iter = upload.getItemIterator(this.getHttpServletRequest());
                 while (iter.hasNext() && returnObj.size() < maxItems) {
                     final FileItemStream item = iter.next();
                     final InputStream inputStream = item.openStream();
                     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    int length;
-                    while ((length = inputStream.read(buffer)) > 0) {
-                        baos.write(buffer, 0, length);
-                        if (baos.size() > maxFileSize) {
-                            while ((inputStream.read(buffer)) > 0) {
-                                // read & ignore file.
-                            }
-                            final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_UNKNOWN,"upload file size limit exceeded");
-                            LOGGER.error(this, errorInformation);
-                            respondWithError(errorInformation);
-                            return Collections.emptyMap();
-                        }
+                    final long length = IOUtils.copyLarge(inputStream, baos, 0, maxFileSize + 1);
+                    if (length > maxFileSize) {
+                        final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_UNKNOWN,"upload file size limit exceeded");
+                        LOGGER.error(this, errorInformation);
+                        respondWithError(errorInformation);
+                        return Collections.emptyMap();
                     }
                     final byte[] outputFile = baos.toByteArray();
                     final FileUploadItem fileUploadItem = new FileUploadItem(
@@ -255,6 +251,62 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
             LOGGER.error("error reading file upload: " + e.getMessage());
         }
         return Collections.unmodifiableMap(returnObj);
+    }
+
+    public enum Attribute {
+        PwmErrorInfo,
+        SuccessMessage,
+        PwmRequest,
+        OriginalUri,
+        AgreementText,
+        CompleteText,
+        AvailableAuthMethods,
+        ConfigurationSummaryOutput,
+        LdapPermissionItems,
+        PageTitle,
+        ModuleBean,
+        ModuleBean_String,
+        CspNonce,
+
+        FormConfiguration,
+        FormReadOnly,
+        FormShowPasswordFields,
+        FormData,
+
+        SetupResponses_ResponseInfo,
+
+        SetupOtp_QrCodeValue,
+
+        HelpdeskDetail,
+        HelpdeskObfuscatedDN,
+        HelpdeskUsername,
+        HelpdeskVerificationEnabled,
+
+        ConfigFilename,
+        ConfigLastModified,
+        ConfigHasPassword,
+        ConfigPasswordRememberTime,
+        ConfigLoginHistory,
+        ApplicationPath,
+
+        CaptchaClientUrl,
+        CaptchaIframeUrl,
+        CaptchaPublicKey,
+
+        ForgottenPasswordChallengeSet,
+        ForgottenPasswordOptionalPageView,
+        ForgottenPasswordPrompts,
+        ForgottenPasswordInstructions,
+
+        GuestCurrentExpirationDate,
+        GuestMaximumExpirationDate,
+        GuestMaximumValidDays,
+
+        NewUser_FormShowBackButton,
+
+        CookieBeanStorage,
+
+        ShortcutItems,
     }
 
     public static class FileUploadItem {
@@ -290,7 +342,7 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
     }
 
     public UserIdentity getUserInfoIfLoggedIn() {
-        return this.getPwmSession().getSessionStateBean().isAuthenticated()
+        return this.getPwmSession().isAuthenticated()
                 ? this.getPwmSession().getUserInfoBean().getUserIdentity()
                 : null;
     }
@@ -306,7 +358,7 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
     public boolean convertURLtokenCommand()
             throws IOException, PwmUnrecoverableException
     {
-        final String uri = this.getHttpServletRequest().getRequestURI();
+        final String uri = getURLwithoutQueryString();
         if (uri == null || uri.length() < 1) {
             return false;
         }
@@ -351,14 +403,14 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
 
 
     public void setResponseError(final ErrorInformation errorInformation) {
-        setAttribute(PwmConstants.REQUEST_ATTR.PwmErrorInfo, errorInformation);
+        setAttribute(PwmRequest.Attribute.PwmErrorInfo, errorInformation);
     }
 
-    public void setAttribute(final PwmConstants.REQUEST_ATTR name, final Serializable value) {
+    public void setAttribute(final PwmRequest.Attribute name, final Serializable value) {
         this.getHttpServletRequest().setAttribute(name.toString(),value);
     }
 
-    public Serializable getAttribute(final PwmConstants.REQUEST_ATTR name) {
+    public Serializable getAttribute(final PwmRequest.Attribute name) {
         return (Serializable)this.getHttpServletRequest().getAttribute(name.toString());
     }
 
@@ -381,7 +433,7 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
 
         sb.append(req.getMethod());
         sb.append(" request for: ");
-        sb.append(req.getRequestURI());
+        sb.append(getURLwithoutQueryString());
 
         if (req.getParameterMap().isEmpty()) {
             sb.append(" (no params)");
@@ -454,7 +506,7 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
         return false;
     }
 
-    public void setFlag(final Flag flag, final boolean status) {
+    public void setFlag(final PwmRequestFlag flag, final boolean status) {
         if (status) {
             flags.add(flag);
         } else {
@@ -462,18 +514,18 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
         }
     }
 
-    public boolean isFlag(final Flag flag) {
+    public boolean isFlag(final PwmRequestFlag flag) {
         return flags.contains(flag);
     }
 
     public boolean hasForwardUrl() {
-        final SessionStateBean ssBean = this.getPwmSession().getSessionStateBean();
+        final LocalSessionStateBean ssBean = this.getPwmSession().getSessionStateBean();
         final String redirectURL = ssBean.getForwardURL();
         return !((redirectURL == null || redirectURL.isEmpty()) && this.getConfig().isDefaultValue(PwmSetting.URL_FORWARD));
     }
 
     public String getForwardUrl() {
-        final SessionStateBean ssBean = this.getPwmSession().getSessionStateBean();
+        final LocalSessionStateBean ssBean = this.getPwmSession().getSessionStateBean();
         String redirectURL = ssBean.getForwardURL();
         if (redirectURL == null || redirectURL.length() < 1) {
             redirectURL = this.getConfig().readSettingAsString(PwmSetting.URL_FORWARD);
@@ -488,32 +540,38 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
 
     public String getLogoutURL(
     ) {
-        final SessionStateBean ssBean = this.getPwmSession().getSessionStateBean();
+        final LocalSessionStateBean ssBean = this.getPwmSession().getSessionStateBean();
         return ssBean.getLogoutURL() == null ? pwmApplication.getConfig().readSettingAsString(PwmSetting.URL_LOGOUT) : ssBean.getLogoutURL();
     }
 
-    public String getCspNonce()
+    public synchronized String getCspNonce()
     {
-        return cspNonce;
+        if (getAttribute(PwmRequest.Attribute.CspNonce) == null) {
+            final int nonceLength = Integer.parseInt(getConfig().readAppProperty(AppProperty.HTTP_HEADER_CSP_NONCE_BYTES));
+            final byte[] cspNonce = PwmRandom.getInstance().newBytes(nonceLength);
+            final String cspString = StringUtil.base64Encode(cspNonce);
+            setAttribute(PwmRequest.Attribute.CspNonce, cspString);
+        }
+        return (String)getAttribute(PwmRequest.Attribute.CspNonce);
     }
 
     public <T extends Serializable> T readEncryptedCookie(final String cookieName, Class<T> returnClass)
-            throws PwmUnrecoverableException 
+            throws PwmUnrecoverableException
     {
         final String strValue = this.readCookie(cookieName);
 
         if (strValue != null && !strValue.isEmpty()) {
             return pwmApplication.getSecureService().decryptObject(strValue, returnClass);
         }
-        
+
         return null;
     }
-    
+
     public String toString() {
         return this.getClass().getSimpleName() + " "
                 + (this.getSessionLabel() == null ? "" : getSessionLabel().toString())
-                + " " + this.getHttpServletRequest().getRequestURI();
-        
+                + " " + getURLwithoutQueryString();
+
     }
 
     public void addFormInfoToRequestAttr(
@@ -523,7 +581,7 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
     ) {
         final ArrayList<FormConfiguration> formConfiguration = new ArrayList<>(this.getConfig().readSettingAsForm(formSetting));
         addFormInfoToRequestAttr(formConfiguration, null, readOnly, showPasswordFields);
-        
+
     }
     public void addFormInfoToRequestAttr(
             final List<FormConfiguration> formConfiguration,
@@ -531,14 +589,14 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
             final boolean readOnly,
             final boolean showPasswordFields
     ) {
-        final LinkedHashMap<FormConfiguration,String> formDataMapValue = formDataMap == null 
-                ? new LinkedHashMap<FormConfiguration,String>() 
+        final LinkedHashMap<FormConfiguration,String> formDataMapValue = formDataMap == null
+                ? new LinkedHashMap<FormConfiguration,String>()
                 : new LinkedHashMap<>(formDataMap);
-        
-        this.setAttribute(PwmConstants.REQUEST_ATTR.FormConfiguration, new ArrayList<>(formConfiguration));
-        this.setAttribute(PwmConstants.REQUEST_ATTR.FormData, formDataMapValue);
-        this.setAttribute(PwmConstants.REQUEST_ATTR.FormReadOnly, readOnly);
-        this.setAttribute(PwmConstants.REQUEST_ATTR.FormShowPasswordFields, showPasswordFields);
+
+        this.setAttribute(PwmRequest.Attribute.FormConfiguration, new ArrayList<>(formConfiguration));
+        this.setAttribute(PwmRequest.Attribute.FormData, formDataMapValue);
+        this.setAttribute(PwmRequest.Attribute.FormReadOnly, readOnly);
+        this.setAttribute(PwmRequest.Attribute.FormShowPasswordFields, showPasswordFields);
     }
 
     public void invalidateSession() {
@@ -548,19 +606,56 @@ public class PwmRequest extends PwmHttpRequestWrapper implements Serializable {
 
     public String getURLwithQueryString() throws PwmUnrecoverableException {
         final HttpServletRequest req = this.getHttpServletRequest();
-        return ServletHelper.appendAndEncodeUrlParameters(req.getRequestURI(), readParametersAsMap());
+        return PwmURL.appendAndEncodeUrlParameters(getURLwithoutQueryString(), readParametersAsMap());
     }
 
-    public String getURLwithoutQueryString() throws PwmUnrecoverableException {
+    public String getURLwithoutQueryString() {
         final HttpServletRequest req = this.getHttpServletRequest();
-        return req.getRequestURI();
+        String requestUri = (String) req.getAttribute("javax.servlet.forward.request_uri");
+        return (requestUri == null) ? req.getRequestURI() : requestUri;
     }
 
-    private void checkRequestInstanceNonce() {
-        final String cookieName = getConfig().readAppProperty(AppProperty.HTTP_COOKIE_INSTANCE_GUID_NAME);
-        final String cookieValue = readCookie(cookieName);
-        if (cookieValue != null && !cookieValue.equals(getPwmApplication().getInstanceNonce())) {
-            LOGGER.warn(this, "request was generated by client communicating with a foreign server instance");
+    public String debugHttpHeaders() {
+        final String LINE_SEPERATOR = "\n";
+        final StringBuilder sb = new StringBuilder();
+
+
+        sb.append("http").append(getHttpServletRequest().isSecure() ? "s " : " non-").append("secure request headers: ");
+        sb.append(LINE_SEPERATOR);
+
+        final Map<String,List<String>> headerMap = readHeaderValuesMap();
+        for (final String headerName : headerMap.keySet()) {
+            for (final String value : headerMap.get(headerName)) {
+                sb.append("  ");
+                sb.append(headerName);
+                sb.append("=");
+                if (headerName.contains("Authorization")) {
+                    sb.append(PwmConstants.LOG_REMOVED_VALUE_REPLACEMENT);
+                } else {
+                    sb.append(value);
+                }
+                sb.append(LINE_SEPERATOR);
+            }
         }
+
+        if (LINE_SEPERATOR.equals(sb.substring(sb.length() - LINE_SEPERATOR.length(), sb.length()))) {
+            sb.delete(sb.length() - LINE_SEPERATOR.length(), sb.length());
+        }
+
+        return sb.toString();
+    }
+
+    public boolean endUserFunctionalityAvailable() {
+        final PwmApplicationMode mode = pwmApplication.getApplicationMode();
+        if (mode == PwmApplicationMode.NEW) {
+            return false;
+        }
+        if (PwmConstants.TRIAL_MODE) {
+            return true;
+        }
+        if (mode == PwmApplicationMode.RUNNING) {
+            return true;
+        }
+        return false;
     }
 }

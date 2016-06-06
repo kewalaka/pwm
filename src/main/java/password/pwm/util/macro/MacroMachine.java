@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,17 +23,19 @@
 package password.pwm.util.macro;
 
 import password.pwm.PwmApplication;
+import password.pwm.PwmApplicationMode;
 import password.pwm.PwmConstants;
+import password.pwm.bean.LoginInfoBean;
 import password.pwm.bean.SessionLabel;
 import password.pwm.bean.UserIdentity;
 import password.pwm.bean.UserInfoBean;
 import password.pwm.config.PwmSetting;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.PwmRequest;
-import password.pwm.http.bean.LoginInfoBean;
 import password.pwm.ldap.LdapUserDataReader;
 import password.pwm.ldap.UserDataReader;
 import password.pwm.ldap.UserStatusReader;
+import password.pwm.util.Helper;
 import password.pwm.util.StringUtil;
 import password.pwm.util.logging.PwmLogger;
 
@@ -49,7 +51,8 @@ public class MacroMachine {
     private final UserInfoBean userInfoBean;
     private final LoginInfoBean loginInfoBean;
     private final UserDataReader userDataReader;
-    private final Map<Pattern,MacroImplementation> macroImplementations;
+
+    private static final Map<MacroImplementation.Scope,Map<Pattern,MacroImplementation>> BUILTIN_MACROS = makeImplementations();
 
     public MacroMachine(
             final PwmApplication pwmApplication,
@@ -64,25 +67,33 @@ public class MacroMachine {
         this.userInfoBean = userInfoBean;
         this.loginInfoBean = loginInfoBean;
         this.userDataReader = userDataReader;
-        this.macroImplementations = makeImplementations();
     }
 
-    private Map<Pattern,MacroImplementation> makeImplementations() {
-        final Set<Class<? extends MacroImplementation>> implementations = new HashSet<>();
-        implementations.addAll(StandardMacros.STANDARD_MACROS);
-        implementations.addAll(InternalMacros.INTERNAL_MACROS);
-        final LinkedHashMap<Pattern,MacroImplementation> map = new LinkedHashMap<>();
+    private static  Map<MacroImplementation.Scope,Map<Pattern,MacroImplementation>> makeImplementations() {
+        final Map<Class<? extends MacroImplementation>, MacroImplementation.Scope> implementations = new LinkedHashMap<>();
+        implementations.putAll(StandardMacros.STANDARD_MACROS);
+        implementations.putAll(InternalMacros.INTERNAL_MACROS);
+        final LinkedHashMap<MacroImplementation.Scope,Map<Pattern,MacroImplementation>> map = new LinkedHashMap<>();
 
-        for (Class macroClass : implementations) {
+        for (Class macroClass : implementations.keySet()) {
+            final MacroImplementation.Scope scope = implementations.get(macroClass);
             try {
                 final MacroImplementation macroImplementation = (MacroImplementation)macroClass.newInstance();
                 final Pattern pattern = macroImplementation.getRegExPattern();
-                map.put(pattern,macroImplementation);
+                if (!map.containsKey(scope)) {
+                    map.put(scope, new LinkedHashMap<Pattern, MacroImplementation>());
+                }
+                map.get(scope).put(pattern,macroImplementation);
             } catch (Exception e) {
-                LOGGER.error(sessionLabel, "unable to load macro class " + macroClass.getName() + ", error: " + e.getMessage());
+                LOGGER.error("unable to load macro class " + macroClass.getName() + ", error: " + e.getMessage());
             }
         }
 
+        return map;
+    }
+
+    private Map<Pattern,MacroImplementation> makeExternalImplementations(PwmApplication pwmApplication) {
+        final LinkedHashMap<Pattern,MacroImplementation> map = new LinkedHashMap<>();
         final List<String> externalMethods = pwmApplication == null
                 ? Collections.<String>emptyList()
                 : pwmApplication.getConfig().readSettingAsStringArray(PwmSetting.EXTERNAL_MACROS_REST_URLS);
@@ -145,8 +156,17 @@ public class MacroMachine {
             }
         };
 
+        final Set<MacroImplementation.Scope> scopes = effectiveScopes(macroRequestInfo);
+        final Map<Pattern,MacroImplementation> macroImplementations = new LinkedHashMap<>();
+        for (final MacroImplementation.Scope scope : scopes) {
+            macroImplementations.putAll(BUILTIN_MACROS.get(scope));
+        }
+        if (scopes.contains(MacroImplementation.Scope.User)) {
+            macroImplementations.putAll(makeExternalImplementations(pwmApplication));
+        }
 
         String workingString = input;
+        String previousString = workingString;
 
         for (final Pattern pattern : macroImplementations.keySet()) {
             final MacroImplementation pwmMacro = macroImplementations.get(pattern);
@@ -155,6 +175,11 @@ public class MacroMachine {
                 final Matcher matcher = pattern.matcher(workingString);
                 if (matcher.find()) {
                     workingString = doReplace(workingString, pwmMacro, matcher, stringReplacer, macroRequestInfo);
+                    if (workingString.equals(previousString)) {
+                        LOGGER.warn(sessionLabel, "macro replace was called but input string was not modified.  "
+                                + " macro=" + pwmMacro.getClass().getName() + ", pattern=" + pwmMacro.getRegExPattern().toString());
+                        break;
+                    }
                 } else {
                     matched = false;
                 }
@@ -163,6 +188,24 @@ public class MacroMachine {
 
         return workingString;
     }
+
+    private static Set<MacroImplementation.Scope> effectiveScopes(MacroImplementation.MacroRequestInfo macroRequestInfo) {
+        final Set<MacroImplementation.Scope> scopes = new HashSet<>();
+        scopes.add(MacroImplementation.Scope.Static);
+
+        final PwmApplication pwmApplication = macroRequestInfo.getPwmApplication();
+        final PwmApplicationMode mode = pwmApplication != null ? pwmApplication.getApplicationMode() : PwmApplicationMode.ERROR;
+        final boolean appModeOk = mode == PwmApplicationMode.RUNNING || mode == PwmApplicationMode.CONFIGURATION;
+        if (appModeOk) {
+            scopes.add(MacroImplementation.Scope.System);
+
+            if (macroRequestInfo.getUserInfoBean() != null || macroRequestInfo.getUserDataReader() != null) {
+                scopes.add(MacroImplementation.Scope.User);
+            }
+        }
+        return Collections.unmodifiableSet(scopes);
+    }
+
 
     private String doReplace(
             final String input,
@@ -201,8 +244,12 @@ public class MacroMachine {
         }
 
         if (replaceStr != null && replaceStr.length() > 0) {
-            LOGGER.trace(sessionLabel, "replaced macro " + matchedStr + " with value: "
-                    + (macroImplementation.isSensitive() ? PwmConstants.LOG_REMOVED_VALUE_REPLACEMENT : replaceStr));
+            final boolean sensitive = Helper.enumArrayContainsValue(macroImplementation.flags(), MacroImplementation.MacroDefinitionFlag.SensitiveValue);
+            final boolean debugOnlyLogging = Helper.enumArrayContainsValue(macroImplementation.flags(), MacroImplementation.MacroDefinitionFlag.OnlyDebugLogging);
+            if (!debugOnlyLogging || (pwmApplication != null && pwmApplication.getConfig().isDevDebugMode())) {
+                LOGGER.trace(sessionLabel, "replaced macro " + matchedStr + " with value: "
+                        + (sensitive ? PwmConstants.LOG_REMOVED_VALUE_REPLACEMENT : replaceStr));
+            }
         }
         return new StringBuilder(input).replace(startPos, endPos, replaceStr).toString();
     }
@@ -211,8 +258,8 @@ public class MacroMachine {
         return new MacroMachine(null,null,null,null,null);
     }
 
-    public static interface StringReplacer {
-        public String replace(final String matchedMacro, final String newValue);
+    public interface StringReplacer {
+        String replace(final String matchedMacro, final String newValue);
     }
 
     public static class URLEncoderReplacer implements StringReplacer {

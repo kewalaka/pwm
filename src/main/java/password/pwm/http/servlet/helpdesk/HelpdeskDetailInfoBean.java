@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ public class HelpdeskDetailInfoBean implements Serializable {
 
     private Date lastLoginTime;
     private List<UserAuditRecord> userHistory;
-    private Map<FormConfiguration, String> searchDetails;
+    private Map<FormConfiguration, List<String>> searchDetails;
     private String passwordSetDelta;
 
     public String getUserDisplayName() {
@@ -92,11 +92,11 @@ public class HelpdeskDetailInfoBean implements Serializable {
         this.userHistory = userHistory;
     }
 
-    public Map<FormConfiguration, String> getSearchDetails() {
+    public Map<FormConfiguration, List<String>> getSearchDetails() {
         return searchDetails;
     }
 
-    public void setSearchDetails(Map<FormConfiguration, String> searchDetails) {
+    public void setSearchDetails(Map<FormConfiguration, List<String>> searchDetails) {
         this.searchDetails = searchDetails;
     }
 

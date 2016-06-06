@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,22 +30,28 @@ import com.novell.ldapchai.exception.ChaiUnavailableException;
 import password.pwm.AppProperty;
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
-import password.pwm.bean.PublicUserInfoBean;
+import password.pwm.bean.SessionLabel;
 import password.pwm.bean.UserInfoBean;
+import password.pwm.bean.pub.PublicUserInfoBean;
 import password.pwm.config.Configuration;
 import password.pwm.config.PwmSetting;
 import password.pwm.config.option.ADPolicyComplexity;
 import password.pwm.config.profile.PwmPasswordPolicy;
+import password.pwm.config.profile.PwmPasswordPolicy.RuleHelper;
 import password.pwm.config.profile.PwmPasswordRule;
 import password.pwm.error.*;
 import password.pwm.svc.PwmService;
 import password.pwm.svc.stats.Statistic;
 import password.pwm.util.logging.PwmLogger;
+import password.pwm.util.macro.MacroMachine;
 import password.pwm.util.operations.PasswordUtility;
 import password.pwm.ws.client.rest.RestClientHelper;
 
 import java.util.*;
 import java.util.regex.Pattern;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 
 public class PwmPasswordRuleValidator {
 
@@ -168,6 +174,9 @@ public class PwmPasswordRuleValidator {
 
         final List<ErrorInformation> errorList = new ArrayList<>();
         final PwmPasswordPolicy.RuleHelper ruleHelper = policy.getRuleHelper();
+        final MacroMachine macroMachine = uiBean == null || uiBean.getUserIdentity() == null
+            ? MacroMachine.forNonUserSpecific(pwmApplication, SessionLabel.SYSTEM_LABEL)
+            : MacroMachine.forUser(pwmApplication, PwmConstants.DEFAULT_LOCALE, SessionLabel.SYSTEM_LABEL, uiBean.getUserIdentity());
 
         //check against old password
         if (oldPasswordString != null && oldPasswordString.length() > 0 && ruleHelper.readBooleanValue(PwmPasswordRule.DisallowCurrent)) {
@@ -216,9 +225,12 @@ public class PwmPasswordRuleValidator {
 
             for (final String loopValue : paramValues) {
                 if (loopValue != null && loopValue.length() > 0) {
-                    final String loweredLoop = loopValue.toLowerCase();
-                    if (lcasePwd.contains(loweredLoop)) {
-                        errorList.add(new ErrorInformation(PwmError.PASSWORD_USING_DISALLOWED_VALUE));
+                    final String expandedValue = macroMachine.expandMacros(loopValue);
+                    if (StringUtils.isNotBlank(expandedValue)) {
+                        final String loweredLoop = expandedValue.toLowerCase();
+                        if (lcasePwd.contains(loweredLoop)) {
+                            errorList.add(new ErrorInformation(PwmError.PASSWORD_USING_DISALLOWED));
+                        }
                     }
                 }
             }
@@ -230,23 +242,19 @@ public class PwmPasswordRuleValidator {
 
         // check disallowed attributes.
         if (!policy.getRuleHelper().getDisallowedAttributes().isEmpty()) {
-            final List paramConfigs = policy.getRuleHelper().getDisallowedAttributes();
+            final List<String> paramConfigs = policy.getRuleHelper().getDisallowedAttributes(RuleHelper.Flag.KeepThresholds);
             if (uiBean != null) {
                 final Map<String,String> userValues = uiBean.getCachedPasswordRuleAttributes();
-                final String lcasePwd = passwordString.toLowerCase();
-                for (final Object paramConfig : paramConfigs) {
-                    final String attr = (String) paramConfig;
-                    final String userValue = userValues.get(attr) == null ? "" : userValues.get(attr).toLowerCase();
 
-                    // if the password is greater then 1 char and the value is contained within it then disallow
-                    if (userValue.length() > 1 && lcasePwd.contains(userValue)) {
-                        LOGGER.trace("password rejected, same as user attr " + attr);
-                        errorList.add(new ErrorInformation(PwmError.PASSWORD_SAMEASATTR));
-                    }
+                for (final String paramConfig : paramConfigs) {
+                    final String[] parts = paramConfig.split(":");
 
-                    // if the password is 1 char and the value is the same then disallow
-                    if (lcasePwd.equalsIgnoreCase(userValue)) {
-                        LOGGER.trace("password rejected, same as user attr " + attr);
+                    final String attrName = parts[0];
+                    final String disallowedValue = StringUtils.defaultString(userValues.get(attrName));
+                    final int threshold = parts.length > 1 ? NumberUtils.toInt(parts[1]) : 0;
+
+                    if (containsDisallowedValue(passwordString, disallowedValue, threshold)) {
+                        LOGGER.trace("password rejected, same as user attr " + attrName);
                         errorList.add(new ErrorInformation(PwmError.PASSWORD_SAMEASATTR));
                     }
                 }
@@ -275,7 +283,7 @@ public class PwmPasswordRuleValidator {
         }
 
         // check regex matches.
-        for (final Pattern pattern : ruleHelper.getRegExMatch()) {
+        for (final Pattern pattern : ruleHelper.getRegExMatch(macroMachine)) {
             if (!pattern.matcher(passwordString).matches()) {
                 errorList.add(new ErrorInformation(PwmError.PASSWORD_INVALID_CHAR));
                 //LOGGER.trace(pwmSession, "password rejected, does not match configured regex pattern: " + pattern.toString());
@@ -287,7 +295,7 @@ public class PwmPasswordRuleValidator {
         }
 
         // check no-regex matches.
-        for (final Pattern pattern : ruleHelper.getRegExNoMatch()) {
+        for (final Pattern pattern : ruleHelper.getRegExNoMatch(macroMachine)) {
             if (pattern.matcher(passwordString).matches()) {
                 errorList.add(new ErrorInformation(PwmError.PASSWORD_INVALID_CHAR));
                 //LOGGER.trace(pwmSession, "password rejected, matches configured no-regex pattern: " + pattern.toString());
@@ -325,7 +333,7 @@ public class PwmPasswordRuleValidator {
         // check if the password is in the dictionary.
         if (ruleHelper.readBooleanValue(PwmPasswordRule.EnableWordlist)) {
             if (pwmApplication != null) {
-                if (pwmApplication.getWordlistManager().status() == PwmService.STATUS.OPEN) {
+                if (pwmApplication.getWordlistManager() != null && pwmApplication.getWordlistManager().status() == PwmService.STATUS.OPEN) {
                     final boolean found = pwmApplication.getWordlistManager().containsWord(passwordString);
 
                     if (found) {
@@ -364,7 +372,25 @@ public class PwmPasswordRuleValidator {
         return errorList;
     }
 
+    static boolean containsDisallowedValue(final String password, final String disallowedValue, final int threshold) {
+        if (StringUtils.isNotBlank(disallowedValue)) {
+            if (threshold > 0) {
+                if (disallowedValue.length() >= threshold) {
+                    final String[] disallowedValueChunks = StringUtil.createStringChunks(disallowedValue, threshold);
+                    for (final String chunk : disallowedValueChunks) {
+                        if (StringUtils.containsIgnoreCase(password, chunk)) {
+                            return true;
+                        }
+                    }
+                }
+            } else {
+                // No threshold?  Then the password can't contain the whole disallowed value
+                return StringUtils.containsIgnoreCase(password, disallowedValue);
+            }
+        }
 
+        return false;
+    }
 
     /**
      * Check a supplied password for it's validity according to AD complexity rules.
@@ -542,7 +568,8 @@ public class PwmPasswordRuleValidator {
             sendData.put("policy",policyData);
         }
         if (uiBean != null) {
-            final PublicUserInfoBean publicUserInfoBean = PublicUserInfoBean.fromUserInfoBean(uiBean, pwmApplication.getConfig(), locale);
+            MacroMachine macroMachine = MacroMachine.forUser(pwmApplication, PwmConstants.DEFAULT_LOCALE, SessionLabel.SYSTEM_LABEL, uiBean.getUserIdentity());
+            final PublicUserInfoBean publicUserInfoBean = PublicUserInfoBean.fromUserInfoBean(uiBean, pwmApplication.getConfig(), locale, macroMachine);
             sendData.put("userInfo", publicUserInfoBean);
         }
 
@@ -550,7 +577,7 @@ public class PwmPasswordRuleValidator {
         try {
             final String responseBody = RestClientHelper.makeOutboundRestWSCall(pwmApplication, locale, restURL,
                     jsonRequestBody);
-            final Map<String,Object> responseMap = JsonUtil.deserialize(responseBody, 
+            final Map<String,Object> responseMap = JsonUtil.deserialize(responseBody,
                     new TypeToken<Map<String, Object>>() {}
             );
             if (responseMap.containsKey(REST_RESPONSE_KEY_ERROR) && Boolean.parseBoolean(responseMap.get(
@@ -662,12 +689,12 @@ public class PwmPasswordRuleValidator {
             final int numberOfNonAlphaChars = charCounter.getNonAlphaCharCount();
 
             if (numberOfNonAlphaChars < ruleHelper.readIntValue(PwmPasswordRule.MinimumNonAlpha)) {
-                errorList.add(new ErrorInformation(PwmError.PASSWORD_NOT_ENOUGH_NON_ALPHA));
+                errorList.add(new ErrorInformation(PwmError.PASSWORD_NOT_ENOUGH_NONALPHA));
             }
 
             final int maxNonAlpha = ruleHelper.readIntValue(PwmPasswordRule.MaximumNonAlpha);
             if (maxNonAlpha > 0 && numberOfNonAlphaChars > maxNonAlpha) {
-                errorList.add(new ErrorInformation(PwmError.PASSWORD_TOO_MANY_NON_ALPHA));
+                errorList.add(new ErrorInformation(PwmError.PASSWORD_TOO_MANY_NONALPHA));
             }
         }
 
@@ -748,41 +775,36 @@ public class PwmPasswordRuleValidator {
         // check consecutive characters
         {
             final int maximumConsecutive = ruleHelper.readIntValue(PwmPasswordRule.MaximumConsecutive);
-            if (maximumConsecutive > 0 && passwordLength >= maximumConsecutive) {
-                final char[] lowerPassCharArray = password.toLowerCase().toCharArray();
-                boolean violated = false;
-                for (int position = 0; (position+maximumConsecutive <= lowerPassCharArray.length && !violated); position++) {
-                    int violationCharCount = 1;
-                    int direction = 0;
-                    int previousCharPoint = Character.codePointAt(lowerPassCharArray,position);
-
-                    for (int distance = 1; violationCharCount >= 0 && !violated; distance++) {
-                        int nextCharPoint = Character.codePointAt(lowerPassCharArray, position + distance);
-
-                        if ((direction == 0 || direction == 1) && (previousCharPoint == nextCharPoint +1)) {
-                            direction = 1;
-                            violationCharCount++;
-                        } else if ((direction == 0 || direction == -1) && (previousCharPoint == nextCharPoint -1)) {
-                            direction = -1;
-                            violationCharCount++;
-                        } else {
-                            violationCharCount = -1;
-                        }
-
-                        if (violationCharCount > maximumConsecutive) {
-                            violated= true;
-                        } else {
-                            previousCharPoint = nextCharPoint;
-                        }
-                    }
-                }
-                if (violated) {
-                    errorList.add(new ErrorInformation(PwmError.PASSWORD_TOO_MANY_CONSECUTIVE));
-                }
+            if (tooManyConsecutiveChars(password, maximumConsecutive)) {
+                errorList.add(new ErrorInformation(PwmError.PASSWORD_TOO_MANY_CONSECUTIVE));
             }
-
         }
 
         return errorList;
+    }
+
+    public static boolean tooManyConsecutiveChars(final String str, final int maximumConsecutive) {
+        if (str != null && maximumConsecutive > 1 && str.length() >= maximumConsecutive) {
+            final int[] codePoints = StringUtil.toCodePointArray(str.toLowerCase());
+
+            int lastCodePoint = -1;
+            int consecutiveCharCount = 1;
+
+            for (int i=0; i<codePoints.length; i++) {
+                if (codePoints[i] == lastCodePoint+1) {
+                    consecutiveCharCount++;
+                } else {
+                    consecutiveCharCount = 1;
+                }
+
+                lastCodePoint = codePoints[i];
+
+                if (consecutiveCharCount == maximumConsecutive) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

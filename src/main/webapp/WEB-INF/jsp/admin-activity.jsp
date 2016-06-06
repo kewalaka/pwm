@@ -1,13 +1,15 @@
 <%@ page import="password.pwm.error.PwmException" %>
+<%@ page import="password.pwm.http.tag.value.PwmValue" %>
 <%@ page import="password.pwm.i18n.Admin" %>
 <%@ page import="password.pwm.svc.intruder.RecordType" %>
 <%@ page import="password.pwm.util.LocaleHelper" %>
+<%@ page import="password.pwm.http.tag.conditional.PwmIfTest" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -35,10 +37,10 @@
         JspUtility.logError(pageContext, "error during page setup: " + e.getMessage());
     }
 %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="/WEB-INF/jsp/fragment/header.jsp" %>
 <body class="nihilo">
-<style nonce="<pwm:value name="cspNonce"/>" type="text/css">
+<style nonce="<pwm:value name="<%=PwmValue.cspNonce%>"/>" type="text/css">
     .analysisGrid {
         min-height: 55vh;
     }
@@ -53,13 +55,15 @@
     }
 </style>
 <div id="wrapper">
-    <jsp:include page="/WEB-INF/jsp/fragment/header-body.jsp">
-        <jsp:param name="pwm.PageName" value="User Activity"/>
+    <% String PageName = JspUtility.localizedString(pageContext,"Title_UserActivity",Admin.class);%>
+    <jsp:include page="/WEB-INF/jsp/fragment/header-body.jsp" flush="true" >
+        <jsp:param name="pwm.PageName" value="<%=PageName%>"/>
     </jsp:include>
     <div id="centerbody" class="wide">
+        <div id="page-content-title"><pwm:display key="Title_UserActivity" bundle="Admin" displayIfMissing="true"/></div>
         <%@ include file="fragment/admin-nav.jsp" %>
         <div data-dojo-type="dijit/layout/TabContainer" style="width: 100%; height: 100%;" data-dojo-props="doLayout: false, persist: true">
-            <div data-dojo-type="dijit/layout/ContentPane" title="<pwm:display key="Title_Sessions" bundle="Admin"/>" class="tabContent">
+            <div id="ActiveWebSessions" data-dojo-type="dijit/layout/ContentPane" title="<pwm:display key="Title_Sessions" bundle="Admin"/>" class="tabContent">
                 <div id="activeSessionGrid" class="analysisGrid">
                 </div>
                 <div style="text-align: center">
@@ -67,7 +71,7 @@
                            data-dojo-props="constraints:{min:10,max:10000000,pattern:'#'},smallDelta:100"/>
                     Rows
                     <button class="btn" type="button" id="button-activeSessionRefresh">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-refresh">&nbsp;</span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-refresh">&nbsp;</span></pwm:if>
                         <pwm:display key="Button_Refresh" bundle="Admin"/>
                     </button>
                     <pwm:script>
@@ -84,12 +88,12 @@
             </div>
             <% for (RecordType recordType : RecordType.values()) { %>
             <% String titleName = LocaleHelper.getLocalizedMessage(activity_pwmRequest.getLocale(),"IntruderRecordType_" + recordType.toString(), activity_pwmRequest.getConfig(), Admin.class); %>
-            <div data-dojo-type="dijit/layout/ContentPane" title="Intruders<br/><%=titleName%>" class="tabContent">
+            <div id="Intruders<%=titleName%>" data-dojo-type="dijit/layout/ContentPane" title="Intruders<br/><%=titleName%>" class="tabContent">
                 <div id="<%=recordType%>_Grid" class="analysisGrid">
                 </div>
             </div>
             <% } %>
-            <div data-dojo-type="dijit/layout/ContentPane" title="<pwm:display key="Title_Audit" bundle="Admin"/><br/><pwm:display key="Title_AuditUsers" bundle="Admin"/>" class="tabContent">
+            <div id="AuditUser" data-dojo-type="dijit/layout/ContentPane" title="<pwm:display key="Title_Audit" bundle="Admin"/><br/><pwm:display key="Title_AuditUsers" bundle="Admin"/>" class="tabContent">
                 <div id="auditUserGrid" class="analysisGrid">
                 </div>
                 <div style="text-align: center">
@@ -97,12 +101,12 @@
                            data-dojo-props="constraints:{min:10,max:10000000,pattern:'#'},smallDelta:100"/>
                     Rows
                     <button class="btn" type="button" id="button-refreshAuditUser">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-refresh">&nbsp;</span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-refresh">&nbsp;</span></pwm:if>
                         <pwm:display key="Button_Refresh" bundle="Admin"/>
                     </button>
                     <form action="<pwm:current-url/>" method="post" enctype="application/x-www-form-urlencoded">
                         <button type="submit" class="btn">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-download"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-download"></span></pwm:if>
                             <pwm:display key="Button_DownloadCSV" bundle="Admin"/>
                         </button>
                         <input type="hidden" name="processAction" value="downloadAuditLogCsv"/>
@@ -110,7 +114,7 @@
                     </form>
                 </div>
             </div>
-            <div data-dojo-type="dijit/layout/ContentPane" title="<pwm:display key="Title_Audit" bundle="Admin"/><br/><pwm:display key="Title_AuditHelpdesk" bundle="Admin"/>" class="tabContent">
+            <div id="AuditHelpdesk" data-dojo-type="dijit/layout/ContentPane" title="<pwm:display key="Title_Audit" bundle="Admin"/><br/><pwm:display key="Title_AuditHelpdesk" bundle="Admin"/>" class="tabContent">
                 <div id="auditHelpdeskGrid" class="analysisGrid">
                 </div>
                 <div style="text-align: center">
@@ -118,12 +122,12 @@
                            data-dojo-props="constraints:{min:10,max:10000000,pattern:'#'},smallDelta:100"/>
                     Rows
                     <button class="btn" type="button" id="button-refreshHelpdeskUser">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-refresh">&nbsp;</span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-refresh">&nbsp;</span></pwm:if>
                         <pwm:display key="Button_Refresh" bundle="Admin"/>
                     </button>
                     <form action="<pwm:current-url/>" method="post" enctype="application/x-www-form-urlencoded">
                         <button type="submit" class="btn">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-download"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-download"></span></pwm:if>
                             <pwm:display key="Button_DownloadCSV" bundle="Admin"/>
                         </button>
                         <input type="hidden" name="processAction" value="downloadAuditLogCsv"/>
@@ -131,7 +135,7 @@
                     </form>
                 </div>
             </div>
-            <div data-dojo-type="dijit/layout/ContentPane" title="<pwm:display key="Title_Audit" bundle="Admin"/><br/><pwm:display key="Title_AuditSystem" bundle="Admin"/>" class="tabContent">
+            <div id="AuditSystem" data-dojo-type="dijit/layout/ContentPane" title="<pwm:display key="Title_Audit" bundle="Admin"/><br/><pwm:display key="Title_AuditSystem" bundle="Admin"/>" class="tabContent">
                 <div id="auditSystemGrid" class="analysisGrid">
                 </div>
                 <div style="text-align: center">
@@ -139,12 +143,12 @@
                            data-dojo-props="constraints:{min:10,max:10000000,pattern:'#'},smallDelta:100"/>
                     Rows
                     <button class="btn" type="button" id="button-refreshSystemAudit">
-                        <pwm:if test="showIcons"><span class="btn-icon fa fa-refresh">&nbsp;</span></pwm:if>
+                        <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-refresh">&nbsp;</span></pwm:if>
                         <pwm:display key="Button_Refresh" bundle="Admin"/>
                     </button>
                     <form action="<pwm:current-url/>" method="post" enctype="application/x-www-form-urlencoded">
                         <button type="submit" class="btn">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-download"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-download"></span></pwm:if>
                             <pwm:display key="Button_DownloadCSV" bundle="Admin"/>
                         </button>
                         <input type="hidden" name="processAction" value="downloadAuditLogCsv"/>
@@ -160,7 +164,7 @@
                    data-dojo-props="constraints:{min:10,max:10000000,pattern:'#'},smallDelta:100"/>
             Rows
             <button class="btn" type="button" onclick="PWM_ADMIN.refreshIntruderGrid()">
-                <pwm:if test="showIcons"><span class="btn-icon fa fa-refresh">&nbsp;</span></pwm:if>
+                <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-refresh">&nbsp;</span></pwm:if>
                 <pwm:display key="Button_Refresh" bundle="Admin"/>
             </button>
         </div>
@@ -195,5 +199,3 @@
 <%@ include file="/WEB-INF/jsp/fragment/footer.jsp" %>
 </body>
 </html>
-
-

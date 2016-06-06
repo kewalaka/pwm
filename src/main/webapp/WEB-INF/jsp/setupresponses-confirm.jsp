@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -27,8 +27,8 @@
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<% final SetupResponsesBean responseBean = (SetupResponsesBean)JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.ModuleBean); %>
-<html dir="<pwm:LocaleOrientation/>">
+<% final SetupResponsesBean responseBean = (SetupResponsesBean)JspUtility.getAttribute(pageContext, PwmRequest.Attribute.ModuleBean); %>
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
@@ -36,6 +36,7 @@
         <jsp:param name="pwm.PageName" value="Title_ConfirmResponses"/>
     </jsp:include>
     <div id="centerbody">
+        <div id="page-content-title"><pwm:display key="Title_ConfirmResponses" displayIfMissing="true"/></div>
         <p><pwm:display key="Display_ConfirmResponses"/></p>
         <%@ include file="fragment/message.jsp" %>
         <br/>
@@ -47,7 +48,7 @@
         </h2>
 
         <p>
-            <span class="fa fa-chevron-circle-right"></span>
+            <span class="pwm-icon pwm-icon-chevron-circle-right"></span>
             <%= StringUtil.escapeHtml(responseText) %>
         </p>
         <% } %>
@@ -60,7 +61,7 @@
         </h2>
 
         <p>
-            <span class="fa fa-chevron-circle-right"></span>
+            <span class="pwm-icon pwm-icon-chevron-circle-right"></span>
             <%= StringUtil.escapeHtml(responseText) %>
         </p>
         <% } %>
@@ -69,7 +70,7 @@
             <form style="display: inline" action="<pwm:current-url/>" method="post" name="changeResponses"
                   enctype="application/x-www-form-urlencoded" class="pwm-form">
                 <button type="submit" name="confirm_btn" class="btn" id="confirm_btn">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-check"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-check"></span></pwm:if>
                     <pwm:display key="Button_ConfirmResponses"/>
                 </button>
                 <input type="hidden" name="processAction" value="confirmResponses"/>
@@ -78,7 +79,7 @@
             <form style="display: inline" action="<pwm:current-url/>" method="post" name="confirmResponses"
                   enctype="application/x-www-form-urlencoded" class="pwm-form">
                 <button type="submit" name="change_btn" class="btn" id="change_btn">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-backward"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-backward"></span></pwm:if>
                     <pwm:display key="Button_GoBack"/>
                 </button>
                 <input type="hidden" name="processAction" value="changeResponses"/>

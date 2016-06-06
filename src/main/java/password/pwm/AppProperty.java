@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,9 @@ public enum AppProperty {
 
     APPLICATION_FILELOCK_FILENAME                   ("application.fileLock.filename"),
     APPLICATION_FILELOCK_WAIT_SECONDS               ("application.fileLock.waitSeconds"),
+    APPLICATION_WORDLIST_RETRY_SECONDS              ("application.wordlistRetryImportSeconds"),
     AUDIT_EVENTS_EMAILFROM                          ("audit.events.emailFrom"),
+    AUDIT_EVENTS_EMAILSUBJECT                       ("audit.events.emailSubject"),
     AUDIT_VAULT_MAX_RECORDS                         ("audit.vault.maxRecords"),
     BACKUP_LOCATION                                 ("backup.path"),
     BACKUP_CONFIG_COUNT                             ("backup.config.count"),
@@ -58,6 +60,7 @@ public enum AppProperty {
     CONFIG_HISTORY_MAX_ITEMS                        ("config.login.history.maxEvents"),
     CONFIG_FILE_SCAN_FREQUENCY                      ("config.fileScanFrequencyMS"),
     CONFIG_NEWUSER_PASSWORD_POLICY_CACHE_MS         ("config.newuser.passwordPolicyCacheMS"),
+    CONFIG_THEME                                    ("config.theme"),
     CONFIG_EDITOR_QUERY_FILTER_TEST_LIMIT           ("configEditor.queryFilter.testLimit"),
     CONFIG_EDITOR_IDLE_TIMEOUT                      ("configEditor.idleTimeoutSeconds"),
     CONFIG_GUIDE_IDLE_TIMEOUT                       ("configGuide.idleTimeoutSeconds"),
@@ -70,7 +73,9 @@ public enum AppProperty {
     HTTP_RESOURCES_ENABLE_GZIP                      ("http.resources.gzip.enable"),
     HTTP_RESOURCES_ENABLE_PATH_NONCE                ("http.resources.pathNonceEnable"),
     HTTP_RESOURCES_NONCE_PATH_PREFIX                ("http.resources.pathNoncePrefix"),
+    HTTP_RESOURCES_WEBJAR_MAPPINGS                  ("http.resources.webjarMappings"),
     HTTP_RESOURCES_ZIP_FILES                        ("http.resources.zipFiles"),
+    HTTP_COOKIE_DEFAULT_SECURE_FLAG                 ("http.cookie.default.secureFlag"),
     HTTP_COOKIE_THEME_NAME                          ("http.cookie.theme.name"),
     HTTP_COOKIE_THEME_AGE                           ("http.cookie.theme.age"),
     HTTP_COOKIE_LOCALE_NAME                         ("http.cookie.locale.name"),
@@ -79,13 +84,17 @@ public enum AppProperty {
     HTTP_COOKIE_MAX_READ_LENGTH                     ("http.cookie.maxReadLength"),
     HTTP_COOKIE_CAPTCHA_SKIP_NAME                   ("http.cookie.captchaSkip.name"),
     HTTP_COOKIE_CAPTCHA_SKIP_AGE                    ("http.cookie.captchaSkip.age"),
-    HTTP_COOKIE_INSTANCE_GUID_NAME                  ("http.cookie.instanceGUID.name"),
-    HTTP_COOKIE_INSTANCE_GUID_AGE                   ("http.cookie.instanceGUID.age"),
     HTTP_COOKIE_LOGIN_NAME                          ("http.cookie.login.name"),
     HTTP_BASIC_AUTH_CHARSET                         ("http.basicAuth.charset"),
     HTTP_BODY_MAXREAD_LENGTH                        ("http.body.maxReadLength"),
+    HTTP_CLIENT_SOCKET_TIMEOUT_MS                   ("http.client.socketTimeoutMs"),
+    HTTP_CLIENT_CONNECT_TIMEOUT_MS                  ("http.client.connectTimeoutMs"),
+    HTTP_CLIENT_REQUEST_TIMEOUT_MS                  ("http.client.requestTimeoutMs"),
+    HTTP_CLIENT_PROMISCUOUS_WORDLIST_ENABLE         ("http.client.promiscuous.wordlist.enable"),
     HTTP_ENABLE_GZIP                                ("http.gzip.enable"),
     HTTP_ERRORS_ALLOW_HTML                          ("http.errors.allowHtml"),
+    HTTP_HEADER_SERVER                              ("http.header.server"),
+    HTTP_HEADER_SEND_CONTENT_LANGUAGE               ("http.header.sendContentLanguage"),
     HTTP_HEADER_SEND_XAMB                           ("http.header.sendXAmb"),
     HTTP_HEADER_SEND_XINSTANCE                      ("http.header.sendXInstance"),
     HTTP_HEADER_SEND_XNOISE                         ("http.header.sendXNoise"),
@@ -93,13 +102,16 @@ public enum AppProperty {
     HTTP_HEADER_SEND_XVERSION                       ("http.header.sendXVersion"),
     HTTP_HEADER_SEND_XCONTENTTYPEOPTIONS            ("http.header.sendXContentTypeOptions"),
     HTTP_HEADER_SEND_XXSSPROTECTION                 ("http.header.sendXXSSProtection"),
+    HTTP_HEADER_NOISE_LENGTH                        ("http.header.noise.length"),
+    HTTP_HEADER_CSP_NONCE_BYTES                     ("http.header.csp.nonce.bytes"),
     HTTP_PARAM_NAME_FORWARD_URL                     ("http.parameter.forward"),
     HTTP_PARAM_NAME_LOGOUT_URL                      ("http.parameter.logout"),
     HTTP_PARAM_NAME_THEME                           ("http.parameter.theme"),
     HTTP_PARAM_NAME_LOCALE                          ("http.parameter.locale"),
     HTTP_PARAM_NAME_PASSWORD_EXPIRED                ("http.parameter.passwordExpired"),
-    HTTP_PARAM_NAME_SSO_ENABLE                      ("http.parameter.ssoBypass"),
+    HTTP_PARAM_NAME_SSO_OVERRIDE                    ("http.parameter.ssoOverride"),
     HTTP_PARAM_MAX_READ_LENGTH                      ("http.parameter.maxReadLength"),
+    HTTP_PARAM_SESSION_VERIFICATION                 ("http.parameter.sessionVerification"),
     HTTP_PARAM_OAUTH_ACCESS_TOKEN                   ("http.parameter.oauth.accessToken"),
     HTTP_PARAM_OAUTH_ATTRIBUTES                     ("http.parameter.oauth.attributes"),
     HTTP_PARAM_OAUTH_CLIENT_ID                      ("http.parameter.oauth.clientID"),
@@ -113,33 +125,43 @@ public enum AppProperty {
     HTTP_DOWNLOAD_BUFFER_SIZE                       ("http.download.buffer.size"),
     HTTP_SESSION_RECYCLE_AT_AUTH                    ("http.session.recycleAtAuth"),
     HTTP_SESSION_VALIDATION_KEY_LENGTH              ("http.session.validationKeyLength"),
+    LOCALDB_AGGRESSIVE_COMPACT_ENABLED              ("localdb.aggressiveCompact.enabled"),
     LOCALDB_COMPRESSION_ENABLED                     ("localdb.compression.enabled"),
     LOCALDB_DECOMPRESSION_ENABLED                   ("localdb.decompression.enabled"),
     LOCALDB_COMPRESSION_MINSIZE                     ("localdb.compression.minSize"),
     LOCALDB_IMPLEMENTATION                          ("localdb.implementation"),
     LOCALDB_INIT_STRING                             ("localdb.initParameters"),
+    LOCALDB_LOGWRITER_BUFFER_SIZE                   ("localdb.logWriter.bufferSize"),
+    LOCALDB_LOGWRITER_MAX_BUFFER_WAIT_MS            ("localdb.logWriter.maxBufferWaitMs"),
+    LOCALDB_LOGWRITER_MAX_TRIM_SIZE                 ("localdb.logWriter.maxTrimSize"),
     MACRO_RANDOM_CHAR_MAX_LENGTH                    ("macro.randomChar.maxLength"),
     MACRO_LDAP_ATTR_CHAR_MAX_LENGTH                 ("macro.ldapAttr.maxLength"),
     NAAF_ID                                         ("naaf.id"),
     NAAF_SECRET                                     ("naaf.secret"),
     NAAF_SALT_LENGTH                                ("naaf.salt.length"),
 
-    
+
     /** Time intruder records exist in the intruder table before being deleted. */
     INTRUDER_RETENTION_TIME_MS                      ("intruder.retentionTimeMS"),
-    
+
     /** How often to cleanup the intruder table. */
     INTRUDER_CLEANUP_FREQUENCY_MS                   ("intruder.cleanupFrequencyMS"),
     INTRUDER_MIN_DELAY_PENALTY_MS                   ("intruder.minimumDelayPenaltyMS"),
     INTRUDER_MAX_DELAY_PENALTY_MS                   ("intruder.maximumDelayPenaltyMS"),
     INTRUDER_DELAY_PER_COUNT_MS                     ("intruder.delayPerCountMS"),
     INTRUDER_DELAY_MAX_JITTER_MS                    ("intruder.delayMaxJitterMS"),
-    HEALTH_MIN_CHECK_INTERVAL_SECONDS               ("health.minimumCheckIntervalSeconds"),
+    HEALTHCHECK_NOMINAL_CHECK_INTERVAL              ("healthCheck.nominalCheckIntervalSeconds"),
+    HEALTHCHECK_MIN_CHECK_INTERVAL                  ("healthCheck.minimumCheckIntervalSeconds"),
+    HEALTHCHECK_MAX_RECORD_AGE                      ("healthCheck.maximumRecordAgeSeconds"),
+    HEALTHCHECK_MAX_FORCE_WAIT                      ("healthCheck.maximumForceCheckWaitSeconds"),
     HEALTH_CERTIFICATE_WARN_SECONDS                 ("health.certificate.warnSeconds"),
     HEALTH_LDAP_CAUTION_DURATION_MS                 ("health.ldap.cautionDurationMS"),
     HEALTH_JAVA_MAX_THREADS                         ("health.java.maxThreads"),
     HEALTH_JAVA_MIN_HEAP_BYTES                      ("health.java.minHeapBytes"),
+    HELPDESK_TOKEN_MAX_AGE                          ("helpdesk.token.maxAgeSeconds"),
     HELPDESK_TOKEN_VALUE                            ("helpdesk.token.value"),
+    HELPDESK_VERIFICATION_INVALID_DELAY_MS          ("helpdesk.verification.invalid.delayMs"),
+    HELPDESK_VERIFICATION_TIMEOUT_SECONDS           ("helpdesk.verification.timeoutSeconds"),
     LDAP_CHAI_SETTINGS                              ("ldap.chaiSettings"),
     LDAP_CONNECTION_TIMEOUT                         ("ldap.connection.timeoutMS"),
     LDAP_PROFILE_RETRY_DELAY                        ("ldap.profile.retryDelayMS"),
@@ -161,17 +183,19 @@ public enum AppProperty {
     NMAS_THREADS_MIN_SECONDS                        ("nmas.threads.minSeconds"),
     NMAS_THREADS_MAX_SECONDS                        ("nmas.threads.maxSeconds"),
     NMAS_THREADS_WATCHDOG_FREQUENCY                 ("nmas.threads.watchdogFrequencyMs"),
+    NMAS_IGNORE_NMASCR_DURING_FORCECHECK            ("nmas.ignoreNmasCrDuringForceSetupCheck"),
     OAUTH_ID_REQUEST_TYPE                           ("oauth.id.requestType"),
     OAUTH_ID_ACCESS_GRANT_TYPE                      ("oauth.id.accessGrantType"),
     OAUTH_ID_REFRESH_GRANT_TYPE                     ("oauth.id.refreshGrantType"),
     OAUTH_ENABLE_TOKEN_REFRESH                      ("oauth.enableTokenRefresh"),
+    OAUTH_RETURN_URL_OVERRIDE                       ("oauth.returnUrlOverride"),
 
     /* Allows one older TOTP token - compensate for clock out of sync */
     TOTP_PAST_INTERVALS                             ("otp.totp.pastIntervals"),
-    
+
     /* Allows one newer TOTP token - compensate for clock out of sync */
     TOTP_FUTURE_INTERVALS                           ("otp.totp.futureIntervals"),
-    
+
     TOTP_INTERVAL                                   ("otp.totp.intervalSeconds"),
     OTP_TOKEN_LENGTH                                ("otp.token.length"),
     OTP_SALT_CHARLENGTH                             ("otp.salt.charLength"),
@@ -210,7 +234,9 @@ public enum AppProperty {
     SECURITY_RESPONSES_HASH_ITERATIONS              ("security.responses.hashIterations"),
     SECURITY_INPUT_TRIM                             ("security.input.trim"),
     SECURITY_INPUT_PASSWORD_TRIM                    ("security.input.password.trim"),
+    SECURITY_INPUT_THEME_MATCH_REGEX                ("security.input.themeMatchRegex"),
     SECURITY_WS_REST_CLIENT_KEY_LENGTH              ("security.ws.rest.clientKeyLength"),
+    SECURITY_WS_REST_SERVER_SECRET_HEADER           ("security.ws.rest.server.secretKeyHeader"),
     SECURITY_SHAREDHISTORY_HASH_ITERATIONS          ("security.sharedHistory.hashIterations"),
     SECURITY_SHAREDHISTORY_HASH_NAME                ("security.sharedHistory.hashName"),
     SECURITY_SHAREDHISTORY_CASE_INSENSITIVE         ("security.sharedHistory.caseInsensitive"),
@@ -226,11 +252,12 @@ public enum AppProperty {
     TOKEN_REMOVAL_DELAY_MS                          ("token.removalDelayMS"),
     TOKEN_PURGE_BATCH_SIZE                          ("token.purgeBatchSize"),
     TOKEN_MAX_UNIQUE_CREATE_ATTEMPTS                ("token.maxUniqueCreateAttempts"),
-    
+
     /** Regular expression to be used for matching URLs to be shortened by the URL Shortening Service Class. */
     URL_SHORTNER_URL_REGEX                          ("urlshortener.url.regex"),
     WORDLIST_BUILTIN_PATH                           ("wordlist.builtin.path"),
     WS_REST_CLIENT_PWRULE_HALTONERROR               ("ws.restClient.pwRule.haltOnError"),
+    ALLOW_MACRO_IN_REGEX_SETTING                    ("password.policy.allowMacroInRegexSetting"),
 
     ;
 

@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -117,13 +117,13 @@ public class ActivateUserServlet extends AbstractPwmServlet {
     protected void processAction(final PwmRequest pwmRequest)
             throws ServletException, ChaiUnavailableException, IOException, PwmUnrecoverableException
     {
-        //Fetch the session state bean.
+            //Fetch the session state bean.
         final PwmSession pwmSession = pwmRequest.getPwmSession();
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
 
         final Configuration config = pwmApplication.getConfig();
 
-        final ActivateUserBean activateUserBean = pwmSession.getActivateUserBean();
+        final ActivateUserBean activateUserBean = pwmApplication.getSessionStateService().getBean(pwmRequest, ActivateUserBean.class);
 
         if (!config.readSettingAsBoolean(PwmSetting.ACTIVATE_USER_ENABLE)) {
             final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_SERVICE_NOT_AVAILABLE,"activate user is not enabled");
@@ -131,7 +131,7 @@ public class ActivateUserServlet extends AbstractPwmServlet {
             return;
         }
 
-        if (pwmSession.getSessionStateBean().isAuthenticated()) {
+        if (pwmSession.isAuthenticated()) {
             final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_USERAUTHENTICATED);
             pwmRequest.respondWithError(errorInformation);
             return;
@@ -145,7 +145,6 @@ public class ActivateUserServlet extends AbstractPwmServlet {
                 return;
             }
         } else {
-            pwmRequest.validatePwmFormID();
             switch (action) {
                 case activate:
                     handleActivationRequest(pwmRequest);
@@ -156,9 +155,9 @@ public class ActivateUserServlet extends AbstractPwmServlet {
                     break;
 
                 case reset:
-                    pwmSession.clearSessionBean(ActivateUserBean.class);
-                    advanceToNextStage(pwmRequest);
-                    break;
+                    pwmApplication.getSessionStateService().clearBean(pwmRequest, ActivateUserBean.class);
+                    forwardToActivateUserForm(pwmRequest);
+                    return;
 
                 case agree:
                     handleAgreeRequest(pwmRequest, activateUserBean);
@@ -178,12 +177,12 @@ public class ActivateUserServlet extends AbstractPwmServlet {
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         final PwmSession pwmSession = pwmRequest.getPwmSession();
         final Configuration config = pwmApplication.getConfig();
-        final SessionStateBean ssBean = pwmSession.getSessionStateBean();
+        final LocalSessionStateBean ssBean = pwmSession.getSessionStateBean();
 
-        pwmSession.clearActivateUserBean();
+        pwmApplication.getSessionStateService().clearBean(pwmRequest, ActivateUserBean.class);
         final List<FormConfiguration> configuredActivationForm = config.readSettingAsForm(PwmSetting.ACTIVATE_USER_FORM);
 
-        Map<FormConfiguration,String> formValues = new HashMap();
+        Map<FormConfiguration,String> formValues = new HashMap<>();
         try {
             //read the values from the request
             formValues = FormUtility.readFormValuesFromRequest(pwmRequest, configuredActivationForm,
@@ -220,13 +219,13 @@ public class ActivateUserServlet extends AbstractPwmServlet {
             final List<UserPermission> userPermissions = config.readSettingAsUserPermission(PwmSetting.ACTIVATE_USER_QUERY_MATCH);
             if (!LdapPermissionTester.testUserPermissions(pwmApplication, pwmSession.getLabel(), userIdentity, userPermissions)) {
                 final String errorMsg = "user " + userIdentity + " attempted activation, but does not match query string";
-                final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_ACTIVATE_USER_NO_QUERY_MATCH, errorMsg);
+                final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_ACTIVATE_NO_PERMISSION, errorMsg);
                 pwmApplication.getIntruderManager().convenience().markUserIdentity(userIdentity, pwmSession);
                 pwmApplication.getIntruderManager().convenience().markAddressAndSession(pwmSession);
                 throw new PwmUnrecoverableException(errorInformation);
             }
 
-            final ActivateUserBean activateUserBean = pwmSession.getActivateUserBean();
+            final ActivateUserBean activateUserBean = pwmApplication.getSessionStateService().getBean(pwmRequest, ActivateUserBean.class);
             activateUserBean.setUserIdentity(userIdentity);
             activateUserBean.setFormValidated(true);
             pwmApplication.getIntruderManager().convenience().clearAttributes(formValues);
@@ -269,7 +268,7 @@ public class ActivateUserServlet extends AbstractPwmServlet {
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         final PwmSession pwmSession = pwmRequest.getPwmSession();
         final Configuration config = pwmApplication.getConfig();
-        final ActivateUserBean activateUserBean = pwmSession.getActivateUserBean();
+        final ActivateUserBean activateUserBean = pwmApplication.getSessionStateService().getBean(pwmRequest, ActivateUserBean.class);
 
         if (!activateUserBean.isFormValidated() || activateUserBean.getUserIdentity() == null) {
             forwardToActivateUserForm(pwmRequest);
@@ -311,7 +310,7 @@ public class ActivateUserServlet extends AbstractPwmServlet {
 
         try {
             activateUser(pwmRequest, activateUserBean.getUserIdentity());
-            pwmRequest.forwardToSuccessPage(Message.Success_ActivateUser);
+            pwmRequest.getPwmResponse().forwardToSuccessPage(Message.Success_ActivateUser);
         } catch (PwmOperationalException e) {
             LOGGER.debug(pwmRequest, e.getErrorInformation());
             pwmApplication.getIntruderManager().convenience().markUserIdentity(activateUserBean.getUserIdentity(),pwmSession);
@@ -361,16 +360,13 @@ public class ActivateUserServlet extends AbstractPwmServlet {
             sessionAuthenticator.authUserWithUnknownPassword(userIdentity,AuthenticationType.AUTH_FROM_PUBLIC_MODULE);
 
             //ensure a change password is triggered
-            pwmSession.getLoginInfoBean().setAuthenticationType(AuthenticationType.AUTH_FROM_PUBLIC_MODULE);
-            pwmSession.getLoginInfoBean().getAuthenticationFlags().add(AuthenticationType.AUTH_FROM_PUBLIC_MODULE);
+            pwmSession.getLoginInfoBean().setType(AuthenticationType.AUTH_FROM_PUBLIC_MODULE);
+            pwmSession.getLoginInfoBean().getAuthFlags().add(AuthenticationType.AUTH_FROM_PUBLIC_MODULE);
             pwmSession.getUserInfoBean().setRequiresNewPassword(true);
 
 
             // mark the event log
             pwmApplication.getAuditManager().submit(AuditEvent.ACTIVATE_USER, pwmSession.getUserInfoBean(), pwmSession);
-
-            // set the session success message
-            pwmSession.getSessionStateBean().setSessionSuccess(Message.Success_ActivateUser, null);
 
             // update the stats bean
             pwmApplication.getStatisticsManager().incrementValue(Statistic.ACTIVATED_USERS);
@@ -446,14 +442,14 @@ public class ActivateUserServlet extends AbstractPwmServlet {
                 try {
                     if (!chaiUser.compareStringAttribute(attrName, value)) {
                         final String errorMsg = "incorrect value for '" + attrName + "'";
-                        final ErrorInformation errorInfo = new ErrorInformation(PwmError.ERROR_ACTIVATION_VALIDATION_FAILED, errorMsg, new String[]{attrName});
+                        final ErrorInformation errorInfo = new ErrorInformation(PwmError.ERROR_ACTIVATION_VALIDATIONFAIL, errorMsg, new String[]{attrName});
                         LOGGER.debug(pwmSession.getLabel(), errorInfo.toDebugStr());
                         throw new PwmDataValidationException(errorInfo);
                     }
                     LOGGER.trace(pwmSession.getLabel(), "successful validation of ldap value for '" + attrName + "'");
                 } catch (ChaiOperationException e) {
                     LOGGER.error(pwmSession.getLabel(), "error during param validation of '" + attrName + "', error: " + e.getMessage());
-                    throw new PwmDataValidationException(new ErrorInformation(PwmError.ERROR_ACTIVATION_VALIDATION_FAILED, "ldap error testing value for '" + attrName + "'", new String[]{attrName}));
+                    throw new PwmDataValidationException(new ErrorInformation(PwmError.ERROR_ACTIVATION_VALIDATIONFAIL, "ldap error testing value for '" + attrName + "'", new String[]{attrName}));
                 }
             }
         }
@@ -564,7 +560,7 @@ public class ActivateUserServlet extends AbstractPwmServlet {
     {
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         final PwmSession pwmSession = pwmRequest.getPwmSession();
-        final ActivateUserBean activateUserBean = pwmSession.getActivateUserBean();
+        final ActivateUserBean activateUserBean = pwmApplication.getSessionStateService().getBean(pwmRequest, ActivateUserBean.class);
         final Configuration config = pwmApplication.getConfig();
 
         final RestTokenDataClient.TokenDestinationData inputTokenDestData;
@@ -624,7 +620,6 @@ public class ActivateUserServlet extends AbstractPwmServlet {
         try {
             tokenPayload = pwmApplication.getTokenService().createTokenPayload(TokenType.ACTIVATION, tokenMapData, userIdentity, destinationValues);
             tokenKey = pwmApplication.getTokenService().generateNewToken(tokenPayload, pwmRequest.getSessionLabel());
-            LOGGER.debug(pwmSession.getLabel(), "generated activate user tokenKey code for session");
         } catch (PwmOperationalException e) {
             throw new PwmUnrecoverableException(e.getErrorInformation());
         }
@@ -641,7 +636,7 @@ public class ActivateUserServlet extends AbstractPwmServlet {
     {
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         final PwmSession pwmSession = pwmRequest.getPwmSession();
-        final ActivateUserBean activateUserBean = pwmSession.getActivateUserBean();
+        final ActivateUserBean activateUserBean = pwmApplication.getSessionStateService().getBean(pwmRequest, ActivateUserBean.class);
         final String userEnteredCode = pwmRequest.readParameterAsString(PwmConstants.PARAM_TOKEN);
 
         ErrorInformation errorInformation = null;

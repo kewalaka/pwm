@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,17 +24,15 @@ package password.pwm.http.servlet;
 
 import com.novell.ldapchai.exception.ChaiUnavailableException;
 import password.pwm.PwmConstants;
-import password.pwm.Validator;
+import password.pwm.util.Validator;
 import password.pwm.bean.UserIdentity;
 import password.pwm.error.*;
 import password.pwm.http.HttpMethod;
 import password.pwm.http.PwmRequest;
 import password.pwm.http.PwmURL;
-import password.pwm.http.ServletHelper;
 import password.pwm.ldap.auth.AuthenticationType;
 import password.pwm.ldap.auth.PwmAuthenticationSource;
 import password.pwm.ldap.auth.SessionAuthenticator;
-import password.pwm.util.LoginCookieManager;
 import password.pwm.util.PasswordData;
 import password.pwm.util.logging.PwmLogger;
 import password.pwm.ws.server.RestResultBean;
@@ -103,7 +101,7 @@ public class LoginServlet extends AbstractPwmServlet {
             throws ServletException, IOException, ChaiUnavailableException, PwmUnrecoverableException
     {
         final boolean passwordOnly = pwmRequest.isAuthenticated() &&
-                pwmRequest.getPwmSession().getLoginInfoBean().getAuthenticationType() == AuthenticationType.AUTH_WITHOUT_PASSWORD;
+                pwmRequest.getPwmSession().getLoginInfoBean().getType() == AuthenticationType.AUTH_WITHOUT_PASSWORD;
 
         final LoginServletAction action = readProcessAction(pwmRequest);
 
@@ -161,7 +159,10 @@ public class LoginServlet extends AbstractPwmServlet {
         }
 
         final String username = valueMap.get(PwmConstants.PARAM_USERNAME);
-        final PasswordData password = new PasswordData(valueMap.get(PwmConstants.PARAM_PASSWORD));
+        final String passwordStr = valueMap.get(PwmConstants.PARAM_PASSWORD);
+        final PasswordData password = passwordStr != null && passwordStr.length() > 0
+                ? new PasswordData(passwordStr)
+                : null;
         final String context = valueMap.get(PwmConstants.PARAM_CONTEXT);
         final String ldapProfile = valueMap.get(PwmConstants.PARAM_LDAP_PROFILE);
 
@@ -216,9 +217,6 @@ public class LoginServlet extends AbstractPwmServlet {
 
         // recycle the session to prevent session fixation attack.
         pwmRequest.getPwmSession().getSessionStateBean().setSessionIdRecycleNeeded(true);
-
-        LoginCookieManager.writeLoginCookieToResponse(pwmRequest);
-
     }
 
     private void forwardToJSP(
@@ -260,7 +258,7 @@ public class LoginServlet extends AbstractPwmServlet {
 
         final String encryptedRedirUrl = pwmRequest.getPwmApplication().getSecureService().encryptToString(originalRequestedUrl);
 
-        final String redirectUrl = ServletHelper.appendAndEncodeUrlParameters(
+        final String redirectUrl = PwmURL.appendAndEncodeUrlParameters(
                 pwmRequest.getContextPath() + PwmServletDefinition.Login.servletUrl(),
                 Collections.singletonMap(PwmConstants.PARAM_POST_LOGIN_URL, encryptedRedirUrl)
         );

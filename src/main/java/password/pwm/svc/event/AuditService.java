@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@ package password.pwm.svc.event;
 import org.apache.commons.csv.CSVPrinter;
 import password.pwm.AppProperty;
 import password.pwm.PwmApplication;
+import password.pwm.PwmApplicationMode;
 import password.pwm.PwmConstants;
 import password.pwm.bean.EmailItemBean;
 import password.pwm.bean.SessionLabel;
@@ -41,10 +42,7 @@ import password.pwm.health.HealthTopic;
 import password.pwm.http.PwmSession;
 import password.pwm.ldap.LdapOperationsHelper;
 import password.pwm.svc.PwmService;
-import password.pwm.util.Helper;
-import password.pwm.util.JsonUtil;
-import password.pwm.util.LocaleHelper;
-import password.pwm.util.TimeDuration;
+import password.pwm.util.*;
 import password.pwm.util.localdb.LocalDB;
 import password.pwm.util.logging.PwmLogger;
 import password.pwm.util.macro.MacroMachine;
@@ -190,7 +188,7 @@ public class AuditService implements PwmService {
 
         settings = new AuditSettings(pwmApplication.getConfig());
 
-        if (pwmApplication.getApplicationMode() == null || pwmApplication.getApplicationMode() == PwmApplication.MODE.READ_ONLY) {
+        if (pwmApplication.getApplicationMode() == null || pwmApplication.getApplicationMode() == PwmApplicationMode.READ_ONLY) {
             this.status = STATUS.CLOSED;
             LOGGER.warn("unable to start - Application is in read-only mode");
             return;
@@ -256,7 +254,7 @@ public class AuditService implements PwmService {
                     maxRecordAge
             );
 
-            if (pwmApplication.getLocalDB() != null && pwmApplication.getApplicationMode() != PwmApplication.MODE.READ_ONLY) {
+            if (pwmApplication.getLocalDB() != null && pwmApplication.getApplicationMode() != PwmApplicationMode.READ_ONLY) {
                 auditVault = new LocalDbAuditVault(pwmApplication, pwmApplication.getLocalDB());
                 auditVault.init(settings);
             }
@@ -325,6 +323,7 @@ public class AuditService implements PwmService {
                 break;
 
             case USER:
+            case HELPDESK:
                 for (final String toAddress : settings.getUserEmailAddresses()) {
                     sendAsEmail(pwmApplication, null, record, toAddress, settings.getAlertFromAddress());
                 }
@@ -342,21 +341,19 @@ public class AuditService implements PwmService {
     )
             throws PwmUnrecoverableException
     {
-        final String subject = PwmConstants.PWM_APP_NAME + " - Audit Event - " + record.getEventCode().toString();
+        final MacroMachine macroMachine = MacroMachine.forNonUserSpecific(pwmApplication, sessionLabel);
 
-        final StringBuilder body = new StringBuilder();
-        final String jsonRecord = JsonUtil.serialize(record);
-        final Map<String,Object> mapRecord = JsonUtil.deserializeMap(jsonRecord);
+        String subject = macroMachine.expandMacros(pwmApplication.getConfig().readAppProperty(AppProperty.AUDIT_EVENTS_EMAILSUBJECT));
+        subject = subject.replace("%EVENT%", record.getEventCode().getLocalizedString(pwmApplication.getConfig(), PwmConstants.DEFAULT_LOCALE));
 
-        for (final String key : mapRecord.keySet()) {
-            body.append(key);
-            body.append("=");
-            body.append(mapRecord.get(key));
-            body.append("\n");
+        final String body;
+        {
+            final String jsonRecord = JsonUtil.serialize(record);
+            final Map<String,Object> mapRecord = JsonUtil.deserializeMap(jsonRecord);
+            body = StringUtil.mapToString(mapRecord, "=", "\n");
         }
 
-        final EmailItemBean emailItem = new EmailItemBean(toAddress, fromAddress, subject, body.toString(), null);
-        final MacroMachine macroMachine = MacroMachine.forNonUserSpecific(pwmApplication, sessionLabel);
+        final EmailItemBean emailItem = new EmailItemBean(toAddress, fromAddress, subject, body, null);
         pwmApplication.getEmailQueue().submitEmail(emailItem, null, macroMachine);
     }
 
@@ -411,7 +408,7 @@ public class AuditService implements PwmService {
         if (auditRecord instanceof UserAuditRecord) {
             if (settings.getUserStoredEvents().contains(auditRecord.getEventCode())) {
                 userHistoryStore.updateUserHistory((UserAuditRecord) auditRecord);
-        }
+            }
         }
 
         // send to syslog

@@ -1,11 +1,12 @@
 <%@ page import="password.pwm.http.bean.ConfigGuideBean" %>
 <%@ page import="password.pwm.http.servlet.configguide.ConfigGuideServlet" %>
+<%@ page import="password.pwm.http.JspUtility" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -22,7 +23,7 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<% ConfigGuideBean headerCgb = JspUtility.getPwmSession(pageContext).getSessionBean(ConfigGuideBean.class);%>
+<% ConfigGuideBean headerCgb = JspUtility.getSessionBean(pageContext, ConfigGuideBean.class);%>
 <% float pctComplete = ConfigGuideServlet.stepProgress(headerCgb.getStep()).asFloat(); %>
 <div id="header">
     <div id="header-center">
@@ -31,4 +32,9 @@
         </div>
     </div>
 </div>
+<pwm:script-ref url="/public/resources/js/configguide.js"/>
+<pwm:script-ref url="/public/resources/js/configmanager.js"/>
+<pwm:script-ref url="/public/resources/js/configeditor.js"/>
+<pwm:script-ref url="/public/resources/js/admin.js"/>
+<pwm:script-ref url="/public/resources/js/uilibrary.js"/>
 <progress style="opacity: 0.5; width:96%; height:7px; padding: 0; margin: 0 1%;" value="<%=pctComplete%>" max="100"></progress>

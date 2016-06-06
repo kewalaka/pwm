@@ -1,3 +1,4 @@
+<%@ page import="password.pwm.PwmEnvironment" %>
 <%@ page import="password.pwm.http.servlet.configguide.ConfigGuideForm" %>
 <%@ page import="password.pwm.util.StringUtil" %>
 <%@ page import="password.pwm.util.X509Utils" %>
@@ -7,10 +8,10 @@
 <%@ page import="java.security.cert.X509Certificate" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -27,17 +28,15 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_LOCALE); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_THEME); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_LOCALE); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.INCLUDE_CONFIG_CSS); %>
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
-<% ConfigGuideBean configGuideBean = JspUtility.getPwmSession(pageContext).getSessionBean(ConfigGuideBean.class);%>
-<% boolean enableNext = configGuideBean.isCertsTrustedbyKeystore() || configGuideBean.isUseConfiguredCerts() || configGuideBean.getLdapCertificates() == null; %>
+<% ConfigGuideBean configGuideBean = JspUtility.getSessionBean(pageContext, ConfigGuideBean.class);%>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
-<link href="<pwm:context/><pwm:url url='/public/resources/configStyle.css'/>" rel="stylesheet" type="text/css"/>
 <div id="wrapper">
     <%@ include file="fragment/configguide-header.jsp"%>
     <div id="centerbody">
@@ -101,6 +100,7 @@
             <div id="outline_ldapcert-options" class="setting_outline">
                 <div class="setting_title">Certificate Settings</div>
                 <div class="setting_body">
+                    <% if (!JspUtility.getPwmRequest(pageContext).getPwmApplication().getPwmEnvironment().getFlags().contains(PwmEnvironment.ApplicationFlag.Appliance)) { %>
                     <div style="padding-left: 5px; padding-top: 5px">
                         At least one of the following options must be selected to continue.
                     </div>
@@ -114,8 +114,9 @@
                         (Import/remove certificate manually into Java keystore to change)
                     </div>
                     <br/>
+                    <% } %>
                     <div id="titlePane_useConfig" style="padding-left: 5px; padding-top: 5px">
-                        Use application to manage certificate(s) and automatically import certificates into configuration file
+                        Use application to manage certificate(s) and import certificates into configuration file
                         <br/>
                         <label class="checkboxWrapper">
                             <input type="checkbox" id="useConfig" name="useConfig" <%=configGuideBean.isUseConfiguredCerts() ? "checked" : ""%>/> Enabled
@@ -148,7 +149,7 @@
 
         function checkIfNextEnabled() {
             var useConfigChecked = PWM_MAIN.getObject('useConfig').checked;
-            var defaultTrustStoreChecked = PWM_MAIN.getObject('defaultTrustStore').checked;
+            var defaultTrustStoreChecked = PWM_MAIN.getObject('defaultTrustStore') && PWM_MAIN.getObject('defaultTrustStore').checked;
 
             if (useConfigChecked || defaultTrustStoreChecked) {
                 PWM_MAIN.getObject('button_next').disabled = false;
@@ -159,9 +160,6 @@
 
     </script>
 </pwm:script>
-<pwm:script-ref url="/public/resources/js/configguide.js"/>
-<pwm:script-ref url="/public/resources/js/configmanager.js"/>
-<pwm:script-ref url="/public/resources/js/admin.js"/>
 <%@ include file="fragment/footer.jsp" %>
 </body>
 </html>

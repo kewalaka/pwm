@@ -1,9 +1,9 @@
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -28,18 +28,20 @@
 <%@ page import="password.pwm.config.FormConfiguration" %>
 <%@ page import="password.pwm.config.PwmSetting" %>
 <%@ page import="password.pwm.config.option.HelpdeskUIMode" %>
-<%@ page import="password.pwm.config.option.MessageSendMethod" %>
 <%@ page import="password.pwm.config.option.ViewStatusFields" %>
 <%@ page import="password.pwm.config.profile.HelpdeskProfile" %>
 <%@ page import="password.pwm.config.profile.PwmPasswordRule" %>
+<%@ page import="password.pwm.http.PwmSession" %>
 <%@ page import="password.pwm.http.servlet.helpdesk.HelpdeskDetailInfoBean" %>
 <%@ page import="password.pwm.http.tag.PasswordRequirementsTag" %>
 <%@ page import="password.pwm.i18n.Display" %>
 <%@ page import="password.pwm.svc.event.UserAuditRecord" %>
 <%@ page import="password.pwm.util.StringUtil" %>
 <%@ page import="password.pwm.util.TimeDuration" %>
+<%@ page import="password.pwm.util.macro.MacroMachine" %>
 <%@ page import="java.text.DateFormat" %>
 <%@ page import="java.util.Date" %>
+<%@ page import="java.util.Iterator" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Set" %>
 <!DOCTYPE html>
@@ -54,14 +56,15 @@
     final HelpdeskUIMode SETTING_PW_UI_MODE = HelpdeskUIMode.valueOf(helpdeskProfile.readSettingAsString(PwmSetting.HELPDESK_SET_PASSWORD_MODE));
 
     // user info
-    final HelpdeskDetailInfoBean helpdeskDetailInfoBean = (HelpdeskDetailInfoBean)pwmRequest.getAttribute(PwmConstants.REQUEST_ATTR.HelpdeskDetail);
+    final HelpdeskDetailInfoBean helpdeskDetailInfoBean = (HelpdeskDetailInfoBean)pwmRequest.getAttribute(PwmRequest.Attribute.HelpdeskDetail);
     final UserInfoBean searchedUserInfo = helpdeskDetailInfoBean.getUserInfoBean();
     final ResponseInfoBean responseInfoBean = searchedUserInfo.getResponseInfoBean();
+
     final String displayName = helpdeskDetailInfoBean.getUserDisplayName();
     final Set<ViewStatusFields> viewStatusFields = helpdeskProfile.readSettingAsOptionList(PwmSetting.HELPDESK_VIEW_STATUS_VALUES,ViewStatusFields.class);
     final boolean hasOtp = searchedUserInfo.getOtpUserRecord() != null;
 %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="/WEB-INF/jsp/fragment/header.jsp" %>
 <body class="nihilo">
 <div id="wrapper">
@@ -69,14 +72,15 @@
         <jsp:param name="pwm.PageName" value="Title_Helpdesk"/>
     </jsp:include>
     <div id="centerbody" style="min-width: 800px">
+        <div id="page-content-title"><pwm:display key="Title_Helpdesk" displayIfMissing="true"/></div>
         <% if (displayName != null && !displayName.isEmpty()) { %>
         <h2 style="text-align: center"><%=displayName%></h2>
         <% } %>
         <pwm:script>
             <script type="text/javascript">
                 PWM_GLOBAL['startupFunctions'].push(function(){
-                    PWM_VAR["helpdesk_obfuscatedDN"] = '<%=JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.HelpdeskObfuscatedDN)%>';
-                    PWM_VAR["helpdesk_username"] = '<%=JspUtility.getAttribute(pageContext, PwmConstants.REQUEST_ATTR.HelpdeskUsername)%>';
+                    PWM_VAR["helpdesk_obfuscatedDN"] = '<%=JspUtility.getAttribute(pageContext, PwmRequest.Attribute.HelpdeskObfuscatedDN)%>';
+                    PWM_VAR["helpdesk_username"] = '<%=JspUtility.getAttribute(pageContext, PwmRequest.Attribute.HelpdeskUsername)%>';
                 });
             </script>
         </pwm:script>
@@ -85,24 +89,27 @@
             <tr>
                 <td style="border:0; width: 600px; max-width:600px; vertical-align: top">
                     <div id="panel-helpdesk-detail" data-dojo-type="dijit.layout.TabContainer" style="max-width: 600px; height: 100%;" data-dojo-props="doLayout: false, persist: true" >
-                        <div data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Field_Profile"/>" class="tabContent">
+                        <div id="Field_Profile" data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Field_Profile"/>" class="tabContent">
                             <div style="max-height: 400px; overflow: auto;">
                                 <table class="nomargin">
                                     <% for (FormConfiguration formItem : helpdeskDetailInfoBean.getSearchDetails().keySet()) { %>
                                     <tr>
-                                        <td class="key" id="key_<%=formItem.getName()%>">
+                                        <td class="key" id="key_<%=StringUtil.escapeHtml(formItem.getName())%>" title="<%=StringUtil.escapeHtml(formItem.getDescription(pwmRequest.getLocale()))%>">
                                             <%= formItem.getLabel(pwmSession.getSessionStateBean().getLocale())%>
                                         </td>
                                         <td id="value_<%=formItem.getName()%>">
-                                            <% final String loopValue = helpdeskDetailInfoBean.getSearchDetails().get(formItem); %>
+                                            <% for (Iterator<String> iter = helpdeskDetailInfoBean.getSearchDetails().get(formItem).iterator(); iter.hasNext(); ) { %>
+                                            <% final String loopValue = iter.next(); %>
                                             <%= loopValue == null ? "" : StringUtil.escapeHtml(loopValue) %>
+                                            <% if (iter.hasNext()) { %> <br/> <% } %>
+                                            <% } %>
                                         </td>
                                     </tr>
                                     <%  } %>
                                 </table>
                             </div>
                         </div>
-                        <div data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Title_Status"/>" class="tabContent">
+                        <div id="Title_Status" data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Title_Status"/>" class="tabContent">
                             <table class="nomargin">
                                 <% if (viewStatusFields.contains(ViewStatusFields.UserDN)) { %>
                                 <tr>
@@ -361,7 +368,7 @@
                                     <% } %>
                                 </tr>
                                 <% } %>
-                                <pwm:if test="otpEnabled">
+                                <pwm:if test="<%=PwmIfTest.otpEnabled%>">
                                     <% if (viewStatusFields.contains(ViewStatusFields.OTPStored)) { %>
                                     <tr>
                                         <td class="key">
@@ -402,7 +409,7 @@
                             </table>
                         </div>
                         <% if (helpdeskDetailInfoBean.getUserHistory() != null && !helpdeskDetailInfoBean.getUserHistory().isEmpty()) { %>
-                        <div data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Title_UserEventHistory"/>" class="tabContent">
+                        <div id="Title_UserEventHistory" data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Title_UserEventHistory"/>" class="tabContent">
                             <div style="max-height: 400px; overflow: auto;">
                                 <table class="nomargin">
                                     <% for (final UserAuditRecord record : helpdeskDetailInfoBean.getUserHistory()) { %>
@@ -420,7 +427,7 @@
                             </div>
                         </div>
                         <% } %>
-                        <div data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Title_PasswordPolicy"/>" class="tabContent">
+                        <div id="Title_PasswordPolicy" data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Title_PasswordPolicy"/>" class="tabContent">
                             <div style="max-height: 400px; overflow: auto;">
                                 <table class="nomargin">
                                     <tr>
@@ -456,7 +463,8 @@
                                         <td>
                                             <ul>
                                                 <%
-                                                    final List<String> requirementLines = PasswordRequirementsTag.getPasswordRequirementsStrings(searchedUserInfo.getPasswordPolicy(), ContextManager.getPwmApplication(session).getConfig(), pwmSession.getSessionStateBean().getLocale()); %>
+                                                    MacroMachine macroMachine = JspUtility.getPwmSession(pageContext).getSessionManager().getMacroMachine(ContextManager.getPwmApplication(session));
+                                                    final List<String> requirementLines = PasswordRequirementsTag.getPasswordRequirementsStrings(searchedUserInfo.getPasswordPolicy(), ContextManager.getPwmApplication(session).getConfig(), pwmSession.getSessionStateBean().getLocale(), macroMachine); %>
                                                 <% for (final String requirementLine : requirementLines) { %>
                                                 <li><%=requirementLine%>
                                                 </li>
@@ -490,7 +498,7 @@
                             </div>
                         </div>
                         <% if (responseInfoBean != null && responseInfoBean.getHelpdeskCrMap() != null && !responseInfoBean.getHelpdeskCrMap().isEmpty()) { %>
-                        <div data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Title_SecurityResponses"/>" class="tabContent">
+                        <div id="Title_SecurityResponses" data-dojo-type="dijit.layout.ContentPane" title="<pwm:display key="Title_SecurityResponses"/>" class="tabContent">
                             <table class="nomargin">
                                 <% for (final Challenge challenge : responseInfoBean.getHelpdeskCrMap().keySet()) { %>
                                 <tr>
@@ -507,34 +515,34 @@
                         <% } %>
                     </div>
                     <br/>
-                    <div class="footnote"><span class="timestamp"><%=PwmConstants.DEFAULT_DATETIME_FORMAT.format(new Date())%></span></div>
+                    <div class="footnote"><div class="timestamp"><%=PwmConstants.DEFAULT_DATETIME_FORMAT.format(new Date())%></div></div>
                 </td>
                 <td style="border:0; width: 200px; max-width:200px; text-align: left; vertical-align: top">
                     <div style="border:0; margin-top: 25px; margin-left: 5px">
                         <button name="button_continue" class="helpdesk-detail-btn btn" id="button_continue" autofocus>
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-backward"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-backward"></span></pwm:if>
                             <pwm:display key="Button_GoBack"/>
                         </button>
                         <button name="button_refresh" class="helpdesk-detail-btn btn" id="button_refresh">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-refresh"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-refresh"></span></pwm:if>
                             <pwm:display key="Display_CaptchaRefresh"/>
                         </button>
                         <br/><br/>
                         <% if (SETTING_PW_UI_MODE != HelpdeskUIMode.none) { %>
                         <button class="helpdesk-detail-btn btn" id="helpdesk_ChangePasswordButton">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-key"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-key"></span></pwm:if>
                             <pwm:display key="Button_ChangePassword"/>
                         </button>
                         <% } %>
                         <% if (helpdeskProfile.readSettingAsBoolean(PwmSetting.HELPDESK_ENABLE_UNLOCK)) { %>
                         <% if (helpdeskDetailInfoBean.isIntruderLocked()) { %>
                         <button id="helpdesk_unlockBtn" class="helpdesk-detail-btn btn">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-unlock"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-unlock"></span></pwm:if>
                             <pwm:display key="Button_Unlock"/>
                         </button>
                         <% } else { %>
                         <button id="helpdesk_unlockBtn" class="helpdesk-detail-btn btn" disabled="disabled">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-unlock"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-unlock"></span></pwm:if>
                             <pwm:display key="Button_Unlock"/>
                         </button>
                         <% } %>
@@ -542,12 +550,12 @@
                         <% if (helpdeskProfile.readSettingAsBoolean(PwmSetting.HELPDESK_CLEAR_RESPONSES_BUTTON)) { %>
                         <% if (responseInfoBean != null) { %>
                         <button id="helpdesk_clearResponsesBtn" class="helpdesk-detail-btn btn">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-eraser"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-eraser"></span></pwm:if>
                             <pwm:display key="Button_ClearResponses"/>
                         </button>
                         <% } else { %>
                         <button id="helpdesk_clearResponsesBtn" class="helpdesk-detail-btn btn" disabled="disabled">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-eraser"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-eraser"></span></pwm:if>
                             <pwm:display key="Button_ClearResponses"/>
                         </button>
                         <pwm:script>
@@ -565,38 +573,32 @@
                         <% if (helpdeskProfile.readSettingAsBoolean(PwmSetting.HELPDESK_CLEAR_OTP_BUTTON) && pwmRequest.getConfig().readSettingAsBoolean(PwmSetting.OTP_ENABLED)) { %>
                         <% if (hasOtp) { %>
                         <button id="helpdesk_clearOtpSecretBtn" class="helpdesk-detail-btn btn">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-eraser"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-eraser"></span></pwm:if>
                             <pwm:display key="Button_HelpdeskClearOtpSecret"/>
                         </button>
                         <% } else { %>
                         <button id="helpdesk_clearOtpSecretBtn" class="helpdesk-detail-btn btn" disabled="disabled">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-eraser"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-eraser"></span></pwm:if>
                             <pwm:display key="Button_HelpdeskClearOtpSecret"/>
                         </button>
                         <% } %>
                         <% } %>
-                        <% if (helpdeskProfile.readSettingAsBoolean(PwmSetting.HELPDESK_ENABLE_OTP_VERIFY)) { %>
-                        <button id="helpdesk_verifyOtpButton" <%=hasOtp?"":" disabled=\"true\""%>class="helpdesk-detail-btn btn">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-mobile-phone"></span></pwm:if>
-                            Verify OTP
-                        </button>
-                        <% } %>
-                        <% if (helpdeskProfile.readSettingAsEnum(PwmSetting.HELPDESK_TOKEN_SEND_METHOD, MessageSendMethod.class) != MessageSendMethod.NONE) { %>
+                        <% if ((Boolean)JspUtility.getPwmRequest(pageContext).getAttribute(PwmRequest.Attribute.HelpdeskVerificationEnabled) == true) { %>
                         <button id="sendTokenButton" class="helpdesk-detail-btn btn">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-mobile-phone"></span></pwm:if>
-                            Send Verification
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-mobile-phone"></span></pwm:if>
+                            <pwm:display key="Button_Verify"/>
                         </button>
                         <% } %>
                         <% if (helpdeskProfile.readSettingAsBoolean(PwmSetting.HELPDESK_DELETE_USER_BUTTON)) { %>
                         <button class="helpdesk-detail-btn btn" id="helpdesk_deleteUserButton">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-user-times"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-user-times"></span></pwm:if>
                             <pwm:display key="Button_Delete"/>
                         </button>
                         <% } %>
                         <% final List<ActionConfiguration> actions = helpdeskProfile.readSettingAsAction(PwmSetting.HELPDESK_ACTIONS); %>
                         <% for (final ActionConfiguration loopAction : actions) { %>
                         <button class="helpdesk-detail-btn btn" name="action-<%=loopAction.getName()%>" id="action-<%=loopAction.getName()%>">
-                            <pwm:if test="showIcons"><span class="btn-icon fa fa-location-arrow"></span></pwm:if>
+                            <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-location-arrow"></span></pwm:if>
                             <%=StringUtil.escapeHtml(loopAction.getName())%>
                         </button>
                         <pwm:script>

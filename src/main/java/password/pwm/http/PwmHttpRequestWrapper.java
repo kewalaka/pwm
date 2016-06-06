@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ package password.pwm.http;
 import org.apache.commons.io.IOUtils;
 import password.pwm.AppProperty;
 import password.pwm.PwmConstants;
-import password.pwm.Validator;
+import password.pwm.util.Validator;
 import password.pwm.config.Configuration;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
@@ -66,7 +66,7 @@ public abstract class PwmHttpRequestWrapper {
 
     public boolean isHtmlRequest() {
         final String acceptHeader = this.readHeaderValueAsString(PwmConstants.HttpHeader.Accept);
-        return acceptHeader.contains(PwmConstants.AcceptValue.json.getHeaderValue());
+        return acceptHeader.contains(PwmConstants.AcceptValue.html.getHeaderValue()) || acceptHeader.contains("*/*");
     }
 
     public String getContextPath() {

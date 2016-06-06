@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@ LocalizedStringValueHandler.draw = function(settingKey) {
     var resultValue = PWM_VAR['clientSettingCache'][settingKey];
     PWM_CFGEDIT.clearDivElements(parentDiv, false);
     if (PWM_MAIN.JSLibrary.isEmpty(resultValue)) {
-        parentDiv.innerHTML = '<button class="btn" id="button-' + settingKey + '-addValue"><span class="btn-icon fa fa-plus-square"></span>Add Value</button>';
+        parentDiv.innerHTML = '<button class="btn" id="button-' + settingKey + '-addValue"><span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Add Value</button>';
         PWM_MAIN.addEventHandler('button-' + settingKey + '-addValue','click',function(){
             UILibrary.stringEditorDialog({
                 title:'Add Value',
@@ -100,7 +100,7 @@ LocalizedStringValueHandler.drawRow = function(parentDiv, settingKey, localeStri
     }
     tableHtml += '</td>';
 
-    tableHtml += '<td id="button-' + inputID + '" style="border-width:0; width: 15px"><span class="fa fa-edit"/></ta>';
+    tableHtml += '<td id="button-' + inputID + '" style="border-width:0; width: 15px"><span class="pwm-icon pwm-icon-edit"/></ta>';
 
     tableHtml += '<td id="panel-' + inputID + '">';
     tableHtml += '<div id="value-' + inputID + '" class="configStringPanel"></div>';
@@ -111,7 +111,7 @@ LocalizedStringValueHandler.drawRow = function(parentDiv, settingKey, localeStri
     var hasNonDefaultValues = PWM_MAIN.JSLibrary.itemCount(PWM_VAR['clientSettingCache'][settingKey]) > 1 ;
 
     if (!defaultLocale || !required && !hasNonDefaultValues) {
-        tableHtml += '<div style="width: 10px; height: 10px;" class="delete-row-icon action-icon fa fa-times"'
+        tableHtml += '<div style="width: 10px; height: 10px;" class="delete-row-icon action-icon pwm-icon pwm-icon-times"'
             + 'id="button-' + settingKey + '-' + localeString + '-deleteRow"></div>';
     }
 
@@ -238,15 +238,15 @@ StringArrayValueHandler.draw = function(settingKey) {
         })(i);
     }
 
-    var settingOptions = PWM_SETTINGS['settings'][settingKey]['options'];
-    if (settingOptions && 'max' in settingOptions && itemCount >= settingOptions['max']) {
+    var settingProperties = PWM_SETTINGS['settings'][settingKey]['properties'];
+    if (settingProperties && 'Maximum' in settingProperties && itemCount >= settingProperties['Maximum']) {
         // item count is already maxed out
     } else {
         var addItemButton = document.createElement("button");
         addItemButton.setAttribute("type", "button");
         addItemButton.setAttribute("class", "btn");
         addItemButton.setAttribute("id", "button-" + settingKey + "-addItem");
-        addItemButton.innerHTML = '<span class="btn-icon fa fa-plus-square"></span>' + (syntax == 'PROFILE' ? "Add Profile" : "Add Value");
+        addItemButton.innerHTML = '<span class="btn-icon pwm-icon pwm-icon-plus-square"></span>' + (syntax == 'PROFILE' ? "Add Profile" : "Add Value");
         parentDivElement.appendChild(addItemButton);
 
         PWM_MAIN.addEventHandler('button-' + settingKey + '-addItem', 'click', function () {
@@ -267,36 +267,36 @@ StringArrayValueHandler.drawRow = function(settingKey, iteration, value, itemCou
 
     var rowHtml = '';
     if (syntax != 'PROFILE') {
-        rowHtml = '<td id="button-' + inputID + '" style="border-width:0; width: 15px"><span class="fa fa-edit"/></td>';
+        rowHtml = '<td id="button-' + inputID + '" style="border-width:0; width: 15px"><span class="pwm-icon pwm-icon-edit"/></td>';
     }
     rowHtml += '<td style=""><div class="configStringPanel" id="' + inputID + '"></div></td>';
 
     if (syntax == 'PROFILE') {
         var copyButtonID = 'button-' + settingKey + '-' + iteration + '-copy';
         rowHtml += '<td style="border:0; padding:0; width:10px" title="Copy">';
-        rowHtml += '<span id="' + copyButtonID + '" class="action-icon fa fa-copy"></span>';
+        rowHtml += '<span id="' + copyButtonID + '" class="action-icon pwm-icon pwm-icon-copy"></span>';
         rowHtml += '</td>';
     }
 
     var downButtonID = 'button-' + settingKey + '-' + iteration + '-moveDown';
     rowHtml += '<td style="border:0; padding:0; width:10px" title="Move Down">';
     if (itemCount > 1 && iteration != (itemCount -1)) {
-        rowHtml += '<span id="' + downButtonID + '" class="action-icon fa fa-chevron-down"></span>';
+        rowHtml += '<span id="' + downButtonID + '" class="action-icon pwm-icon pwm-icon-chevron-down"></span>';
     }
     rowHtml += '</td>';
 
     var upButtonID = 'button-' + settingKey + '-' + iteration + '-moveUp';
     rowHtml += '<td style="border:0; padding:0; width:10px" title="Move Up">';
     if (itemCount > 1 && iteration != 0) {
-        rowHtml += '<span id="' + upButtonID + '" class="action-icon fa fa-chevron-up"></span>';
+        rowHtml += '<span id="' + upButtonID + '" class="action-icon pwm-icon pwm-icon-chevron-up"></span>';
     }
     rowHtml += '</td>';
 
     var deleteButtonID = 'button-' + settingKey + '-' + iteration + '-delete';
     rowHtml += '<td style="border:0; padding:0; width:10px" title="Delete">';
 
-    if (itemCount > 1 || (!settingInfo['required'] && (syntax != 'PROFILE'))) {
-        rowHtml += '<span id="' + deleteButtonID + '" class="delete-row-icon action-icon fa fa-times"></span>';
+    if (itemCount > 1 || (!settingInfo['required'])) {
+        rowHtml += '<span id="' + deleteButtonID + '" class="delete-row-icon action-icon pwm-icon pwm-icon-times"></span>';
     }
     rowHtml += '</td>';
 
@@ -327,11 +327,11 @@ StringArrayValueHandler.drawRow = function(settingKey, iteration, value, itemCou
                     if (data['error']) {
                         PWM_MAIN.showErrorDialog(data);
                     } else {
-                        PWM_MAIN.goto('ConfigEditor');
+                        PWM_MAIN.goto('editor');
                     }
                 };
                 PWM_MAIN.showWaitDialog({loadFunction:function(){
-                    PWM_MAIN.ajaxRequest("ConfigEditor?processAction=copyProfile",resultFunction,{content:options});
+                    PWM_MAIN.ajaxRequest("editor?processAction=copyProfile",resultFunction,{content:options});
                 }});
             };
             UILibrary.stringEditorDialog(editorOptions);
@@ -352,7 +352,6 @@ StringArrayValueHandler.drawRow = function(settingKey, iteration, value, itemCou
 };
 
 StringArrayValueHandler.valueHandler = function(settingKey, iteration) {
-    var isLdapDN = PWM_SETTINGS['settings'][settingKey]['options']['ldapDNsyntax'] == 'true';
     var okAction = function(value) {
         if (iteration > -1) {
             PWM_VAR['clientSettingCache'][settingKey][iteration] = value;
@@ -368,13 +367,13 @@ StringArrayValueHandler.valueHandler = function(settingKey, iteration) {
     editorOptions['placeholder'] = PWM_SETTINGS['settings'][settingKey]['placeholder'];
     editorOptions['completeFunction'] = okAction;
     editorOptions['value'] = iteration > -1 ? PWM_VAR['clientSettingCache'][settingKey][iteration] : '';
-    var isLdapDN = PWM_SETTINGS['settings'][settingKey]['options']['ldapDNsyntax'] == 'true';
+
+    var isLdapDN = PWM_MAIN.JSLibrary.arrayContains(PWM_SETTINGS['settings'][settingKey]['flags'],'ldapDNsyntax');
     if (isLdapDN) {
         UILibrary.editLdapDN(okAction);
     } else {
         UILibrary.stringEditorDialog(editorOptions);
     }
-
 };
 
 StringArrayValueHandler.move = function(settingKey, moveUp, iteration) {
@@ -417,7 +416,7 @@ StringArrayValueHandler.writeSetting = function(settingKey, reload) {
     var syntax = PWM_SETTINGS['settings'][settingKey]['syntax'];
     var nextFunction = function() {
         if (syntax == 'PROFILE') {
-            PWM_MAIN.goto('ConfigEditor');
+            PWM_MAIN.goto('editor');
         }
         if (reload) {
             StringArrayValueHandler.init(settingKey);
@@ -465,7 +464,7 @@ MultiLocaleTableHandler.draw = function(keyName) {
             localeTableRow.appendChild(localeTdContent);
 
             var localeTableElement = document.createElement("table");
-            localeTableElement.setAttribute("style", "border-width: 2px; width:525px; margin:0");
+            localeTableElement.setAttribute("style", "border-width: 0px; width:525px; margin:0");
             localeTdContent.appendChild(localeTableElement);
 
             var multiValues = resultValue[localeName];
@@ -491,7 +490,7 @@ MultiLocaleTableHandler.draw = function(keyName) {
                 inputElement.setAttribute("id", inputID);
                 inputElement.setAttribute("value", multiValues[iteration]);
                 inputElement.setAttribute("onchange", "MultiLocaleTableHandler.writeMultiLocaleSetting('" + keyName + "','" + localeName + "','" + iteration + "',this.value,'" + regExPattern + "')");
-                inputElement.setAttribute("style", "width: 490px");
+                inputElement.setAttribute("style", "width: 480px; padding: 5px;");
                 inputElement.setAttribute("data-dojo-type", "dijit.form.ValidationTextBox");
                 inputElement.setAttribute("regExp", regExPattern);
                 inputElement.setAttribute("invalidMessage", "The value does not have the correct format.");
@@ -502,7 +501,7 @@ MultiLocaleTableHandler.draw = function(keyName) {
                 // add remove button
                 var imgElement = document.createElement("div");
                 imgElement.setAttribute("style", "width: 10px; height: 10px;");
-                imgElement.setAttribute("class", "delete-row-icon action-icon fa fa-times");
+                imgElement.setAttribute("class", "delete-row-icon action-icon pwm-icon pwm-icon-times");
 
                 imgElement.setAttribute("onclick", "MultiLocaleTableHandler.writeMultiLocaleSetting('" + keyName + "','" + localeName + "','" + iteration + "',null,'" + regExPattern + "')");
                 valueTd1.appendChild(imgElement);
@@ -530,7 +529,7 @@ MultiLocaleTableHandler.draw = function(keyName) {
 
             if (localeName != '') { // add remove locale x
                 var imgElement2 = document.createElement("div");
-                imgElement2.setAttribute("class", "delete-row-icon action-icon fa fa-times");
+                imgElement2.setAttribute("class", "delete-row-icon action-icon pwm-icon pwm-icon-times");
                 imgElement2.setAttribute("onclick", "MultiLocaleTableHandler.writeMultiLocaleSetting('" + keyName + "','" + localeName + "',null,null,'" + regExPattern + "')");
                 var tdElement = document.createElement("td");
                 tdElement.setAttribute("style", "border-width: 0; text-align: left; vertical-align: top;width 10px");
@@ -632,7 +631,7 @@ FormTableHandler.redraw = function(keyName) {
 
     var buttonRow = document.createElement("tr");
     buttonRow.setAttribute("colspan","5");
-    buttonRow.innerHTML = '<td><button class="btn" id="button-' + keyName + '-addRow"><span class="btn-icon fa fa-plus-square"></span>Add Form Item</button></td>';
+    buttonRow.innerHTML = '<td><button class="btn" id="button-' + keyName + '-addRow"><span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Add Form Item</button></td>';
 
     parentDivElement.appendChild(buttonRow);
 
@@ -647,51 +646,48 @@ FormTableHandler.drawRow = function(parentDiv, settingKey, iteration, value) {
         var itemCount = PWM_MAIN.JSLibrary.itemCount(PWM_VAR['clientSettingCache'][settingKey]);
         var inputID = 'value_' + settingKey + '_' + iteration + "_";
         var options = PWM_SETTINGS['settings'][settingKey]['options'];
+        var properties = PWM_SETTINGS['settings'][settingKey]['properties'];
 
         var newTableRow = document.createElement("tr");
         newTableRow.setAttribute("style", "border-width: 0");
 
         var htmlRow = '';
-        htmlRow += '<td style="border:1px solid #D4D4D4; width:180px"><div class="noWrapTextBox" id="panel-name-' + inputID + '" ></div></td>';
-        htmlRow += '<td style="width:1px" id="icon-editLabel-' + inputID + '"><span class="btn-icon fa fa-edit"></span></td>';
-        htmlRow += '<td style="border:1px solid #D4D4D4; width:170px"><div style="" class="noWrapTextBox " id="' + inputID + 'label"><span>' + value['labels'][''] + '</span></div></td>';
+        htmlRow += '<td style="background: #f6f9f8; border:1px solid #dae1e1; width:180px"><div class="noWrapTextBox" id="panel-name-' + inputID + '" ></div></td>';
+        htmlRow += '<td style="width:1px" id="icon-editLabel-' + inputID + '"><span class="btn-icon pwm-icon pwm-icon-edit"></span></td>';
+        htmlRow += '<td style="background: #f6f9f8; border:1px solid #dae1e1; width:170px"><div style="" class="noWrapTextBox " id="' + inputID + 'label"><span>' + value['labels'][''] + '</span></div></td>';
 
         var userDNtypeAllowed = options['type-userDN'] == 'show';
-        var optionList = PWM_GLOBAL['formTypeOptions'];
-        if ('types' in options) {
-            optionList = JSON.parse(options['types']);
-        }
-        if (!PWM_MAIN.JSLibrary.isEmpty(optionList)) {
+        if (!PWM_MAIN.JSLibrary.isEmpty(options)) {
             htmlRow += '<td style="width:15px;">';
             htmlRow += '<select id="' + inputID + 'type">';
-            for (var optionItem in optionList) {
-                if (optionList[optionItem] != 'userDN' || userDNtypeAllowed) {
-                    var optionName = optionList[optionItem];
+            for (var optionItem in options) {
+                //if (optionList[optionItem] != 'userDN' || userDNtypeAllowed) {
+                    var optionName = options[optionItem];
                     var selected = (optionName == PWM_VAR['clientSettingCache'][settingKey][iteration]['type']);
                     htmlRow += '<option value="' + optionName + '"' + (selected ? " selected" : "") + '>' + optionName + '</option>';
-                }
+                //}
             }
             htmlRow += '</select>';
             htmlRow += '</td>';
         }
 
-        var hideOptions = PWM_SETTINGS['settings'][settingKey]['options']['hideOptions'] == 'true';
+        var hideOptions = PWM_MAIN.JSLibrary.arrayContains(PWM_SETTINGS['settings'][settingKey]['flags'], 'Form_HideOptions');
         if (!hideOptions) {
-            htmlRow += '<td style="min-width:90px; border:0"><button id="' + inputID + 'optionsButton"><span class="btn-icon fa fa-sliders"/> Options</button></td>';
+            htmlRow += '<td style="min-width:90px; border:0"><button id="' + inputID + 'optionsButton"><span class="btn-icon pwm-icon pwm-icon-sliders"/> Options</button></td>';
         }
 
         htmlRow += '<td style="width:10px">';
         if (itemCount > 1 && iteration != (itemCount -1)) {
-            htmlRow += '<span id="' + inputID + '-moveDown" class="action-icon fa fa-chevron-down"></span>';
+            htmlRow += '<span id="' + inputID + '-moveDown" class="action-icon pwm-icon pwm-icon-chevron-down"></span>';
         }
         htmlRow += '</td>';
 
         htmlRow += '<td style="width:10px">';
         if (itemCount > 1 && iteration != 0) {
-            htmlRow += '<span id="' + inputID + '-moveUp" class="action-icon fa fa-chevron-up"></span>';
+            htmlRow += '<span id="' + inputID + '-moveUp" class="action-icon pwm-icon pwm-icon-chevron-up"></span>';
         }
         htmlRow += '</td>';
-        htmlRow += '<td style="width:10px"><span class="delete-row-icon action-icon fa fa-times" id="' + inputID + '-deleteRowButton"></span></td>';
+        htmlRow += '<td style="width:10px"><span class="delete-row-icon action-icon pwm-icon pwm-icon-times" id="' + inputID + '-deleteRowButton"></span></td>';
 
         newTableRow.innerHTML = htmlRow;
         var parentDivElement = PWM_MAIN.getObject(parentDiv);
@@ -789,19 +785,27 @@ FormTableHandler.addRow = function(keyName) {
 
 FormTableHandler.showOptionsDialog = function(keyName, iteration) {
     var type = PWM_VAR['clientSettingCache'][keyName][iteration]['type'];
+    var settings = PWM_SETTINGS['settings'][keyName];
     var options = 'options' in PWM_SETTINGS['settings'][keyName] ? PWM_SETTINGS['settings'][keyName]['options'] : {};
-    var showRequired = options['required'] != 'hide' && type != 'checkbox';
-    var showConfirmation = type != 'checkbox' && type != 'select';
-    var showUnique = options['unique'] == 'show';
-    var showReadOnly = options['readonly'] == 'show';
+
+    var hideStandardOptions = PWM_MAIN.JSLibrary.arrayContains(settings['flags'],'Form_HideStandardOptions');
+    var showRequired = PWM_MAIN.JSLibrary.arrayContains(settings['flags'],'Form_ShowRequiredOption') && (type != 'checkbox');
+    var showUnique = PWM_MAIN.JSLibrary.arrayContains(settings['flags'],'Form_ShowUniqueOption');
+    var showReadOnly = PWM_MAIN.JSLibrary.arrayContains(settings['flags'],'Form_ShowReadOnlyOption');
+    var showMultiValue = PWM_MAIN.JSLibrary.arrayContains(settings['flags'],'Form_ShowMultiValueOption');
+    var showConfirmation = type != 'checkbox' && type != 'select' && !hideStandardOptions;
+
+
     require(["dijit/Dialog","dijit/form/Textarea","dijit/form/CheckBox","dijit/form/NumberSpinner"],function(){
         var inputID = 'value_' + keyName + '_' + iteration + "_";
         var bodyText = '<div style="max-height: 500px; overflow-y: auto"><table class="noborder">';
-        bodyText += '<tr>';
-        var descriptionValue = PWM_VAR['clientSettingCache'][keyName][iteration]['description'][''];
-        bodyText += '<td id="' + inputID + '-label-description" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_Description') + '">Description</td><td>';
-        bodyText += '<div class="noWrapTextBox" id="' + inputID + 'description"><span class="btn-icon fa fa-edit"></span><span>' + descriptionValue + '...</span></div>';
-        bodyText += '</td>';
+        if (!hideStandardOptions) {
+            bodyText += '<tr>';
+            var descriptionValue = PWM_VAR['clientSettingCache'][keyName][iteration]['description'][''];
+            bodyText += '<td id="' + inputID + '-label-description" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_Description') + '">Description</td><td>';
+            bodyText += '<div class="noWrapTextBox" id="' + inputID + 'description"><span class="btn-icon pwm-icon pwm-icon-edit"></span><span>' + descriptionValue + '...</span></div>';
+            bodyText += '</td>';
+        }
 
         bodyText += '</tr><tr>';
         if (showRequired) {
@@ -820,28 +824,35 @@ FormTableHandler.showOptionsDialog = function(keyName, iteration) {
             bodyText += '<td id="' + inputID + '-label-unique" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_Unique') + '">Unique</td><td><input type="checkbox" id="' + inputID + 'unique' + '"/></td>';
             bodyText += '</tr><tr>';
         }
-        bodyText += '<td class="key">Minimum Length</td><td><input type="number" id="' + inputID + 'minimumLength' + '"/></td>';
-        bodyText += '</tr><tr>';
-        bodyText += '<td class="key">Maximum Length</td><td><input type="number" id="' + inputID + 'maximumLength' + '"/></td>';
-        bodyText += '</tr><tr>';
-
-        { // regex
-            bodyText += '<td id="' + inputID + '-label-regex" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_Regex') + '">Regular Expression</td><td><input type="text" class="configStringInput" id="' + inputID + 'regex' + '"/></td>';
-            bodyText += '</tr><tr>';
-
-            var regexErrorValue = PWM_VAR['clientSettingCache'][keyName][iteration]['regexErrors'][''];
-            bodyText += '<td id="' + inputID + '-label-regexError" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_RegexError') + '">Regular Expression<br/>Error Message</td><td>';
-            bodyText += '<div class="noWrapTextBox" id="' + inputID + 'regexErrors"><span class="btn-icon fa fa-edit"></span><span>' + regexErrorValue + '...</span></div>';
-            bodyText += '</td>';
+        if (showMultiValue) {
+            bodyText += '<td id="' + inputID + '-label-multivalue" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_MultiValue') + '">MultiValue</td><td><input type="checkbox" id="' + inputID + 'multivalue' + '"/></td>';
             bodyText += '</tr><tr>';
         }
-        bodyText += '<td id="' + inputID + '-label-placeholder" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_Placeholder') + '">Placeholder</td><td><input type="text" id="' + inputID + 'placeholder' + '"/></td>';
-        bodyText += '</tr><tr>';
-        bodyText += '<td id="' + inputID + '-label-js" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_Javascript') + '">JavaScript</td><td><input type="text" id="' + inputID + 'javascript' + '"/></td>';
-        bodyText += '</tr><tr>';
-        if (PWM_VAR['clientSettingCache'][keyName][iteration]['type'] == 'select') {
-            bodyText += '<td class="key">Select Options</td><td><button id="' + inputID + 'editOptionsButton"><span class="btn-icon fa fa-list-ul"/> Edit</button></td>';
-            bodyText += '</tr>';
+
+        if (!hideStandardOptions) {
+            bodyText += '<td class="key">Minimum Length</td><td><input type="number" id="' + inputID + 'minimumLength' + '"/></td>';
+            bodyText += '</tr><tr>';
+            bodyText += '<td class="key">Maximum Length</td><td><input type="number" id="' + inputID + 'maximumLength' + '"/></td>';
+            bodyText += '</tr><tr>';
+
+            { // regex
+                bodyText += '<td id="' + inputID + '-label-regex" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_Regex') + '">Regular Expression</td><td><input type="text" class="configStringInput" id="' + inputID + 'regex' + '"/></td>';
+                bodyText += '</tr><tr>';
+
+                var regexErrorValue = PWM_VAR['clientSettingCache'][keyName][iteration]['regexErrors'][''];
+                bodyText += '<td id="' + inputID + '-label-regexError" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_RegexError') + '">Regular Expression<br/>Error Message</td><td>';
+                bodyText += '<div class="noWrapTextBox" id="' + inputID + 'regexErrors"><span class="btn-icon pwm-icon pwm-icon-edit"></span><span>' + regexErrorValue + '...</span></div>';
+                bodyText += '</td>';
+                bodyText += '</tr><tr>';
+            }
+            bodyText += '<td id="' + inputID + '-label-placeholder" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_Placeholder') + '">Placeholder</td><td><input type="text" id="' + inputID + 'placeholder' + '"/></td>';
+            bodyText += '</tr><tr>';
+            bodyText += '<td id="' + inputID + '-label-js" class="key" title="' + PWM_CONFIG.showString('Tooltip_FormOptions_Javascript') + '">JavaScript</td><td><input type="text" id="' + inputID + 'javascript' + '"/></td>';
+            bodyText += '</tr><tr>';
+            if (PWM_VAR['clientSettingCache'][keyName][iteration]['type'] == 'select') {
+                bodyText += '<td class="key">Select Options</td><td><button id="' + inputID + 'editOptionsButton"><span class="btn-icon pwm-icon pwm-icon-list-ul"/> Edit</button></td>';
+                bodyText += '</tr>';
+            }
         }
         bodyText += '</table></div>';
 
@@ -875,7 +886,7 @@ FormTableHandler.showOptionsDialog = function(keyName, iteration) {
                 }
             }, inputID + "confirmationRequired");
 
-            if (PWM_SETTINGS['settings'][keyName]['options']['readonly'] == 'show') {
+            if (showReadOnly) {
                 PWM_MAIN.clearDijitWidget(inputID + "readonly");
                 new dijit.form.CheckBox({
                     checked: PWM_VAR['clientSettingCache'][keyName][iteration]['readonly'],
@@ -897,56 +908,72 @@ FormTableHandler.showOptionsDialog = function(keyName, iteration) {
                 }, inputID + "unique");
             }
 
-            PWM_MAIN.clearDijitWidget(inputID + "minimumLength");
-            new dijit.form.NumberSpinner({
-                value: PWM_VAR['clientSettingCache'][keyName][iteration]['minimumLength'],
-                onChange: function () {
-                    PWM_VAR['clientSettingCache'][keyName][iteration]['minimumLength'] = this.value;
-                    FormTableHandler.write(keyName)
-                },
-                constraints: {min: 0, max: 5000},
-                style: "width: 70px"
-            }, inputID + "minimumLength");
+            if (showMultiValue) {
+                PWM_MAIN.clearDijitWidget(inputID + "multivalue");
+                new dijit.form.CheckBox({
+                    checked: PWM_VAR['clientSettingCache'][keyName][iteration]['multivalue'],
+                    onChange: function () {
+                        PWM_VAR['clientSettingCache'][keyName][iteration]['multivalue'] = this.checked;
+                        FormTableHandler.write(keyName)
+                    }
+                }, inputID + "multivalue");
+            }
 
-            PWM_MAIN.clearDijitWidget(inputID + "maximumLength");
-            new dijit.form.NumberSpinner({
-                value: PWM_VAR['clientSettingCache'][keyName][iteration]['maximumLength'],
-                onChange: function () {
-                    PWM_VAR['clientSettingCache'][keyName][iteration]['maximumLength'] = this.value;
-                    FormTableHandler.write(keyName)
-                },
-                constraints: {min: 0, max: 5000},
-                style: "width: 70px"
-            }, inputID + "maximumLength");
+            if (!hideStandardOptions) {
+                PWM_MAIN.clearDijitWidget(inputID + "minimumLength");
+                new dijit.form.NumberSpinner({
+                    value: PWM_VAR['clientSettingCache'][keyName][iteration]['minimumLength'],
+                    onChange: function () {
+                        PWM_VAR['clientSettingCache'][keyName][iteration]['minimumLength'] = this.value;
+                        FormTableHandler.write(keyName)
+                    },
+                    constraints: {min: 0, max: 65536},
+                    style: "width: 70px"
+                }, inputID + "minimumLength");
 
-            PWM_MAIN.clearDijitWidget(inputID + "regex");
-            new dijit.form.Textarea({
-                value: PWM_VAR['clientSettingCache'][keyName][iteration]['regex'],
-                onChange: function () {
-                    PWM_VAR['clientSettingCache'][keyName][iteration]['regex'] = this.value;
-                    FormTableHandler.write(keyName)
-                }
-            }, inputID + "regex");
+                PWM_MAIN.clearDijitWidget(inputID + "maximumLength");
+                new dijit.form.NumberSpinner({
+                    value: PWM_VAR['clientSettingCache'][keyName][iteration]['maximumLength'],
+                    onChange: function () {
+                        PWM_VAR['clientSettingCache'][keyName][iteration]['maximumLength'] = this.value;
+                        FormTableHandler.write(keyName)
+                    },
+                    constraints: {min: 0, max: 65536},
+                    style: "width: 70px"
+                }, inputID + "maximumLength");
+
+                PWM_MAIN.clearDijitWidget(inputID + "regex");
+                new dijit.form.Textarea({
+                    value: PWM_VAR['clientSettingCache'][keyName][iteration]['regex'],
+                    onChange: function () {
+                        PWM_VAR['clientSettingCache'][keyName][iteration]['regex'] = this.value;
+                        FormTableHandler.write(keyName)
+                    }
+                }, inputID + "regex");
 
 
-            PWM_MAIN.addEventHandler(inputID + 'regexErrors','click',function(){
-                FormTableHandler.showRegexErrorsDialog(keyName, iteration);
-            });
+                PWM_MAIN.addEventHandler(inputID + 'regexErrors', 'click', function () {
+                    FormTableHandler.showRegexErrorsDialog(keyName, iteration);
+                });
 
-            PWM_MAIN.clearDijitWidget(inputID + "placeholder");
-            new dijit.form.Textarea({
-                value: PWM_VAR['clientSettingCache'][keyName][iteration]['placeholder'],
-                onChange: function () {
-                    PWM_VAR['clientSettingCache'][keyName][iteration]['placeholder'] = this.value;
-                    FormTableHandler.write(keyName)
-                }
-            }, inputID + "placeholder");
+                PWM_MAIN.clearDijitWidget(inputID + "placeholder");
+                new dijit.form.Textarea({
+                    value: PWM_VAR['clientSettingCache'][keyName][iteration]['placeholder'],
+                    onChange: function () {
+                        PWM_VAR['clientSettingCache'][keyName][iteration]['placeholder'] = this.value;
+                        FormTableHandler.write(keyName)
+                    }
+                }, inputID + "placeholder");
 
-            PWM_MAIN.clearDijitWidget(inputID + "javascript");
-            new dijit.form.Textarea({
-                value: PWM_VAR['clientSettingCache'][keyName][iteration]['javascript'],
-                onChange: function(){PWM_VAR['clientSettingCache'][keyName][iteration]['javascript'] = this.value;FormTableHandler.write(keyName)}
-            },inputID + "javascript");
+                PWM_MAIN.clearDijitWidget(inputID + "javascript");
+                new dijit.form.Textarea({
+                    value: PWM_VAR['clientSettingCache'][keyName][iteration]['javascript'],
+                    onChange: function () {
+                        PWM_VAR['clientSettingCache'][keyName][iteration]['javascript'] = this.value;
+                        FormTableHandler.write(keyName)
+                    }
+                }, inputID + "javascript");
+            }
         };
 
         PWM_MAIN.showDialog({
@@ -978,7 +1005,7 @@ FormTableHandler.multiLocaleStringDialog = function(keyName, iteration, settingT
             bodyText += '<td>' + localeName + '</td>';
             bodyText += '<td><input style="width:420px" class="configStringInput" type="text" value="' + value + '" id="' + localeID + '-input"></input></td>';
             if (localeName != '') {
-                bodyText += '<td><span class="delete-row-icon action-icon fa fa-times" id="' + localeID + '-removeLocaleButton"></span></td>';
+                bodyText += '<td><span class="delete-row-icon action-icon pwm-icon pwm-icon-times" id="' + localeID + '-removeLocaleButton"></span></td>';
             }
             bodyText += '</tr><tr>';
         }
@@ -1041,7 +1068,7 @@ FormTableHandler.showSelectOptionsDialog = function(keyName, iteration) {
         var optionID = inputID + optionName;
         bodyText += '<td>' + optionName + '</td><td>' + value + '</td>';
         bodyText += '<td style="border:0; width:15px">';
-        bodyText += '<span id="' + optionID + '-removeButton" class="delete-row-icon action-icon fa fa-times"></span>';
+        bodyText += '<span id="' + optionID + '-removeButton" class="delete-row-icon action-icon pwm-icon pwm-icon-times"></span>';
         bodyText += '</td>';
         bodyText += '</tr><tr>';
     }
@@ -1049,7 +1076,7 @@ FormTableHandler.showSelectOptionsDialog = function(keyName, iteration) {
     bodyText += '<br/><br/><br/>';
     bodyText += '<input class="configStringInput" style="width:200px" type="text" placeholder="Value" required id="addSelectOptionName"/>';
     bodyText += '<input class="configStringInput" style="width:200px" type="text" placeholder="Display Name" required id="addSelectOptionValue"/>';
-    bodyText += '<button id="addSelectOptionButton"><span class="btn-icon fa fa-plus-square"/> Add</button>';
+    bodyText += '<button id="addSelectOptionButton"><span class="btn-icon pwm-icon pwm-icon-plus-square"/> Add</button>';
 
     PWM_MAIN.showDialog({
         title: 'Select Options for ' + PWM_VAR['clientSettingCache'][keyName][iteration]['name'],
@@ -1118,9 +1145,9 @@ ChangePasswordHandler.init = function(settingKey) {
             var htmlBody = '';
             if (hasPassword) {
                 htmlBody += '<table><tr><td>Value stored.</td></tr></table>';
-                htmlBody += '<button id="button-clearPassword-' + settingKey + '" class="btn"><span class="btn-icon fa fa-times"></span>Clear Value</button>';
+                htmlBody += '<button id="button-clearPassword-' + settingKey + '" class="btn"><span class="btn-icon pwm-icon pwm-icon-times"></span>Clear Value</button>';
             } else {
-                htmlBody += '<button id="button-changePassword-' + settingKey + '" class="btn"><span class="btn-icon fa fa-plus-square"></span>Store Value</button>';
+                htmlBody += '<button id="button-changePassword-' + settingKey + '" class="btn"><span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Store Value</button>';
             }
 
             parentDivElement.innerHTML = htmlBody;
@@ -1164,19 +1191,30 @@ ChangePasswordHandler.popup = function(settingKey,settingName,writeFunction) {
     ChangePasswordHandler.changePasswordPopup(settingKey);
 };
 
-ChangePasswordHandler.validatePasswordPopupFields = function() {
+ChangePasswordHandler.validatePasswordPopupFields = function(settingKey) {
     var password1 = PWM_MAIN.getObject('password1').value;
     var password2 = PWM_MAIN.getObject('password2').value;
 
     var matchStatus = "";
 
+    var properties = settingKey === undefined || PWM_SETTINGS['settings'][settingKey] === undefined ? {} : PWM_SETTINGS['settings'][settingKey]['properties'];
+    var minLength = properties && 'Minimum' in properties ? properties['Minimum'] : 1;
+
+    PWM_MAIN.getObject('field-password-length').innerHTML = password1.length;
     PWM_MAIN.getObject('button-storePassword').disabled = true;
-    if (password2.length > 0) {
-        if (password1 == password2) {
-            matchStatus = "MATCH";
-            PWM_MAIN.getObject('button-storePassword').disabled = false;
-        } else {
-            matchStatus = "NO_MATCH";
+
+    if (minLength > 1 && password1.length < minLength) {
+        PWM_MAIN.addCssClass('field-password-length','invalid-value');
+    } else {
+        PWM_MAIN.removeCssClass('field-password-length','invalid-value');
+        if (password2.length > 0) {
+
+            if (password1 == password2) {
+                matchStatus = "MATCH";
+                PWM_MAIN.getObject('button-storePassword').disabled = false;
+            } else {
+                matchStatus = "NO_MATCH";
+            }
         }
     }
 
@@ -1255,10 +1293,17 @@ ChangePasswordHandler.changePasswordPopup = function(settingKey) {
     var showFields = PWM_VAR['clientSettingCache'][settingKey]['settings']['showFields'];
     var p1 = PWM_VAR['clientSettingCache'][settingKey]['settings']['p1'];
     var p2 = PWM_VAR['clientSettingCache'][settingKey]['settings']['p2'];
-    var length = 'passwordDialog-randomLength' in PWM_VAR ? PWM_VAR['passwordDialog-randomLength'] : 25;
+    var properties = settingKey === undefined || PWM_SETTINGS['settings'][settingKey] === undefined ? {} : PWM_SETTINGS['settings'][settingKey]['properties'];
+    var minLength = properties && 'Minimum' in properties ? properties['Minimum'] : 1;
+    var randomLength = 'passwordDialog-randomLength' in PWM_VAR ? PWM_VAR['passwordDialog-randomLength'] : 25;
+    randomLength = randomLength < minLength ? minLength : randomLength;
     var special = 'passwordDialog-special' in PWM_VAR ? PWM_VAR['passwordDialog-special'] : false;
 
-    var bodyText = '<table class="noborder">'
+    var bodyText = '';
+    if (minLength > 1) {
+        bodyText += 'Minimum Length: ' + minLength + '</span><br/><br/>'
+    }
+    bodyText += '<table class="noborder">'
         + '<tr><td><span class="formFieldLabel">' + PWM_MAIN.showString('Field_NewPassword') + '</span></td></tr>'
         + '<tr><td>';
 
@@ -1283,14 +1328,17 @@ ChangePasswordHandler.changePasswordPopup = function(settingKey) {
         + '<img style="visibility:hidden;" id="confirmCheckMark" alt="checkMark" height="15" width="15" src="' + PWM_GLOBAL['url-resources'] + '/greenCheck.png">'
         + '<img style="visibility:hidden;" id="confirmCrossMark" alt="crossMark" height="15" width="15" src="' + PWM_GLOBAL['url-resources'] + '/redX.png">'
         + '</div></td>'
-        + '</tr></table>'
-        + '<br/><br/><div class="dialogSection" style="width: 400px"><span class="formFieldLabel">Generate Random Password </span><br/>'
+        + '</tr></table>';
+
+    bodyText += '<br/>Length: <span id="field-password-length">-</span>';
+
+    bodyText += '<br/><br/><div class="dialogSection" style="width: 400px"><span class="formFieldLabel">Generate Random Password </span><br/>'
         + '<label class="checkboxWrapper"><input id="input-special" type="checkbox"' + (special ? ' checked' : '') + '>Specials</input></label>'
-        + '&nbsp;&nbsp;&nbsp;&nbsp;<input id="input-randomLength" type="number" min="10" max="1000" value="' + length + '" style="width:45px">Length'
-        + '&nbsp;&nbsp;&nbsp;&nbsp;<button id="button-generateRandom" name="button-generateRandom"><span class="fa fa-random btn-icon"></span>Generate Random</button>'
+        + '&nbsp;&nbsp;&nbsp;&nbsp;<input id="input-randomLength" type="number" min="10" max="1000" value="' + randomLength + '" style="width:45px">Length'
+        + '&nbsp;&nbsp;&nbsp;&nbsp;<button id="button-generateRandom" name="button-generateRandom"><span class="pwm-icon pwm-icon-random btn-icon"></span>Generate Random</button>'
         + '</div><br/><br/>'
         + '<button name="button-storePassword" class="btn" id="button-storePassword" disabled="true"/>'
-        + '<span class="fa fa-forward btn-icon"></span>Store Password</button>&nbsp;&nbsp;'
+        + '<span class="pwm-icon pwm-icon-forward btn-icon"></span>Store Password</button>&nbsp;&nbsp;'
         + '<label class="checkboxWrapper"><input id="show" type="checkbox"' + (showFields ? ' checked' : '') + '>Show Passwords</input></label>'
         + '</div><br/><br/>';
 
@@ -1312,19 +1360,19 @@ ChangePasswordHandler.changePasswordPopup = function(settingKey) {
             });
             PWM_MAIN.addEventHandler('password1','input',function(){
                 PWM_VAR['clientSettingCache'][settingKey]['settings']['p1'] = PWM_MAIN.getObject('password1').value;
-                ChangePasswordHandler.validatePasswordPopupFields();
+                ChangePasswordHandler.validatePasswordPopupFields(settingKey);
                 PWM_MAIN.getObject('password2').value = '';
             });
             PWM_MAIN.addEventHandler('password2','input',function(){
                 PWM_VAR['clientSettingCache'][settingKey]['settings']['p2'] = PWM_MAIN.getObject('password2').value;
-                ChangePasswordHandler.validatePasswordPopupFields();
+                ChangePasswordHandler.validatePasswordPopupFields(settingKey);
             });
             PWM_MAIN.addEventHandler('show','change',function(){
                 PWM_VAR['clientSettingCache'][settingKey]['settings']['showFields'] = PWM_MAIN.getObject('show').checked;
                 ChangePasswordHandler.changePasswordPopup(settingKey);
             });
             PWM_MAIN.getObject('password1').focus();
-            ChangePasswordHandler.validatePasswordPopupFields();
+            ChangePasswordHandler.validatePasswordPopupFields(settingKey);
         }
     });
 };
@@ -1387,7 +1435,7 @@ ActionHandler.redraw = function(keyName) {
         html += '</table>';
     }
 
-    html += '<br/><button class="btn" id="button-' + keyName + '-addValue"><span class="btn-icon fa fa-plus-square"></span>Add Action</button>';
+    html += '<br/><button class="btn" id="button-' + keyName + '-addValue"><span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Add Action</button>';
     parentDivElement.innerHTML = html;
 
     for (var i in resultValue) {
@@ -1409,7 +1457,7 @@ ActionHandler.drawRow = function(settingKey, iteration, value) {
     var htmlRow = '<tr>';
     htmlRow += '<td class="border">';
     htmlRow += '<div class="noWrapTextBox" style="width:160px" id="display-' + inputID + '-name" ></div>';
-    htmlRow += '<td style="width:1px" id="icon-editDescription-' + inputID + '"><span class="btn-icon fa fa-edit"></span></td>';
+    htmlRow += '<td style="width:1px" id="icon-editDescription-' + inputID + '"><span class="btn-icon pwm-icon pwm-icon-edit"></span></td>';
     htmlRow += '</td><td class="border" style="width:160px" >';
     htmlRow += '<div class="noWrapTextBox" id="display-' + inputID + '-description"></div>';
     htmlRow += '</td><td>';
@@ -1419,9 +1467,9 @@ ActionHandler.drawRow = function(settingKey, iteration, value) {
         htmlRow += '<option value="' + optionList[optionItem] + '"' + (selected ? ' selected' : '') + '>' + optionList[optionItem] + '</option>';
     }
     htmlRow += '</td><td>';
-    htmlRow += '<button id="button-' + inputID + '-options"><span class="btn-icon fa fa-sliders"/> Options</button>';
+    htmlRow += '<button id="button-' + inputID + '-options"><span class="btn-icon pwm-icon pwm-icon-sliders"/> Options</button>';
     htmlRow += '</td>';
-    htmlRow += '<td><span class="delete-row-icon action-icon fa fa-times" id="button-' + inputID + '-deleteRow"></span></td>';
+    htmlRow += '<td><span class="delete-row-icon action-icon pwm-icon pwm-icon-times" id="button-' + inputID + '-deleteRow"></span></td>';
     htmlRow += '</tr>';
     return htmlRow;
 };
@@ -1484,6 +1532,7 @@ ActionHandler.addRow = function(keyName) {
     UILibrary.stringEditorDialog({
         title:'New Action',
         regex:'^[0-9a-zA-Z]+$',
+        placeholder:'Action Name',
         completeFunction:function(value){
             var currentSize = PWM_MAIN.JSLibrary.itemCount(PWM_VAR['clientSettingCache'][keyName]);
             PWM_VAR['clientSettingCache'][keyName][currentSize + 1] = ActionHandler.defaultValue;
@@ -1503,29 +1552,36 @@ ActionHandler.showOptionsDialog = function(keyName, iteration) {
         var value = PWM_VAR['clientSettingCache'][keyName][iteration];
         var titleText = 'title';
         var bodyText = '<table class="noborder">';
-        if (PWM_VAR['clientSettingCache'][keyName][iteration]['type'] == 'webservice') {
-            titleText = 'Web Service options for ' + PWM_VAR['clientSettingCache'][keyName][iteration]['name'];
+        if (value['type'] == 'webservice') {
+            titleText = 'Web Service options for ' + value['name'];
             bodyText += '<tr>';
             bodyText += '<td class="key">HTTP Method</td><td style="border:0;"><select id="select-' + inputID + '-method">';
 
             for (var optionItem in ActionHandler.httpMethodOptions) {
                 var label = ActionHandler.httpMethodOptions[optionItem]['label'];
                 var optionValue = ActionHandler.httpMethodOptions[optionItem]['value'];
-                var selected = optionValue == PWM_VAR['clientSettingCache'][keyName][iteration]['method'];
+                var selected = optionValue == value['method'];
                 bodyText += '<option value="' + optionValue + '"' + (selected ? ' selected' : '') + '>' + label + '</option>';
             }
             bodyText += '</td>';
             bodyText += '</tr><tr>';
-            bodyText += '<td class="key">HTTP Headers</td><td><button id="button-' + inputID + '-headers"><span class="btn-icon fa fa-list-ul"/> Edit</button></td>';
+            bodyText += '<td class="key">HTTP Headers</td><td><button id="button-' + inputID + '-headers"><span class="btn-icon pwm-icon pwm-icon-list-ul"/> Edit</button></td>';
             bodyText += '</tr><tr>';
             bodyText += '<td class="key">URL</td><td><input type="text" class="configstringinput" style="width:400px" placeholder="http://www.example.com/service"  id="input-' + inputID + '-url' + '" value="' + value['url'] + '"/></td>';
             bodyText += '</tr>';
-            if (PWM_VAR['clientSettingCache'][keyName][iteration]['method'] != 'get') {
+            if (value['method'] != 'get') {
                 bodyText += '<tr><td class="key">Body</td><td><textarea style="max-width:400px; height:100px; max-height:100px" class="configStringInput" id="input-' + inputID + '-body' + '"/>' + value['body'] + '</textarea></td></tr>';
             }
+            if (!PWM_MAIN.JSLibrary.isEmpty(value['certificateInfos'])) {
+                bodyText += '<tr><td class="key">Certificates</td><td><a id="button-' + inputID + '-certDetail">View Certificates</a></td>';
+                bodyText += '</tr>';
+            } else {
+                bodyText += '<tr><td class="key">Certificates</td><td>None</td>';
+                bodyText += '</tr>';
+            }
             bodyText += '';
-        } else if (PWM_VAR['clientSettingCache'][keyName][iteration]['type'] == 'ldap') {
-            titleText = 'LDAP options for ' + PWM_VAR['clientSettingCache'][keyName][iteration]['name'];
+        } else if (value['type'] == 'ldap') {
+            titleText = 'LDAP options for ' + value['name'];
             bodyText += '<tr>';
             bodyText += '<td class="key">Attribute Name</td><td><input style="width:300px" class="configStringInput" type="text" id="input-' + inputID + '-attributeName' + '" value="' + value['attributeName'] + '"/></td>';
             bodyText += '</tr><tr>';
@@ -1537,13 +1593,20 @@ ActionHandler.showOptionsDialog = function(keyName, iteration) {
             for (var optionItem in ActionHandler.ldapMethodOptions) {
                 var label = ActionHandler.ldapMethodOptions[optionItem]['label'];
                 var optionValue = ActionHandler.ldapMethodOptions[optionItem]['value'];
-                var selected = optionValue == PWM_VAR['clientSettingCache'][keyName][iteration]['ldapMethod'];
+                var selected = optionValue == value['ldapMethod'];
                 bodyText += '<option value="' + optionValue + '"' + (selected ? ' selected' : '') + '>' + label + '</option>';
             }
             bodyText += '</td></tr>';
         }
         bodyText += '</table>';
 
+        if (value['type'] == 'webservice') {
+            if (!PWM_MAIN.JSLibrary.isEmpty(value['certificateInfos'])) {
+                bodyText += '<button class="btn" id="button-' + inputID + '-clearCertificates"><span class="btn-icon pwm-icon pwm-icon-trash"></span>Clear Certificates</button>'
+            } else {
+                bodyText += '<button class="btn" id="button-' + inputID + '-importCertificates"><span class="btn-icon pwm-icon pwm-icon-download"></span>Import From Server</button>'
+            }
+        }
 
         PWM_MAIN.showDialog({
             title: titleText,
@@ -1552,34 +1615,80 @@ ActionHandler.showOptionsDialog = function(keyName, iteration) {
                 PWM_MAIN.addEventHandler('button-' + inputID + '-headers','click',function(){
                     ActionHandler.showHeadersDialog(keyName,iteration);
                 });
-                if (PWM_VAR['clientSettingCache'][keyName][iteration]['type'] == 'webservice') {
+                if (value['type'] == 'webservice') {
                     PWM_MAIN.addEventHandler('select-' + inputID + '-method','change',function(){
-                        var value = PWM_MAIN.getObject('select-' + inputID + '-method').value;
-                        if (value == 'get') {
-                            PWM_VAR['clientSettingCache'][keyName][iteration]['body'] = '';
+                        var methodValue = PWM_MAIN.getObject('select-' + inputID + '-method').value;
+                        if (methodValue == 'get') {
+                            value['body'] = '';
                         }
-                        PWM_VAR['clientSettingCache'][keyName][iteration]['method'] = value;
+                        value['method'] = methodValue;
                         ActionHandler.write(keyName, function(){ ActionHandler.showOptionsDialog(keyName,iteration)});
                     });
                     PWM_MAIN.addEventHandler('input-' + inputID + '-url','input',function(){
-                        PWM_VAR['clientSettingCache'][keyName][iteration]['url'] = PWM_MAIN.getObject('input-' + inputID + '-url').value;
+                        value['url'] = PWM_MAIN.getObject('input-' + inputID + '-url').value;
                         ActionHandler.write(keyName);
                     });
                     PWM_MAIN.addEventHandler('input-' + inputID + '-body','input',function(){
-                        PWM_VAR['clientSettingCache'][keyName][iteration]['body'] = PWM_MAIN.getObject('input-' + inputID + '-body').value;
+                        value['body'] = PWM_MAIN.getObject('input-' + inputID + '-body').value;
                         ActionHandler.write(keyName);
                     });
-                } else if (PWM_VAR['clientSettingCache'][keyName][iteration]['type'] == 'ldap') {
+                    if (!PWM_MAIN.JSLibrary.isEmpty(value['certificateInfos'])) {
+                        PWM_MAIN.addEventHandler('button-' + inputID + '-certDetail','click',function(){
+                            var bodyText = '';
+                            for (var i in value['certificateInfos']) {
+                                var certificate = value['certificateInfos'][i];
+                                bodyText += X509CertificateHandler.certificateToHtml(certificate,keyName,i);
+                            }
+                            var cancelFunction = function(){ ActionHandler.showOptionsDialog(keyName,iteration); };
+                            var loadFunction = function(){
+                                for (var i in value['certificateInfos']) {
+                                    var certificate = value['certificateInfos'][i];
+                                    X509CertificateHandler.certHtmlActions(certificate,keyName,i);
+                                }
+                            };
+                           PWM_MAIN.showDialog({
+                               title:'Certificate Detail',
+                               dialogClass: 'wide',
+                               text:bodyText,
+                               okAction:cancelFunction,
+                               loadFunction:loadFunction
+                           });
+                        });
+                        PWM_MAIN.addEventHandler('button-' + inputID + '-clearCertificates','click',function() {
+                            PWM_MAIN.showConfirmDialog({okAction:function(){
+                                delete value['certificates'];
+                                delete value['certificateInfos'];
+                                ActionHandler.write(keyName, function(){ ActionHandler.showOptionsDialog(keyName,iteration)});
+                            },cancelAction:function(){
+                                ActionHandler.showOptionsDialog(keyName,iteration);
+                            }});
+                        });
+                    } else {
+                        PWM_MAIN.addEventHandler('button-' + inputID + '-importCertificates','click',function() {
+                            var dataHandler = function(data) {
+                                var msgBody = '<div style="max-height: 400px; overflow-y: auto">' + data['successMessage'] + '</div>';
+                                PWM_MAIN.showDialog({width:700,title: 'Results', text: msgBody, okAction: function () {
+                                    PWM_CFGEDIT.readSetting(keyName, function(resultValue) {
+                                        PWM_VAR['clientSettingCache'][keyName] = resultValue;
+                                        ActionHandler.showOptionsDialog(keyName, iteration);
+                                    });
+                                }});
+                            };
+                            PWM_CFGEDIT.executeSettingFunction(keyName, 'password.pwm.config.function.ActionCertImportFunction', dataHandler, value['name'])
+                        });
+                    }
+
+                } else if (value['type'] == 'ldap') {
                     PWM_MAIN.addEventHandler('input-' + inputID + '-attributeName','input',function(){
-                        PWM_VAR['clientSettingCache'][keyName][iteration]['attributeName'] = PWM_MAIN.getObject('input-' + inputID + '-attributeName').value;
+                        value['attributeName'] = PWM_MAIN.getObject('input-' + inputID + '-attributeName').value;
                         ActionHandler.write(keyName);
                     });
                     PWM_MAIN.addEventHandler('input-' + inputID + '-attributeValue','input',function(){
-                        PWM_VAR['clientSettingCache'][keyName][iteration]['attributeValue'] = PWM_MAIN.getObject('input-' + inputID + '-attributeValue').value;
+                        value['attributeValue'] = PWM_MAIN.getObject('input-' + inputID + '-attributeValue').value;
                         ActionHandler.write(keyName);
                     });
                     PWM_MAIN.addEventHandler('select-' + inputID + '-ldapMethod','change',function(){
-                        PWM_VAR['clientSettingCache'][keyName][iteration]['ldapMethod'] = PWM_MAIN.getObject('select-' + inputID + '-ldapMethod').value;
+                        value['ldapMethod'] = PWM_MAIN.getObject('select-' + inputID + '-ldapMethod').value;
                         ActionHandler.write(keyName);
                     });
                 }
@@ -1601,7 +1710,7 @@ ActionHandler.showHeadersDialog = function(keyName, iteration) {
                 var value = settingValue['headers'][headerName];
                 var optionID = inputID + headerName;
                 bodyText += '<tr><td class="border">' + headerName + '</td><td class="border">' + value + '</td>';
-                bodyText += '<td style="width:15px;"><span class="delete-row-icon action-icon fa fa-times" id="button-' + optionID + '-deleteRow"></span></td>';
+                bodyText += '<td style="width:15px;"><span class="delete-row-icon action-icon pwm-icon pwm-icon-times" id="button-' + optionID + '-deleteRow"></span></td>';
                 bodyText += '</tr>';
             }(iter));
         }
@@ -1610,7 +1719,7 @@ ActionHandler.showHeadersDialog = function(keyName, iteration) {
         PWM_MAIN.showDialog({
             title: 'HTTP Headers for webservice ' + settingValue['name'],
             text: bodyText,
-            buttonHtml:'<button id="button-' + inputID + '-addHeader" class="btn"><span class="btn-icon fa fa-plus-square"></span>Add Header</button>',
+            buttonHtml:'<button id="button-' + inputID + '-addHeader" class="btn"><span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Add Header</button>',
             okAction: function() {
                 ActionHandler.showOptionsDialog(keyName,iteration);
             },
@@ -1711,7 +1820,7 @@ EmailTableHandler.draw = function(settingKey) {
 
     if (PWM_MAIN.JSLibrary.isEmpty(resultValue)) {
         var htmlBody = '<button class="btn" id="button-addValue-' + settingKey + '">';
-        htmlBody += '<span class="btn-icon fa fa-plus-square"></span>Add Value';
+        htmlBody += '<span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Add Value';
         htmlBody += '</button>';
 
         var parentDivElement = PWM_MAIN.getObject(parentDiv);
@@ -1743,7 +1852,7 @@ EmailTableHandler.drawRowHtml = function(settingKey, localeName) {
     }
     var outputFunction = function (labelText, typeText) {
         htmlBody += '<tr><td style="text-align:right; border-width:0;">' + labelText + '</td>';
-        htmlBody += '<td id="button-' + typeText + '-' + idPrefix + '" style="border-width:0; width: 15px"><span class="fa fa-edit"/></ta>';
+        htmlBody += '<td id="button-' + typeText + '-' + idPrefix + '" style="border-width:0; width: 15px"><span class="pwm-icon pwm-icon-edit"/></ta>';
         htmlBody += '<td style=""><div class="configStringPanel" id="panel-' + typeText + '-' + idPrefix + '"></div></td>';
         htmlBody += '</tr>';
     };
@@ -1755,7 +1864,7 @@ EmailTableHandler.drawRowHtml = function(settingKey, localeName) {
 
     htmlBody += '</table></td><td style="width:20px; border:0; vertical-align:top">';
     if (localeName != '' || PWM_MAIN.JSLibrary.itemCount(PWM_VAR['clientSettingCache'][settingKey]) < 2) { // add remove locale x
-        htmlBody += '<div id="button-deleteRow-' + idPrefix + '" style="vertical-align:top" class="delete-row-icon action-icon fa fa-times"></div>';
+        htmlBody += '<div id="button-deleteRow-' + idPrefix + '" style="vertical-align:top" class="delete-row-icon action-icon pwm-icon pwm-icon-times"></div>';
     }
     htmlBody += '</td></tr></table><br/>';
     return htmlBody;
@@ -1897,7 +2006,7 @@ ChallengeSettingHandler.init = function(settingKey) {
         PWM_VAR['clientSettingCache'][settingKey] = resultValue;
         if (PWM_MAIN.JSLibrary.isEmpty(resultValue)) {
             var htmlBody = '<button class="btn" id="button-addValue-' + settingKey + '">';
-            htmlBody += '<span class="btn-icon fa fa-plus-square"></span>Add Value';
+            htmlBody += '<span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Add Value';
             htmlBody += '</button>';
 
             var parentDivElement = PWM_MAIN.getObject(parentDiv);
@@ -1921,7 +2030,7 @@ ChallengeSettingHandler.draw = function(settingKey) {
     var parentDiv = "table_setting_" + settingKey;
     var resultValue = PWM_VAR['clientSettingCache'][settingKey];
     var parentDivElement = PWM_MAIN.getObject(parentDiv);
-    var bodyText = '';
+    var bodyText = '<div class="footnote">Click on challenge questions to edit questions and policies</div>';
     PWM_CFGEDIT.clearDivElements(parentDiv, false);
     for (var localeName in resultValue) {
         (function(localeKey) {
@@ -1929,7 +2038,7 @@ ChallengeSettingHandler.draw = function(settingKey) {
             var rowCount = PWM_MAIN.JSLibrary.itemCount(multiValues);
 
             bodyText += '<table class="noborder"><tr><td>';
-            bodyText += '<table style="cursor: pointer; table-layout: fixed">';
+            bodyText += '<table class="setting-challenge-question-summary">';
             var localeLabel = localeName == '' ? 'Default Locale' : PWM_GLOBAL['localeInfo'][localeName] + " (" + localeName + ")";
             if (PWM_MAIN.JSLibrary.itemCount(PWM_VAR['clientSettingCache'][settingKey]) > 1) {
                 bodyText += '<tr><td class="title" style="font-size:100%; font-weight:normal">' + localeLabel + '</td></tr>';
@@ -1949,7 +2058,7 @@ ChallengeSettingHandler.draw = function(settingKey) {
 
             bodyText += '</table></td><td style="width:20px; border:0; vertical-align:top">';
             if (localeName != '' || PWM_MAIN.JSLibrary.itemCount(PWM_VAR['clientSettingCache'][settingKey]) < 2) { // add remove locale x
-                bodyText += '<div id="button-deleteRow-' + settingKey + '-' + localeKey + '" style="vertical-align:top" class="delete-row-icon action-icon fa fa-times"></div>';
+                bodyText += '<div id="button-deleteRow-' + settingKey + '-' + localeKey + '" style="vertical-align:top" class="delete-row-icon action-icon pwm-icon pwm-icon-times"></div>';
             }
             bodyText += '</td></tr></table><br/>';
         }(localeName));
@@ -2040,16 +2149,16 @@ ChallengeSettingHandler.editLocale = function(keyName, localeKey) {
 
             dialogBody += '</td><td>';
             dialogBody += '<input type="number" id="button-maxQuestionCharsInAnswer-' + inputID + '" style="width:50px" class="configNumericInput" min="0" max="100" value="' + multiValues[rowKey]['maxQuestionCharsInAnswer'] + '"/>';
-            dialogBody += '<br/>Max Question Chars';
+            dialogBody += '<br/>Max Question Characters';
 
             dialogBody += '</td><td>';
-            dialogBody += '<label class="checkboxWrapper"><input type="checkbox" id="value-wordlist-' + inputID + '" disabled/>Apply Wordlist</label>';
+            dialogBody += '<label class="checkboxWrapper"><input type="checkbox" id="value-wordlist-' + inputID + '" disabled/>Apply Word List</label>';
 
             dialogBody += '</td></tr>';
             dialogBody += '</table></td><td style="border:0; vertical-align: top">';
             if (PWM_MAIN.JSLibrary.itemCount(PWM_VAR['clientSettingCache'][keyName][localeKey]) > 1) { // add remove locale x
 
-                dialogBody += '<div class="delete-row-icon action-icon fa fa-times" id="button-deleteRow-' + inputID + '"/>';
+                dialogBody += '<div class="delete-row-icon action-icon pwm-icon pwm-icon-times" id="button-deleteRow-' + inputID + '"/>';
             }
 
             dialogBody += '</td></tr></table>';
@@ -2064,7 +2173,7 @@ ChallengeSettingHandler.editLocale = function(keyName, localeKey) {
     var dialogTitle = PWM_SETTINGS['settings'][keyName]['label'] + ' - ' + localeDisplay + ' Locale';
     PWM_MAIN.showDialog({
         title:dialogTitle,
-        buttonHtml:'<button class="btn" id="button-addValue"><span class="btn-icon fa fa-plus-square"></span>Add Value</button>',
+        buttonHtml:'<button class="btn" id="button-addValue"><span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Add Value</button>',
         text:dialogBody,
         showClose:false,
         dialogClass:'wide',
@@ -2221,7 +2330,7 @@ UserPermissionHandler.draw = function(keyName) {
             var inputID = "value-" + keyName + "-" + rowKey;
 
             if (htmlBody.length > 0) {
-                htmlBody += '<br/><br/><div style="clear:both; text-align:center"><span class="fa fa-plus"></span></div>'
+                htmlBody += '<br/><br/><div style="clear:both; text-align:center">OR</span></div>'
             }
 
             htmlBody += '<div class="setting_item_value_wrapper" style="float:left; width: 570px;"><div style="width:100%; text-align:center">';
@@ -2237,8 +2346,8 @@ UserPermissionHandler.draw = function(keyName) {
             if (resultValue[rowKey]['type'] != 'ldapGroup') {
                 htmlBody += '<tr>'
                     + '<td><span id="' + inputID + '_FilterHeader' + '">' + PWM_CONFIG.showString('Setting_Permission_Filter') + '</span></td>'
-                    + '<td id="icon-edit-query-' + inputID + '"><div title="Edit Value" class="btn-icon fa fa-edit"></div></td>'
-                    + '<td><div style="width: 350px;" class="configStringPanel noWrapTextBox border" id="' + inputID + '-query"></div></td>'
+                    + '<td id="icon-edit-query-' + inputID + '"><div title="Edit Value" class="btn-icon pwm-icon pwm-icon-edit"></div></td>'
+                    + '<td><div style="width: 350px; padding: 5px;" class="configStringPanel noWrapTextBox border" id="' + inputID + '-query"></div></td>'
                     + '</tr>';
             }
 
@@ -2246,12 +2355,12 @@ UserPermissionHandler.draw = function(keyName) {
                 + '<td><span id="' + inputID + '_BaseHeader' + '">'
                 + PWM_CONFIG.showString((resultValue[rowKey]['type'] == 'ldapGroup') ?  'Setting_Permission_Base_Group' : 'Setting_Permission_Base')
                 + '</span></td>'
-                + '<td id="icon-edit-base-' + inputID + '"><div title="Edit Value" class="btn-icon fa fa-edit"></div></td>'
-                + '<td><div style="width: 350px;" class="configStringPanel noWrapTextBox border" id="' + inputID + '-base">&nbsp;</div></td>'
+                + '<td id="icon-edit-base-' + inputID + '"><div title="Edit Value" class="btn-icon pwm-icon pwm-icon-edit"></div></td>'
+                + '<td><div style="width: 350px; padding: 5px;" class="configStringPanel noWrapTextBox border" id="' + inputID + '-base">&nbsp;</div></td>'
                 + '</tr>';
 
 
-            htmlBody += '</table></div><div id="button-' + inputID + '-deleteRow" style="float:right" class="delete-row-icon action-icon fa fa-times"></div>';
+            htmlBody += '</table></div><div id="button-' + inputID + '-deleteRow" style="float:right" class="delete-row-icon action-icon pwm-icon pwm-icon-times"></div>';
         }(iteration));
     }
     parentDivElement.innerHTML = parentDivElement.innerHTML + htmlBody;
@@ -2344,18 +2453,18 @@ UserPermissionHandler.draw = function(keyName) {
     var options = PWM_SETTINGS['settings'][keyName]['options'];
 
     var buttonRowHtml = '<button class="btn" id="button-' + keyName + '-addFilterValue">'
-        + '<span class="btn-icon fa fa-plus-square"></span>Add Filter</button>';
+        + '<span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Add Filter</button>';
 
-    var hideGroup = 'hideGroups' in options && options['hideGroups'] == "true";
+    var hideGroup = PWM_MAIN.JSLibrary.arrayContains(PWM_SETTINGS['settings'][keyName]['flags'], 'Permission_HideGroups');
     if (!hideGroup) {
         buttonRowHtml += '<button class="btn" id="button-' + keyName + '-addGroupValue">'
-            + '<span class="btn-icon fa fa-plus-square"></span>Add Group</button>';
+            + '<span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Add Group</button>';
     }
 
-    var hideMatch = 'hideMatch' in options && options['hideMatch'] == "true";
+    var hideMatch = PWM_MAIN.JSLibrary.arrayContains(PWM_SETTINGS['settings'][keyName]['flags'], 'Permission_HideMatch');
     if (!hideMatch) {
         buttonRowHtml += '<button id="button-' + keyName + '-viewMatches" class="btn">'
-            + '<span class="btn-icon fa fa-user"></span>View Matches</button>';
+            + '<span class="btn-icon pwm-icon pwm-icon-user"></span>View Matches</button>';
     }
 
     parentDivElement.innerHTML = parentDivElement.innerHTML + buttonRowHtml;
@@ -2365,7 +2474,7 @@ UserPermissionHandler.draw = function(keyName) {
             var html = PWM_CONFIG.convertListOfIdentitiesToHtml(data['data']);
             PWM_MAIN.showDialog({title:'Matches',text:html});
         };
-        PWM_CFGEDIT.executeSettingFunction(keyName,'password.pwm.config.function.UserMatchViewerFunction',null,dataHandler)
+        PWM_CFGEDIT.executeSettingFunction(keyName, 'password.pwm.config.function.UserMatchViewerFunction', dataHandler, null)
     });
 
     PWM_MAIN.addEventHandler('button-' + keyName + '-addFilterValue','click',function(){
@@ -2463,10 +2572,10 @@ NumericValueHandler.init = function(settingKey) {
 NumericValueHandler.impl = function(settingKey, type, defaultMin, defaultMax) {
     var parentDiv = 'table_setting_' + settingKey;
     var parentDivElement = PWM_MAIN.getObject(parentDiv);
-    var options = PWM_SETTINGS['settings'][settingKey]['options'];
+    var properties = PWM_SETTINGS['settings'][settingKey]['properties'];
     var pattern = PWM_SETTINGS['settings'][settingKey]['pattern'];
-    var min = 'min' in options ? parseInt(options['min']) : defaultMin;
-    var max = 'max' in options ? parseInt(options['max']) : defaultMax;
+    var min = 'Minimum' in properties ? parseInt(properties['Minimum']) : defaultMin;
+    var max = 'Maximum' in properties ? parseInt(properties['Maximum']) : defaultMax;
 
     var htmlBody = '<input type="number" id="value_' + settingKey + '" class="configNumericInput" min="'+min+'" max="'+max+'"/>';
     if (type == 'number') {
@@ -2526,16 +2635,16 @@ StringValueHandler.init = function(settingKey) {
         var value = data;
         if (value && value.length > 0) {
             bodyHtml += '<table style="border-width: 0">';
-            bodyHtml += '<td id="button-' + inputID + '" style="border-width:0; width: 15px"><span class="fa fa-edit"/></ta>';
+            bodyHtml += '<td id="button-' + inputID + '" style="border-width:0; width: 15px"><span class="pwm-icon pwm-icon-edit"/></ta>';
             bodyHtml += '<td style=""><div class="configStringPanel" id="panel-' + inputID + '"></div></td>';
             if (!settingData['required']) {
-                bodyHtml += '<td style="border-width: 0"><span id="button-' + inputID + '-delete" class="delete-row-icon action-icon fa fa-times"></span></td>';
+                bodyHtml += '<td style="border-width: 0"><span id="button-' + inputID + '-delete" class="delete-row-icon action-icon pwm-icon pwm-icon-times"></span></td>';
             }
 
             bodyHtml += '</table>';
         } else {
             bodyHtml += '<button class="btn" id="button-add-' + inputID + '">';
-            bodyHtml += '<span class="btn-icon fa fa-plus-square"></span>Add Value';
+            bodyHtml += '<span class="btn-icon pwm-icon pwm-icon-plus-square"></span>Add Value';
             bodyHtml += '</button>';
         }
 
@@ -2548,8 +2657,7 @@ StringValueHandler.init = function(settingKey) {
             });
         });
 
-
-        var isLdapDN = settingData['options']['ldapDNsyntax'] == 'true';
+        var isLdapDN = PWM_MAIN.JSLibrary.arrayContains(PWM_SETTINGS['settings'][settingKey]['flags'], 'ldapDNsyntax');
         var editor = function(){
             var writeBackFunc = function(value){
                 PWM_CFGEDIT.writeSetting(settingKey,value,function(){
@@ -2626,13 +2734,28 @@ SelectValueHandler.init = function(settingKey) {
         + '<option value="' + PWM_MAIN.showString('Display_PleaseWait') + '">' + PWM_MAIN.showString('Display_PleaseWait') + '</option></select>';
     parentDivElement.innerHTML = htmlBody;
 
-    PWM_MAIN.clearDijitWidget("value_" + settingKey);
-    PWM_MAIN.clearDijitWidget("setting_" + settingKey);
+
+
 
     PWM_MAIN.addEventHandler('setting_' + settingKey,'change',function(){
         var settingElement = PWM_MAIN.getObject('setting_' + settingKey);
-        var selectedValue = settingElement.options[settingElement.selectedIndex].value;
-        PWM_CFGEDIT.writeSetting(settingKey,selectedValue)
+        var changeFunction = function(){
+            var selectedValue = settingElement.options[settingElement.selectedIndex].value;
+            PWM_CFGEDIT.writeSetting(settingKey,selectedValue);
+            settingElement.setAttribute('previousValue',settingElement.selectedIndex);
+        };
+        if ('ModificationWarning' in PWM_SETTINGS['settings'][settingKey]['properties']) {
+            PWM_MAIN.showConfirmDialog({
+                text:PWM_SETTINGS['settings'][settingKey]['properties']['ModificationWarning'],
+                cancelAction: function(){
+                    settingElement.selectedIndex = settingElement.getAttribute('previousValue');
+                    PWM_MAIN.closeWaitDialog();
+                },
+                okAction:changeFunction
+            });
+        } else {
+            changeFunction();
+        }
     });
     PWM_CFGEDIT.readSetting(settingKey, function(dataValue) {
         var settingElement = PWM_MAIN.getObject('setting_' + settingKey);
@@ -2646,6 +2769,7 @@ SelectValueHandler.init = function(settingKey) {
         settingElement.innerHTML = optionsHtml;
         settingElement.value = dataValue;
         settingElement.disabled = false;
+        settingElement.setAttribute('previousValue',settingElement.selectedIndex);
     });
 };
 
@@ -2661,6 +2785,35 @@ X509CertificateHandler.init = function(keyName) {
     });
 };
 
+X509CertificateHandler.certificateToHtml = function(certificate, keyName, id) {
+    var htmlBody = '';
+    htmlBody += '<div style="max-width:100%; margin-bottom:8px"><table style="max-width:100%" id="table_certificate' + keyName + '-' + id + '">';
+    htmlBody += '<tr><td colspan="2" class="key" style="text-align: center">Certificate ' + id + '  <a id="certTimestamp-detail-' + keyName + '-' + id + '">(detail)</a></td></tr>';
+    htmlBody += '<tr><td>Subject</td><td><div class="setting_table_value">' + certificate['subject'] + '</div></td></tr>';
+    htmlBody += '<tr><td>Issuer</td><td><div class="setting_table_value">' + certificate['issuer'] + '</div></td></tr>';
+    htmlBody += '<tr><td>Serial</td><td><div class="setting_table_value">' + certificate['serial'] + '</div></td></tr>';
+    htmlBody += '<tr><td>Issue Date</td><td id="certTimestamp-issue-' + keyName + '-' + id + '" class="setting_table_value timestamp">' + certificate['issueDate'] + '</td></tr>';
+    htmlBody += '<tr><td>Expire Date</td><td id="certTimestamp-expire-' + keyName + '-' + id + '" class="setting_table_value timestamp">' + certificate['expireDate'] + '</td></tr>';
+    htmlBody += '<tr><td>MD5 Hash</td><td><div class="setting_table_value">' + certificate['md5Hash'] + '</div></td></tr>';
+    htmlBody += '<tr><td>SHA1 Hash</td><td><div class="setting_table_value">' + certificate['sha1Hash'] + '</div></td></tr>';
+    htmlBody += '<tr><td>SHA512 Hash</td><td><div class="setting_table_value">' + certificate['sha512Hash'] + '</div></td></tr>';
+    htmlBody += '</table></div>';
+    return htmlBody;
+};
+
+X509CertificateHandler.certHtmlActions = function(certificate, keyName, id) {
+    PWM_MAIN.TimestampHandler.initElement(PWM_MAIN.getObject('certTimestamp-issue-' + keyName + '-' + id));
+    PWM_MAIN.TimestampHandler.initElement(PWM_MAIN.getObject('certTimestamp-expire-' + keyName + '-' + id));
+    PWM_MAIN.addEventHandler('certTimestamp-detail-' + keyName + '-' + id,'click',function(){
+        PWM_MAIN.showDialog({
+            title: 'Detail - ' + PWM_SETTINGS['settings'][keyName]['label'] + ' - Certificate ' + id,
+            text: '<pre>' + certificate['detail'] + '</pre>',
+            dialogClass: 'wide',
+            showClose: true
+        });
+    });
+};
+
 X509CertificateHandler.draw = function(keyName) {
     var parentDiv = 'table_setting_' + keyName;
     var parentDivElement = PWM_MAIN.getObject(parentDiv);
@@ -2671,39 +2824,21 @@ X509CertificateHandler.draw = function(keyName) {
     for (var certCounter in resultValue) {
         (function (counter) {
             var certificate = resultValue[counter];
-            htmlBody += '<div style="max-width:100%; margin-bottom:8px"><table style="max-width:100%" id="table_certificate' + keyName + '-' + counter + '">';
-            htmlBody += '<tr><td colspan="2" class="key" style="text-align: center">Certificate ' + counter + '  <a id="certTimestamp-detail-' + keyName + '-' + counter + '">(detail)</a></td></tr>';
-            htmlBody += '<tr><td>Subject</td><td><div class="setting_table_value">' + certificate['subject'] + '</div></td></tr>';
-            htmlBody += '<tr><td>Issuer</td><td><div class="setting_table_value">' + certificate['issuer'] + '</div></td></tr>';
-            htmlBody += '<tr><td>Serial</td><td><div class="setting_table_value">' + certificate['serial'] + '</div></td></tr>';
-            htmlBody += '<tr><td>Issue Date</td><td id="certTimestamp-issue-' + keyName + '-' + counter + '" class="setting_table_value timestamp">' + certificate['issueDate'] + '</td></tr>';
-            htmlBody += '<tr><td>Expire Date</td><td id="certTimestamp-expire-' + keyName + '-' + counter + '" class="setting_table_value timestamp">' + certificate['expireDate'] + '</td></tr>';
-            htmlBody += '<tr><td>MD5 Hash</td><td><div class="setting_table_value">' + certificate['md5Hash'] + '</div></td></tr>';
-            htmlBody += '<tr><td>SHA1 Hash</td><td><div class="setting_table_value">' + certificate['sha1Hash'] + '</div></td></tr>';
-            htmlBody += '<tr><td>SHA512 Hash</td><td><div class="setting_table_value">' + certificate['sha512Hash'] + '</div></td></tr>';
-            htmlBody += '</table></div>'
+            htmlBody += X509CertificateHandler.certificateToHtml(certificate, keyName, counter);
         })(certCounter);
     }
     htmlBody += '</div>';
 
     if (!PWM_MAIN.JSLibrary.isEmpty(resultValue)) {
-        htmlBody += '<button id="' + keyName + '_ClearButton" class="btn"><span class="btn-icon fa fa-times"></span>Clear</button>'
+        htmlBody += '<button id="' + keyName + '_ClearButton" class="btn"><span class="btn-icon pwm-icon pwm-icon-times"></span>Clear</button>'
     }
-    htmlBody += '<button id="' + keyName + '_AutoImportButton" class="btn"><span class="btn-icon fa fa-download"></span>Import From Server</button>'
+    htmlBody += '<button id="' + keyName + '_AutoImportButton" class="btn"><span class="btn-icon pwm-icon pwm-icon-download"></span>Import From Server</button>'
     parentDivElement.innerHTML = htmlBody;
 
     for (certCounter in resultValue) {
         (function (counter) {
-            PWM_MAIN.TimestampHandler.initElement(PWM_MAIN.getObject('certTimestamp-issue-' + keyName + '-' + counter));
-            PWM_MAIN.TimestampHandler.initElement(PWM_MAIN.getObject('certTimestamp-expire-' + keyName + '-' + counter));
-            PWM_MAIN.addEventHandler('certTimestamp-detail-' + keyName + '-' + counter,'click',function(){
-                PWM_MAIN.showDialog({
-                    title: 'Detail - ' + PWM_SETTINGS['settings'][keyName]['label'] + ' - Certificate ' + counter,
-                    text: '<pre>' + resultValue[counter]['detail'] + '</pre>',
-                    dialogClass: 'wide',
-                    showClose: true
-                });
-            });
+            var certificate = resultValue[counter];
+            X509CertificateHandler.certHtmlActions(certificate, keyName, counter)
         })(certCounter);
     }
 
@@ -2712,7 +2847,7 @@ X509CertificateHandler.draw = function(keyName) {
             handleResetClick(keyName);
         });
     }
-    var importClassname = PWM_SETTINGS['settings'][keyName]['options']['ImportHandler'];
+    var importClassname = PWM_SETTINGS['settings'][keyName]['properties']['Cert_ImportHandler'];
     PWM_MAIN.addEventHandler(keyName + '_AutoImportButton','click',function(){
         PWM_CFGEDIT.executeSettingFunction(keyName,importClassname);
     });
@@ -2734,6 +2869,8 @@ VerificationMethodHandler.draw = function(settingKey) {
     var parentDiv = 'table_setting_' + settingKey;
     var parentDivElement = PWM_MAIN.getObject(parentDiv);
 
+    var showMinOptional = !PWM_MAIN.JSLibrary.arrayContains(PWM_SETTINGS['settings'][settingKey]['flags'],'Verification_HideMinimumOptional');
+
     var htmlBody = '<table class="">';
     for (var method in settingOptions) {
         var id = settingKey + '-' + method;
@@ -2743,7 +2880,10 @@ VerificationMethodHandler.draw = function(settingKey) {
         htmlBody += '<td><span id="label-' + id +'"></span></td></tr>';
     }
     htmlBody += '</table>';
-    htmlBody += '<br/><label>Minimum Optional Required <input min="0" style="width:30px;" id="input-minOptional-' + settingKey + '" type="number" value="0" class="configNumericInput""></label>';
+
+    if (showMinOptional) {
+        htmlBody += '<br/><label>Minimum Optional Required <input min="0" style="width:30px;" id="input-minOptional-' + settingKey + '" type="number" value="0" class="configNumericInput""></label>';
+    }
     parentDivElement.innerHTML = htmlBody;
     for (var method in settingOptions) {
         var id = settingKey + '-' + method;
@@ -2773,19 +2913,23 @@ VerificationMethodHandler.draw = function(settingKey) {
         }
         PWM_MAIN.getObject('input-range-' + id).value = numberValue;
     }
-    PWM_MAIN.getObject('input-minOptional-' + settingKey).value = PWM_VAR['clientSettingCache'][settingKey]['minOptionalRequired'];
-    PWM_MAIN.addEventHandler('input-minOptional-' + settingKey,'input',function(){
-        VerificationMethodHandler.updateLabels(settingKey);
-        VerificationMethodHandler.write(settingKey);
-    });
+    if (showMinOptional) {
+        PWM_MAIN.getObject('input-minOptional-' + settingKey).value = PWM_VAR['clientSettingCache'][settingKey]['minOptionalRequired'];
+        PWM_MAIN.addEventHandler('input-minOptional-' + settingKey, 'input', function () {
+            VerificationMethodHandler.updateLabels(settingKey);
+            VerificationMethodHandler.write(settingKey);
+        });
+    }
 
     VerificationMethodHandler.updateLabels(settingKey);
 };
 
 VerificationMethodHandler.write = function(settingKey) {
+    var showMinOptional = !PWM_MAIN.JSLibrary.arrayContains(PWM_SETTINGS['settings'][settingKey]['flags'],'Verification_HideMinimumOptional');
+
     var settingOptions = PWM_SETTINGS['settings'][settingKey]['options'];
     var values = {};
-    values['minOptionalRequired'] = Number(PWM_MAIN.getObject('input-minOptional-' + settingKey).value);
+    values['minOptionalRequired'] = showMinOptional ? Number(PWM_MAIN.getObject('input-minOptional-' + settingKey).value) : 0;
     values['methodSettings'] = {};
     for (var method in settingOptions) {
         var id = settingKey + '-' + method;
@@ -2832,11 +2976,14 @@ VerificationMethodHandler.updateLabels = function(settingKey) {
         }
         PWM_MAIN.getObject('label-' + id).innerHTML = label;
     }
-    var minOptionalInput = PWM_MAIN.getObject('input-minOptional-' + settingKey);
-    minOptionalInput.max = optionalCount;
-    var currentMax = Number(minOptionalInput.value);
-    if (currentMax > optionalCount) {
-        minOptionalInput.value = optionalCount.toString();
+    var showMinOptional = !PWM_MAIN.JSLibrary.arrayContains(PWM_SETTINGS['settings'][settingKey]['flags'],'Verification_HideMinimumOptional');
+    if (showMinOptional) {
+        var minOptionalInput = PWM_MAIN.getObject('input-minOptional-' + settingKey);
+        minOptionalInput.max = optionalCount;
+        var currentMax = Number(minOptionalInput.value);
+        if (currentMax > optionalCount) {
+            minOptionalInput.value = optionalCount.toString();
+        }
     }
 };
 
@@ -2878,9 +3025,9 @@ FileValueHandler.draw = function(keyName) {
     }
 
     if (PWM_MAIN.JSLibrary.isEmpty(resultValue)) {
-        htmlBody += '<button class="btn" id="button-uploadFile-' + keyName + '"><span class="btn-icon fa fa-upload"></span>Upload File</button>';
+        htmlBody += '<button class="btn" id="button-uploadFile-' + keyName + '"><span class="btn-icon pwm-icon pwm-icon-upload"></span>Upload File</button>';
     } else {
-        htmlBody += '<button class="btn" id="button-removeFile-' + keyName + '"><span class="btn-icon fa fa-trash-o"></span>Remove File</button>';
+        htmlBody += '<button class="btn" id="button-removeFile-' + keyName + '"><span class="btn-icon pwm-icon pwm-icon-trash-o"></span>Remove File</button>';
     }
 
     parentDivElement.innerHTML = htmlBody;
@@ -2903,7 +3050,7 @@ FileValueHandler.draw = function(keyName) {
 
 FileValueHandler.uploadFile = function(keyName) {
     var options = {};
-    options['url'] = "ConfigEditor?processAction=uploadFile&key=" + keyName;
+    options['url'] = "editor?processAction=uploadFile&key=" + keyName;
     options['nextFunction'] = function() {
         PWM_MAIN.showWaitDialog({loadFunction:function(){
             FileValueHandler.init(keyName);
@@ -2913,3 +3060,91 @@ FileValueHandler.uploadFile = function(keyName) {
     UILibrary.uploadFileDialog(options);
 };
 
+
+// -------------------------- x509 setting handler ------------------------------------
+
+var PrivateKeyHandler = {};
+
+PrivateKeyHandler.init = function(keyName) {
+    PWM_CFGEDIT.readSetting(keyName, function(resultValue) {
+        PWM_VAR['clientSettingCache'][keyName] = resultValue;
+        PrivateKeyHandler.draw(keyName);
+    });
+};
+
+PrivateKeyHandler.draw = function(keyName) {
+    var parentDiv = 'table_setting_' + keyName;
+    var parentDivElement = PWM_MAIN.getObject(parentDiv);
+
+    var resultValue = PWM_VAR['clientSettingCache'][keyName];
+
+    var htmlBody = '<div style="max-height: 300px; overflow-y: auto">';
+
+    var hasValue = resultValue != null && 'key' in resultValue;
+
+    if (hasValue) {
+        var certificates = resultValue['certificates'];
+        for (var certCounter in certificates) {
+            (function (counter) {
+                var certificate = certificates[counter];
+                htmlBody += X509CertificateHandler.certificateToHtml(certificate, keyName, counter);
+            })(certCounter);
+        }
+        htmlBody += '</div>';
+
+        var key = resultValue['key'];
+        htmlBody += '<div style="max-width:100%; margin-bottom:8px"><table style="max-width:100%">';
+        htmlBody += '<tr><td colspan="2" class="key" style="text-align: center">Key</td></tr>';
+        htmlBody += '<tr><td>Format</td><td><div class="setting_table_value">' + key['format'] + '</div></td></tr>';
+        htmlBody += '<tr><td>Algorithm</td><td><div class="setting_table_value">' + key['algorithm'] + '</div></td></tr>';
+        htmlBody += '</table></div>';
+        htmlBody += '<button id="' + keyName + '_ClearButton" class="btn"><span class="btn-icon pwm-icon pwm-icon-times"></span>Clear</button>'
+    } else {
+        htmlBody += '<div>No Key Present</div><br/>';
+    }
+
+    if (!hasValue) {
+        htmlBody += '<button id="' + keyName + '_UploadButton" class="btn"><span class="btn-icon pwm-icon pwm-icon-upload"></span>Import Private Key &amp; Certificate</button>'
+    }
+    parentDivElement.innerHTML = htmlBody;
+
+    if (hasValue) {
+        var certificates = resultValue['certificates'];
+        for (var certCounter in certificates) {
+            (function (counter) {
+                var certificate = certificates[counter];
+                X509CertificateHandler.certHtmlActions(certificate, keyName, counter);
+            })(certCounter);
+        }
+    }
+
+    if (!PWM_MAIN.JSLibrary.isEmpty(resultValue)) {
+        PWM_MAIN.addEventHandler(keyName + '_ClearButton','click',function(){
+            handleResetClick(keyName);
+        });
+    }
+    PWM_MAIN.addEventHandler(keyName + '_UploadButton','click',function(){
+        var options = {};
+        var url = PWM_MAIN.addParamToUrl(window.location.href,'processAction','uploadFile');
+        url = PWM_MAIN.addParamToUrl(url, 'key', keyName);
+        options['url'] = url;
+
+        var text = '<form autocomplete="off"><table class="noborder">';
+        text += '<tr><td class="key">File Format</td><td><select id="input-certificateUpload-format"><option value="PKCS12">PKCS12 / PFX</option><option value="JKS">Java Keystore (JKS)</option></select></td></tr>';
+        text += '<tr><td class="key">Password</td><td><input required type="password" class="configInput" id="input-certificateUpload-password"/></td></tr>';
+        text += '<tr><td class="key">Alias</td><td><input type="text" class="configInput" id="input-certificateUpload-alias"/><br/><span class="footnote">Alias only required if file has multiple aliases</span></td></tr>';
+        text += '</table></form>';
+        options['text'] = text;
+        
+        var urlUpdateFunction = function(url) {
+            var formatSelect = PWM_MAIN.getObject('input-certificateUpload-format');
+            url = PWM_MAIN.addParamToUrl(url,'format',formatSelect.options[formatSelect.selectedIndex].value);
+            url = PWM_MAIN.addParamToUrl(url,'password',PWM_MAIN.getObject('input-certificateUpload-password').value);
+            url = PWM_MAIN.addParamToUrl(url,'alias',PWM_MAIN.getObject('input-certificateUpload-alias').value);
+            return url;
+        };
+        options['title'] = 'Import Private Key & Certificate';
+        options['urlUpdateFunction'] = urlUpdateFunction;
+        UILibrary.uploadFileDialog(options);
+    });
+};

@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ import com.novell.ldapchai.exception.ChaiUnavailableException;
 import password.pwm.AppProperty;
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
-import password.pwm.bean.SessionStateBean;
+import password.pwm.bean.LocalSessionStateBean;
 import password.pwm.config.PwmSetting;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
@@ -37,7 +37,6 @@ import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.HttpMethod;
 import password.pwm.http.PwmRequest;
 import password.pwm.http.PwmSession;
-import password.pwm.http.ServletHelper;
 import password.pwm.http.client.PwmHttpClient;
 import password.pwm.http.client.PwmHttpClientRequest;
 import password.pwm.http.client.PwmHttpClientResponse;
@@ -226,7 +225,7 @@ public class CaptchaServlet extends AbstractPwmServlet {
             throws IOException, ServletException {
         try {
             final PwmSession pwmSession = pwmRequest.getPwmSession();
-            final SessionStateBean ssBean = pwmSession.getSessionStateBean();
+            final LocalSessionStateBean ssBean = pwmSession.getSessionStateBean();
 
             String destURL = ssBean.getPreCaptchaRequestURL();
             ssBean.setPreCaptchaRequestURL(null);
@@ -279,7 +278,7 @@ public class CaptchaServlet extends AbstractPwmServlet {
         final String allowedSkipValue = figureSkipCookieValue(pwmRequest);
         final String captchaSkipCookieName = pwmRequest.getConfig().readAppProperty(AppProperty.HTTP_COOKIE_CAPTCHA_SKIP_NAME);
         if (allowedSkipValue != null) {
-            final String cookieValue = ServletHelper.readCookie(pwmRequest.getHttpServletRequest(), captchaSkipCookieName);
+            final String cookieValue = pwmRequest.readCookie(captchaSkipCookieName);
             if (allowedSkipValue.equals(cookieValue)) {
                 LOGGER.debug(pwmRequest, "browser has a valid " + captchaSkipCookieName+ " cookie value of " + figureSkipCookieValue(pwmRequest) + ", skipping captcha check");
                 return true;
@@ -292,15 +291,15 @@ public class CaptchaServlet extends AbstractPwmServlet {
         StatisticsManager.incrementStat(pwmRequest, Statistic.CAPTCHA_PRESENTATIONS);
 
         final String reCaptchaPublicKey = pwmRequest.getConfig().readSettingAsString(PwmSetting.RECAPTCHA_KEY_PUBLIC);
-        pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.CaptchaPublicKey, reCaptchaPublicKey);
+        pwmRequest.setAttribute(PwmRequest.Attribute.CaptchaPublicKey, reCaptchaPublicKey);
         {
             final String urlValue = pwmRequest.getConfig().readAppProperty(AppProperty.RECAPTCHA_CLIENT_JS_URL);
-            pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.CaptchaClientUrl, urlValue);
+            pwmRequest.setAttribute(PwmRequest.Attribute.CaptchaClientUrl, urlValue);
         }
         {
             final String configuredUrl =pwmRequest.getConfig().readAppProperty(AppProperty.RECAPTCHA_CLIENT_IFRAME_URL);
             final String url = configuredUrl + "?k=" + reCaptchaPublicKey + "&hl=" + pwmRequest.getLocale().toString();
-            pwmRequest.setAttribute(PwmConstants.REQUEST_ATTR.CaptchaIframeUrl,url);
+            pwmRequest.setAttribute(PwmRequest.Attribute.CaptchaIframeUrl,url);
         }
         pwmRequest.forwardToJsp(PwmConstants.JSP_URL.CAPTCHA);
     }

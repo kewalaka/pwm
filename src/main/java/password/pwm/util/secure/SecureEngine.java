@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 
 package password.pwm.util.secure;
 
+import org.apache.commons.io.IOUtils;
 import password.pwm.PwmConstants;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
@@ -33,7 +34,10 @@ import password.pwm.util.logging.PwmLogger;
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -48,6 +52,8 @@ public class SecureEngine {
     private static final PwmLogger LOGGER = PwmLogger.forClass(SecureEngine.class);
 
     private static final int HASH_BUFFER_SIZE = 1024 * 4;
+
+    private static final NonceGenerator AES_GCM_NONCE_GENERATOR = new NonceGenerator(8,8);
 
     private SecureEngine() {
     }
@@ -77,20 +83,33 @@ public class SecureEngine {
     }
 
 
+    static final int GCM_TAG_LENGTH = 16; // in bytes
+
     public static byte[] encryptToBytes(
             final String value,
             final PwmSecurityKey key,
             final PwmBlockAlgorithm blockAlgorithm
     )
-            throws PwmUnrecoverableException {
+            throws PwmUnrecoverableException
+    {
         try {
             if (value == null || value.length() < 1) {
                 return null;
             }
 
             final SecretKey aesKey = key.getKey(blockAlgorithm.getBlockKey());
-            final Cipher cipher = Cipher.getInstance(blockAlgorithm.getAlgName());
-            cipher.init(Cipher.ENCRYPT_MODE, aesKey, cipher.getParameters());
+            final byte[] nonce;
+            final Cipher cipher;
+            if (blockAlgorithm == PwmBlockAlgorithm.AES128_GCM) {
+                nonce = AES_GCM_NONCE_GENERATOR.nextValue();
+                GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, nonce);
+                cipher = Cipher.getInstance(blockAlgorithm.getAlgName());
+                cipher.init(Cipher.ENCRYPT_MODE, aesKey, spec);
+            } else {
+                cipher = Cipher.getInstance(blockAlgorithm.getAlgName());
+                cipher.init(Cipher.ENCRYPT_MODE, aesKey, cipher.getParameters());
+                nonce = null;
+            }
             final byte[] encryptedBytes = cipher.doFinal(value.getBytes(PwmConstants.DEFAULT_CHARSET));
 
             final byte[] output;
@@ -98,7 +117,13 @@ public class SecureEngine {
                 final byte[] hashChecksum = computeHmacToBytes(blockAlgorithm.getHmacAlgorithm(), key, encryptedBytes);
                 output = appendByteArrays(blockAlgorithm.getPrefix(), hashChecksum, encryptedBytes);
             } else {
-                output = appendByteArrays(blockAlgorithm.getPrefix(), encryptedBytes);
+                if (nonce == null) {
+                    output = appendByteArrays(blockAlgorithm.getPrefix(), encryptedBytes);
+                } else {
+                    final byte[] nonceLength = new byte[1];
+                    nonceLength[0] = (byte)nonce.length;
+                    output = appendByteArrays(blockAlgorithm.getPrefix(), nonceLength, nonce, encryptedBytes);
+                }
             }
             return output;
 
@@ -162,8 +187,22 @@ public class SecureEngine {
                 }
                 value = inputPayload;
             }
-            final Cipher cipher = Cipher.getInstance(blockAlgorithm.getAlgName());
-            cipher.init(Cipher.DECRYPT_MODE, aesKey);
+            final Cipher cipher;
+            if (blockAlgorithm == PwmBlockAlgorithm.AES128_GCM) {
+                final int nonceLength = value[0];
+                value = Arrays.copyOfRange(value,1,value.length);
+                if (value.length <= nonceLength) {
+                    throw new PwmUnrecoverableException(new ErrorInformation(PwmError.ERROR_CRYPT_ERROR, "incoming " + blockAlgorithm.toString()  + " data is missing nonce"));
+                }
+                final byte[] nonce = Arrays.copyOfRange(value, 0, nonceLength);
+                value = Arrays.copyOfRange(value, nonceLength, value.length);
+                GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, nonce);
+                cipher = Cipher.getInstance(blockAlgorithm.getAlgName());
+                cipher.init(Cipher.DECRYPT_MODE, aesKey, spec);
+            } else {
+                cipher = Cipher.getInstance(blockAlgorithm.getAlgName());
+                cipher.init(Cipher.DECRYPT_MODE, aesKey);
+            }
             final byte[] decrypted = cipher.doFinal(value);
             return new String(decrypted, PwmConstants.DEFAULT_CHARSET);
         } catch (Exception e) {
@@ -198,18 +237,29 @@ public class SecureEngine {
             final File file,
             final PwmHashAlgorithm hashAlgorithm
     )
-            throws IOException, PwmUnrecoverableException {
-        if (file == null || !file.exists()) {
-            return null;
-        }
+            throws IOException, PwmUnrecoverableException
+    {
         FileInputStream fileInputStream = null;
         try {
+            final MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.getAlgName());
             fileInputStream = new FileInputStream(file);
-            return hash(fileInputStream, hashAlgorithm);
-        } finally {
-            if (fileInputStream != null) {
-                fileInputStream.close();
+            final FileChannel fileChannel = fileInputStream.getChannel();
+            final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024 * 8);
+
+            while (fileChannel.read(byteBuffer) > 0) {
+                byteBuffer.flip();
+                messageDigest.update(byteBuffer);
+                byteBuffer.clear();
             }
+
+            return Helper.byteArrayToHexString(messageDigest.digest());
+
+        } catch (NoSuchAlgorithmException | IOException e) {
+            final String errorMsg = "unexpected error during file hash operation: " + e.getMessage();
+            final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_CRYPT_ERROR, errorMsg);
+            throw new PwmUnrecoverableException(errorInformation);
+        } finally {
+            IOUtils.closeQuietly(fileInputStream);
         }
     }
 
@@ -321,7 +371,7 @@ public class SecureEngine {
         }
         byte[] inputPrefix = Arrays.copyOf(input, definedPrefix.length);
         if (!Arrays.equals(definedPrefix, inputPrefix)) {
-            final String errorMsg = "value is missing valid prefix for decrpyption type";
+            final String errorMsg = "value is missing valid prefix for decryption type";
             final ErrorInformation errorInformation = new ErrorInformation(PwmError.ERROR_CRYPT_ERROR, errorMsg);
             throw new PwmUnrecoverableException(errorInformation);
         }
@@ -329,4 +379,31 @@ public class SecureEngine {
         return Arrays.copyOfRange(input,definedPrefix.length,input.length);
     }
 
+    static class NonceGenerator {
+        private final byte[] value;
+
+        private final int fixedComponentLength;
+
+        public NonceGenerator(final int fixedComponentLength, final int counterComponentLength) {
+            this.fixedComponentLength = fixedComponentLength;
+            value = new byte[fixedComponentLength + counterComponentLength];
+            PwmRandom.getInstance().nextBytes(value);
+        }
+
+        public synchronized byte[] nextValue() {
+            increment(value.length - 1);
+            return Arrays.copyOf(value, value.length);
+        }
+
+        private void increment(final int index) {
+            if (value[index] == Byte.MAX_VALUE) {
+                value[index] = 0;
+                if(index > fixedComponentLength) {
+                    increment(index - 1);
+                }
+            } else {
+                value[index]++;
+            }
+        }
+    }
 }

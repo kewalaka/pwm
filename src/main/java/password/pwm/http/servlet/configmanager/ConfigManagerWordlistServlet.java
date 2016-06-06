@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,12 +31,12 @@ import password.pwm.error.PwmError;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.HttpMethod;
 import password.pwm.http.PwmRequest;
-import password.pwm.http.ServletHelper;
 import password.pwm.http.servlet.AbstractPwmServlet;
 import password.pwm.i18n.Message;
 import password.pwm.svc.wordlist.StoredWordlistDataBean;
+import password.pwm.svc.wordlist.Wordlist;
+import password.pwm.svc.wordlist.WordlistConfiguration;
 import password.pwm.svc.wordlist.WordlistType;
-import password.pwm.util.Helper;
 import password.pwm.util.logging.PwmLogger;
 import password.pwm.ws.server.RestResultBean;
 
@@ -46,6 +46,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.text.NumberFormat;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -138,7 +139,7 @@ public class ConfigManagerWordlistServlet extends AbstractPwmServlet {
             return;
         }
 
-        final InputStream inputStream = ServletHelper.readFileUpload(pwmRequest.getHttpServletRequest(),"uploadFile");
+        final InputStream inputStream = pwmRequest.readFileUploadStream(PwmConstants.PARAM_FILE_UPLOAD);
 
         try {
             wordlistType.forType(pwmApplication).populate(inputStream);
@@ -166,19 +167,11 @@ public class ConfigManagerWordlistServlet extends AbstractPwmServlet {
             return;
         }
 
-        final Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    wordlistType.forType(pwmRequest.getPwmApplication()).populateBuiltIn();
-                } catch (Exception e) {
-                    LOGGER.error("error clearing wordlist " + wordlistType + ", error: " + e.getMessage());
-                }
-            }
-        });
-        thread.setDaemon(true);
-        thread.setName(Helper.makeThreadName(pwmRequest.getPwmApplication(), ConfigManagerWordlistServlet.class) + "-" + wordlistType + "-Clear");
-        thread.start();
+        try {
+            wordlistType.forType(pwmRequest.getPwmApplication()).clear();
+        } catch (Exception e) {
+            LOGGER.error("error clearing wordlist " + wordlistType + ", error: " + e.getMessage());
+        }
 
         pwmRequest.outputJsonResult(RestResultBean.forSuccessMessage(pwmRequest, Message.Success_Unknown));
     }
@@ -187,25 +180,46 @@ public class ConfigManagerWordlistServlet extends AbstractPwmServlet {
             throws IOException
     {
         final LinkedHashMap<WordlistType,WordlistDataBean> outputData = new LinkedHashMap<>();
+        final NumberFormat numberFormat = NumberFormat.getInstance(pwmRequest.getLocale());
+
         for (WordlistType wordlistType : WordlistType.values()) {
-
-            final StoredWordlistDataBean storedWordlistDataBean = wordlistType.forType(pwmRequest.getPwmApplication()).readMetadata();
-
-            final Map<String,String> presentableValues = new LinkedHashMap<>();
-            presentableValues.put("Population Status", storedWordlistDataBean.isCompleted() ? "Completed" : "In-Progress");
-            if (storedWordlistDataBean.isCompleted()) {
-                presentableValues.put("Wordlist Type", storedWordlistDataBean.isBuiltin() ? "Built-In" : "Uploaded");
-                presentableValues.put("Word Count", String.valueOf(storedWordlistDataBean.getSize()));
-                if (!storedWordlistDataBean.isBuiltin()) {
-                    presentableValues.put("Population Timestamp", PwmConstants.DEFAULT_DATETIME_FORMAT.format(storedWordlistDataBean.getStoreDate()));
-                }
-                presentableValues.put("SHA1 Checksum Hash", storedWordlistDataBean.getSha1hash());
-            }
+            final Wordlist wordlist = wordlistType.forType(pwmRequest.getPwmApplication());
+            final StoredWordlistDataBean storedWordlistDataBean = wordlist.readMetadata();
+            final WordlistConfiguration wordlistConfiguration = wordlistType.forType(pwmRequest.getPwmApplication()).getConfiguration();
 
             final WordlistDataBean wordlistDataBean = new WordlistDataBean();
-            wordlistDataBean.getPresentableData().putAll(presentableValues);
-            wordlistDataBean.setCompleted(storedWordlistDataBean.isCompleted());
-            wordlistDataBean.setBuiltIn(storedWordlistDataBean.isBuiltin());
+            {
+                final Map<String, String> presentableValues = new LinkedHashMap<>();
+                presentableValues.put("Population Status", storedWordlistDataBean.isCompleted() ? "Completed" : "In-Progress");
+                presentableValues.put("List Source", storedWordlistDataBean.getSource() == null
+                        ? StoredWordlistDataBean.Source.BuiltIn.getLabel()
+                        : storedWordlistDataBean.getSource().getLabel());
+                if (wordlistConfiguration.getAutoImportUrl() != null) {
+                    presentableValues.put("Configured Source URL", wordlistConfiguration.getAutoImportUrl());
+                }
+
+                if (storedWordlistDataBean.isCompleted()) {
+                    presentableValues.put("Word Count", numberFormat.format(storedWordlistDataBean.getSize()));
+                    if (StoredWordlistDataBean.Source.BuiltIn != storedWordlistDataBean.getSource()) {
+                        presentableValues.put("Population Timestamp", PwmConstants.DEFAULT_DATETIME_FORMAT.format(storedWordlistDataBean.getStoreDate()));
+                    }
+                    presentableValues.put("SHA1 Checksum Hash", storedWordlistDataBean.getSha1hash());
+                }
+                if (wordlist.getAutoImportError() != null) {
+                    presentableValues.put("Error During Import", wordlist.getAutoImportError().getDetailedErrorMsg());
+                    presentableValues.put("Last Import Attempt", PwmConstants.DEFAULT_DATETIME_FORMAT.format(wordlist.getAutoImportError().getDate()));
+                }
+                wordlistDataBean.getPresentableData().putAll(presentableValues);
+            }
+
+            if (storedWordlistDataBean.isCompleted()) {
+                if (wordlistConfiguration.getAutoImportUrl() == null) {
+                    wordlistDataBean.setAllowUpload(true);
+                }
+                if (wordlistConfiguration.getAutoImportUrl() != null || storedWordlistDataBean.getSource() != StoredWordlistDataBean.Source.BuiltIn) {
+                    wordlistDataBean.setAllowClear(true);
+                }
+            }
             outputData.put(wordlistType,wordlistDataBean);
         }
         pwmRequest.outputJsonResult(new RestResultBean(outputData));
@@ -213,27 +227,26 @@ public class ConfigManagerWordlistServlet extends AbstractPwmServlet {
 
     public static class WordlistDataBean implements Serializable {
         private Map<String,String> presentableData = new LinkedHashMap<>();
-        private boolean completed;
-        private boolean builtIn;
+        private boolean allowUpload;
+        private boolean allowClear;
 
         public Map<String, String> getPresentableData() {
             return presentableData;
         }
-
-        public boolean isCompleted() {
-            return completed;
+        public boolean isAllowUpload() {
+            return allowUpload;
         }
 
-        public void setCompleted(boolean completed) {
-            this.completed = completed;
+        public void setAllowUpload(boolean allowUpload) {
+            this.allowUpload = allowUpload;
         }
 
-        public boolean isBuiltIn() {
-            return builtIn;
+        public boolean isAllowClear() {
+            return allowClear;
         }
 
-        public void setBuiltIn(boolean builtIn) {
-            this.builtIn = builtIn;
+        public void setAllowClear(boolean allowClear) {
+            this.allowClear = allowClear;
         }
     }
 }

@@ -1,11 +1,11 @@
+<%@ page import="password.pwm.config.PwmSettingTemplate" %>
 <%@ page import="password.pwm.http.servlet.configguide.ConfigGuideForm" %>
-<%@ page import="java.util.Map" %>
 <%--
   ~ Password Management Servlets (PWM)
-  ~ http://code.google.com/p/pwm/
+  ~ http://www.pwm-project.org
   ~
   ~ Copyright (c) 2006-2009 Novell, Inc.
-  ~ Copyright (c) 2009-2015 The PWM Project
+  ~ Copyright (c) 2009-2016 The PWM Project
   ~
   ~ This program is free software; you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -22,17 +22,16 @@
   ~ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
   --%>
 
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_LOCALE); %>
-<% JspUtility.setFlag(pageContext, PwmRequest.Flag.HIDE_THEME); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.HIDE_LOCALE); %>
+<% JspUtility.setFlag(pageContext, PwmRequestFlag.INCLUDE_CONFIG_CSS); %>
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
-<% ConfigGuideBean configGuideBean = JspUtility.getPwmSession(pageContext).getSessionBean(ConfigGuideBean.class);%>
-<% Map<ConfigGuideForm.FormParameter,String> PLACEHOLDER_FORM = ConfigGuideForm.placeholderForm(configGuideBean.getStoredConfiguration().getTemplate()); %>
+<% ConfigGuideBean configGuideBean = JspUtility.getSessionBean(pageContext, ConfigGuideBean.class);%>
+<% boolean isAD = ConfigGuideForm.generateStoredConfig(configGuideBean).getTemplateSet().getTemplates().contains(PwmSettingTemplate.AD); %>
 <%@ taglib uri="pwm" prefix="pwm" %>
-<html dir="<pwm:LocaleOrientation/>">
+<html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="fragment/header.jsp" %>
 <body class="nihilo">
-<link href="<pwm:context/><pwm:url url='/public/resources/configStyle.css'/>" rel="stylesheet" type="text/css"/>
 <div id="wrapper">
     <%@ include file="fragment/configguide-header.jsp"%>
     <div id="centerbody">
@@ -46,13 +45,17 @@
                     <pwm:display key="ldap_admin_description" bundle="ConfigGuide"/>
                     <div class="setting_item">
                         <label>
+                            Example: <code><%=PwmSetting.LDAP_PROXY_USER_DN.getExample(ConfigGuideForm.generateStoredConfig(configGuideBean).getTemplateSet())%></code>
+                            <br/><br/>
                             <b><pwm:display key="ldap_admin_title_proxy-dn" bundle="ConfigGuide"/></b>
                             <br/>
-                            <input class="configStringInput" type="text" style="width:400px" id="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_PROXY_DN%>" name="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_PROXY_DN%>" value="<%=configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_LDAP_PROXY_DN)%>" placeholder="<%=PLACEHOLDER_FORM.get(ConfigGuideForm.FormParameter.PARAM_LDAP_PROXY_DN)%>"/>
+                            <input class="configStringInput" type="text" style="width:400px" id="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_PROXY_DN%>" name="<%=ConfigGuideForm.FormParameter.PARAM_LDAP_PROXY_DN%>" value="<%=configGuideBean.getFormData().get(ConfigGuideForm.FormParameter.PARAM_LDAP_PROXY_DN)%>" <pwm:autofocus/> />
+                            <% if (!isAD) { %>
                             <button type="button" class="btn" id="button-browse-adminDN">
-                                <span class="btn-icon fa fa-sitemap"></span>
+                                <span class="btn-icon pwm-icon pwm-icon-sitemap"></span>
                                 <pwm:display key="Button_Browse"/>
                             </button>
+                            <% } %>
                         </label>
                     </div>
                     &nbsp;<br/>
@@ -70,7 +73,7 @@
         <div id="healthBody" style="border:0; margin:0; padding:0; cursor: pointer">
             <div style="text-align: center">
                 <button class="menubutton" style="margin-left: auto; margin-right: auto">
-                    <pwm:if test="showIcons"><span class="btn-icon fa fa-check"></span></pwm:if>
+                    <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-check"></span></pwm:if>
                     <pwm:display key="Button_CheckSettings" bundle="Config"/>
                 </button>
             </div>
@@ -132,10 +135,6 @@
         }
     </script>
 </pwm:script>
-<pwm:script-ref url="/public/resources/js/configguide.js"/>
-<pwm:script-ref url="/public/resources/js/uilibrary.js"/>
-<pwm:script-ref url="/public/resources/js/configmanager.js"/>
-<pwm:script-ref url="/public/resources/js/admin.js"/>
 <%@ include file="fragment/footer.jsp" %>
 </body>
 </html>

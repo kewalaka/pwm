@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,8 +82,8 @@ public class LocalDBAdaptor implements LocalDB {
     }
 
     @WriteOperation
-    public void init(final File dbDirectory, final Map<String, String> initParameters, boolean readOnly) throws LocalDBException {
-        innerDB.init(dbDirectory, initParameters, readOnly);
+    public void init(final File dbDirectory, final Map<String, String> initParameters, Map<LocalDBProvider.Parameter,String> parameters) throws LocalDBException {
+        innerDB.init(dbDirectory, initParameters, parameters);
     }
 
     public LocalDBIterator<String> iterator(final DB db) throws LocalDBException {

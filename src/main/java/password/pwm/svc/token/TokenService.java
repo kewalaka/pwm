@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -206,6 +206,8 @@ public class TokenService implements PwmService {
             final ErrorInformation errorInformation = new ErrorInformation(e.getError(),errorMsg);
             throw new PwmOperationalException(errorInformation);
         }
+
+        LOGGER.trace(sessionLabel, "generated token type=" + tokenPayload.getName());
 
         pwmApplication.getAuditManager().submit(pwmApplication.getAuditManager().createUserAuditRecord(
                 AuditEvent.TOKEN_ISSUED,

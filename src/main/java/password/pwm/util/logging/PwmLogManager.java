@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,13 +23,15 @@
 package password.pwm.util.logging;
 
 import com.novell.ldapchai.ChaiUser;
+
 import org.apache.log4j.*;
 import org.apache.log4j.xml.DOMConfigurator;
+
 import password.pwm.AppProperty;
 import password.pwm.PwmApplication;
+import password.pwm.PwmApplicationMode;
 import password.pwm.PwmConstants;
 import password.pwm.config.Configuration;
-import password.pwm.config.PwmSetting;
 import password.pwm.util.FileSystemUtility;
 import password.pwm.util.localdb.LocalDB;
 import password.pwm.util.localdb.LocalDBException;
@@ -96,8 +98,7 @@ public class PwmLogManager {
         initFileLogger(config, fileLogLevel, pwmApplicationPath);
 
         // disable jersey warnings.
-        java.util.logging.LogManager.getLogManager().addLogger(java.util.logging.Logger.getLogger("com.sun.jersey.spi.container.servlet.WebComponent"));
-        java.util.logging.LogManager.getLogManager().getLogger("com.sun.jersey.spi.container.servlet.WebComponent").setLevel(java.util.logging.Level.OFF);
+        java.util.logging.Logger.getLogger("org.glassfish.jersey").setLevel(java.util.logging.Level.SEVERE);
     }
 
     private static void initConsoleLogger(
@@ -174,7 +175,7 @@ public class PwmLogManager {
     public static LocalDBLogger initializeLocalDBLogger(final PwmApplication pwmApplication) {
         final LocalDB localDB = pwmApplication.getLocalDB();
 
-        if (pwmApplication.getApplicationMode() == PwmApplication.MODE.READ_ONLY) {
+        if (pwmApplication.getApplicationMode() == PwmApplicationMode.READ_ONLY) {
             LOGGER.trace("skipping initialization of LocalDBLogger due to read-only mode");
             return null;
         }
@@ -183,9 +184,7 @@ public class PwmLogManager {
         final LocalDBLogger localDBLogger;
         final PwmLogLevel localDBLogLevel = pwmApplication.getConfig().getEventLogLocalDBLevel();
         try {
-            final int maxEvents = (int) pwmApplication.getConfig().readSettingAsLong(PwmSetting.EVENTS_PWMDB_MAX_EVENTS);
-            final long maxAgeMS = 1000 * pwmApplication.getConfig().readSettingAsLong(PwmSetting.EVENTS_PWMDB_MAX_AGE);
-            localDBLogger = initLocalDBLogger(localDB, maxEvents, maxAgeMS, pwmApplication);
+            localDBLogger = initLocalDBLogger(localDB, pwmApplication);
             if (localDBLogger != null) {
                 PwmLogger.setLocalDBLogger(localDBLogLevel, localDBLogger);
             }
@@ -214,16 +213,10 @@ public class PwmLogManager {
 
     static LocalDBLogger initLocalDBLogger(
             final LocalDB pwmDB,
-            final int maxEvents,
-            final long maxAgeMS,
             final PwmApplication pwmApplication
     ) {
-        final boolean devDebugMode = pwmApplication.getConfig().isDevDebugMode();
         try {
-            final LocalDBLogger.Settings settings = new LocalDBLogger.Settings();
-            settings.setMaxEvents(maxEvents);
-            settings.setMaxAgeMs(maxAgeMS);
-            settings.setDevDebug(devDebugMode);
+            final LocalDBLoggerSettings settings = LocalDBLoggerSettings.fromConfiguration(pwmApplication.getConfig());
             return new LocalDBLogger(pwmApplication, pwmDB, settings);
         } catch (LocalDBException e) {
             //nothing to do;

@@ -1,9 +1,9 @@
 /*
  * Password Management Servlets (PWM)
- * http://code.google.com/p/pwm/
+ * http://www.pwm-project.org
  *
  * Copyright (c) 2006-2009 Novell, Inc.
- * Copyright (c) 2009-2015 The PWM Project
+ * Copyright (c) 2009-2016 The PWM Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,7 +60,10 @@ html, body {
 
 .header-warning-button {
     color: #00cc00;
-}
+	}
+.header-warning-button:hover {
+	background-color: #273d28;
+	}
 
 #header-company-logo {
     position: relative;
@@ -77,6 +80,51 @@ html, body {
     font: 100% "Andale Mono","Lucida Console",Monaco,monospace;
     color: #00cc00;
 
+}
+
+#button-openHeader {
+    color: #00cc00;
+}
+
+.header-button {
+    margin: 0px;
+    margin-top: 6px;
+    margin-left: 6px;
+    background-color: black;
+    color: #00cc00;
+}
+
+#header-username-group, #header-username {
+    text-align: right;
+}
+
+#HomeButton span.btn-icon, #LogoutButton span.btn-icon, #header-username-caret span.m-icon {
+    font: 20px FontAwesome;
+    margin-right: 0px;
+}
+
+#HomeButton span.btn-icon:before {
+    content: "\f015";
+}
+
+#LogoutButton span.btn-icon:before {
+    content: "\f08b";
+}
+
+#header-username-caret span.m-icon {
+    content: "\f08b";
+}
+
+.tile {
+    background: transparent;
+    width: 160px;
+    height: 160px;
+    border: 1px solid #00cc00;
+}
+
+.tile:hover {
+    background: transparent;
+    border: 1px solid #fff;
 }
 
 #centerbody {
@@ -160,4 +208,54 @@ input, button {
 
 .btn-icon {
     display: none;
+}
+
+#header-menu-wrapper {
+    color: #00cc00;
+    text-align: right;
+}
+
+#header-menu-alert {
+    display: inline-block;
+    height: 10px;
+}
+
+#header-menu-alert::before {
+    color: #e50000;
+    content: "\f071";
+    font: 12px FontAwesome;
+}
+
+#header-username-group, #header-username {
+    display: inline-block;
+}
+
+#header-menu-wrapper > #header-username {
+    display: block;
+}
+
+#header-menu {
+    cursor: pointer;
+}
+
+#header-menu:only-child {
+  padding-top: 15px;
+}
+
+#header-username-caret {
+    display: inline-block;
+}
+
+#header-username-caret::after {
+    content: "\f078";
+    font: 12px FontAwesome;
+}
+
+#header-menu-icon {
+  display: inline-block;
+}
+
+#header-menu-icon::after {
+  content: "\f141";
+  font: 12px FontAwesome;
 }
